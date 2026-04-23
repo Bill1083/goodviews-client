@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 
 const NAV_TABS = [
@@ -49,12 +47,6 @@ export default function Navbar() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [showConfirm, setShowConfirm] = useState(false)
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/auth')
-  }
 
   if (!user) return null
 
@@ -82,44 +74,9 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Sign out */}
-        <button
-          onClick={() => setShowConfirm(true)}
-          className="pb-3 text-sm text-gray-muted hover:text-gray-lighter transition-colors"
-        >
-          Sign Out
-        </button>
+        {/* Spacer to balance layout */}
+        <div className="w-20" />
       </div>
-
-      {/* Sign-out confirmation dialog */}
-      {showConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
-          onClick={() => setShowConfirm(false)}
-        >
-          <div
-            className="dialog-scale-in w-full max-w-xs rounded-2xl border border-white/10 bg-navy-card p-6 shadow-2xl text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-base font-semibold text-gray-lighter mb-1">Sign out?</p>
-            <p className="text-sm text-gray-muted mb-5">You'll be returned to the login screen.</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="px-5 py-2 rounded-full bg-pink-brand/80 hover:bg-pink-brand text-sm text-white font-semibold transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   )
 }

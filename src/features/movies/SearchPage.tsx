@@ -87,7 +87,12 @@ export default function SearchPage() {
   // ── Step: search ──────────────────────────────────────────────────────────
   if (step === 'search') {
     return (
-      <main className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-12">
+      <main
+      style={{
+        opacity: isFetching ? 0.5 : 1,
+        pointerEvents: isFetching ? 'none' : 'auto',
+      }} 
+      className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-12">
         {/* Icon + title row */}
         <div className="flex items-center gap-5">
           <svg width="64" height="65" viewBox="1305 2944 64 65" fill="none" xmlns="http://www.w3.org/2000/svg">

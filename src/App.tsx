@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
 import { useAuthStore } from './store/authStore'
@@ -8,8 +8,9 @@ import AuthPage from './pages/AuthPage'
 import MyMoviesPage from './pages/MyMoviesPage'
 import SearchPage from './features/movies/SearchPage'
 import ProfilePage from './features/profile/ProfilePage'
+import SettingsPage from './pages/SettingsPage'
 
-const ROUTE_ORDER = ['/', '/search', '/profile']
+const ROUTE_ORDER = ['/', '/search', '/profile', '/settings']
 function getRouteIndex(path: string) {
   const idx = ROUTE_ORDER.indexOf(path)
   return idx === -1 ? 0 : idx
@@ -20,7 +21,7 @@ function AppRoutes() {
   const prevPath = useRef(location.pathname)
   const [transitionClass, setTransitionClass] = useState('')
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prevIdx = getRouteIndex(prevPath.current)
     const currIdx = getRouteIndex(location.pathname)
     if (prevIdx !== currIdx) {
@@ -59,6 +60,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

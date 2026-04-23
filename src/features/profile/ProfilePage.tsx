@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
 import ColorPicker from '../../components/ColorPicker'
@@ -18,6 +19,8 @@ import {
   addFriend,
   removeFriend,
   searchUsers,
+  getProfile,
+  updateProfile,
 } from '../../services/apiClient'
 
 // ─── Pill preview ─────────────────────────────────────────────────────────────
@@ -77,13 +80,55 @@ type ProfileView = 'default' | 'add-friend' | 'edit-category' | 'edit-group'
 
 export default function ProfilePage() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const qc = useQueryClient()
 
   const username =
     (user?.user_metadata?.['username'] as string | undefined) ??
     user?.email?.split('@')[0] ??
     'User'
-  const initials = username.slice(0, 2).toUpperCase()
+
+  // ── Profile data ──────────────────────────────────────────────────────────
+  const { data: profileData } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+  })
+
+  // ── Profile editing state ─────────────────────────────────────────────────
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editUsername, setEditUsername] = useState('')
+  const [editBio, setEditBio] = useState('')
+  const [editAvatarColor, setEditAvatarColor] = useState<string | null>(null)
+  const [showAvatarColorPicker, setShowAvatarColorPicker] = useState(false)
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null)
+
+  function openProfileEdit() {
+    setEditUsername(profileData?.username ?? username)
+    setEditBio(profileData?.bio ?? '')
+    setEditAvatarColor(profileData?.avatar_color ?? null)
+    setProfileSaveError(null)
+    setIsEditingProfile(true)
+  }
+
+  const profileSaveMutation = useMutation({
+    mutationFn: () =>
+      updateProfile({
+        username: editUsername.trim(),
+        bio: editBio.trim() || null,
+        avatar_color: editAvatarColor,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] })
+      setIsEditingProfile(false)
+      setProfileSaveError(null)
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        'Failed to save profile'
+      setProfileSaveError(msg)
+    },
+  })
 
   // ── Data queries ──────────────────────────────────────────────────────────
   const { data: categories = [], isLoading: catsLoading } = useQuery({
@@ -253,27 +298,139 @@ export default function ProfilePage() {
   )
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const displayUsername = profileData?.username ?? username
+  const displayBio = profileData?.bio ?? null
+  const avatarColor = profileData?.avatar_color ?? '#c5c491'
+  const displayInitials = displayUsername.slice(0, 2).toUpperCase()
+
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10">
       {/* ── Profile Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-5">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-avatar text-2xl font-bold text-navy">
-          {initials}
+      {isEditingProfile ? (
+        /* ── Edit mode ── */
+        <div className="flex items-start gap-5">
+          {/* Avatar */}
+          <div
+            className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-navy"
+            style={{ backgroundColor: editAvatarColor ?? avatarColor }}
+          >
+            {displayInitials}
+          </div>
+
+          {/* Name + bio inputs */}
+          <div className="flex flex-1 flex-col gap-3">
+            {/* Username row */}
+            <div
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+            >
+              <input
+                type="text"
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                maxLength={50}
+                className="flex-1 bg-transparent text-2xl font-bold text-gray-lighter focus:outline-none"
+                placeholder="Username"
+              />
+              <svg width="33" height="31" viewBox="1804 5722 33 31" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 opacity-60">
+                <g>
+                  <path d="M1833.2596435546875,5730.2666015625L1820.1424560546875,5742.5888671875C1818.8359375,5743.81640625,1814.958740234375,5744.384765625,1814.09228515625,5743.5712890625C1813.2261962890625,5742.7568359375,1813.8173828125,5739.1142578125,1815.12353515625,5737.88818359375L1828.2548828125,5725.5517578125C1828.5787353515625,5725.22021484375,1828.9705810546875,5724.95361328125,1829.4073486328125,5724.76806640625C1829.843994140625,5724.58203125,1830.3160400390625,5724.48193359375,1830.79541015625,5724.47265625C1831.2744140625,5724.462890625,1831.750732421875,5724.544921875,1832.1951904296875,5724.71240234375C1832.6396484375,5724.88134765625,1833.04345703125,5725.1318359375,1833.3818359375,5725.45068359375C1833.72021484375,5725.76953125,1833.9864501953125,5726.1494140625,1834.1640625,5726.5673828125C1834.342041015625,5726.9853515625,1834.4278564453125,5727.43359375,1834.41650390625,5727.8828125C1834.405029296875,5728.33349609375,1834.296630859375,5728.77685546875,1834.097900390625,5729.18603515625C1833.899169921875,5729.59619140625,1833.6141357421875,5729.9638671875,1833.2596435546875,5730.2666015625Z" stroke="#e1e1e1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1819.125,5727.1669921875L1812.25,5727.1669921875C1810.7913818359375,5727.1669921875,1809.392578125,5727.7109375,1808.3609619140625,5728.6806640625C1807.3294677734375,5729.6494140625,1806.75,5730.962890625,1806.75,5732.3330078125L1806.75,5745.25C1806.75,5746.62060546875,1807.3294677734375,5747.9345703125,1808.3609619140625,5748.9033203125C1809.392578125,5749.8720703125,1810.7913818359375,5750.4169921875,1812.25,5750.4169921875L1827.375,5750.4169921875C1830.4136962890625,5750.4169921875,1831.5,5748.091796875,1831.5,5745.25L1831.5,5738.7919921875" stroke="#e1e1e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </g>
+              </svg>
+            </div>
+
+            {/* Bio area */}
+            <div
+              className="relative rounded-xl px-4 py-3"
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+            >
+              <p className="mb-1 text-sm font-semibold text-gray-lighter">About:</p>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={500}
+                rows={3}
+                className="w-full bg-transparent text-sm text-gray-light/80 focus:outline-none resize-none"
+                placeholder="Write something about yourself…"
+              />
+              <div className="flex justify-end">
+                <svg width="33" height="31" viewBox="1804 5722 33 31" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-40">
+                  <g>
+                    <path d="M1833.2596435546875,5730.2666015625L1820.1424560546875,5742.5888671875C1818.8359375,5743.81640625,1814.958740234375,5744.384765625,1814.09228515625,5743.5712890625C1813.2261962890625,5742.7568359375,1813.8173828125,5739.1142578125,1815.12353515625,5737.88818359375L1828.2548828125,5725.5517578125C1828.5787353515625,5725.22021484375,1828.9705810546875,5724.95361328125,1829.4073486328125,5724.76806640625C1829.843994140625,5724.58203125,1830.3160400390625,5724.48193359375,1830.79541015625,5724.47265625C1831.2744140625,5724.462890625,1831.750732421875,5724.544921875,1832.1951904296875,5724.71240234375C1832.6396484375,5724.88134765625,1833.04345703125,5725.1318359375,1833.3818359375,5725.45068359375C1833.72021484375,5725.76953125,1833.9864501953125,5726.1494140625,1834.1640625,5726.5673828125C1834.342041015625,5726.9853515625,1834.4278564453125,5727.43359375,1834.41650390625,5727.8828125C1834.405029296875,5728.33349609375,1834.296630859375,5728.77685546875,1834.097900390625,5729.18603515625C1833.899169921875,5729.59619140625,1833.6141357421875,5729.9638671875,1833.2596435546875,5730.2666015625Z" stroke="#e1e1e1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1819.125,5727.1669921875L1812.25,5727.1669921875C1810.7913818359375,5727.1669921875,1809.392578125,5727.7109375,1808.3609619140625,5728.6806640625C1807.3294677734375,5729.6494140625,1806.75,5730.962890625,1806.75,5732.3330078125L1806.75,5745.25C1806.75,5746.62060546875,1807.3294677734375,5747.9345703125,1808.3609619140625,5748.9033203125C1809.392578125,5749.8720703125,1810.7913818359375,5750.4169921875,1812.25,5750.4169921875L1827.375,5750.4169921875C1830.4136962890625,5750.4169921875,1831.5,5748.091796875,1831.5,5745.25L1831.5,5738.7919921875" stroke="#e1e1e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {profileSaveError && (
+              <p className="text-xs text-pink-brand">{profileSaveError}</p>
+            )}
+          </div>
+
+          {/* Colour picker + Save */}
+          <div className="flex flex-col items-center gap-3 shrink-0">
+            <span className="text-sm text-gray-muted">Colour</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowAvatarColorPicker((p) => !p)}
+                className="h-14 w-14 rounded-xl border-2 border-white/20 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal/50"
+                style={{ backgroundColor: editAvatarColor ?? avatarColor }}
+                title="Pick avatar colour"
+              />
+              {showAvatarColorPicker && (
+                <div className="absolute top-full right-0 mt-1 z-50">
+                  <ColorPicker
+                    value={editAvatarColor}
+                    onChange={setEditAvatarColor}
+                    onClose={() => setShowAvatarColorPicker(false)}
+                  />
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => profileSaveMutation.mutate()}
+              disabled={!editUsername.trim() || profileSaveMutation.isPending}
+              className="mt-1 px-5 py-2 rounded-full text-sm font-semibold text-white transition-colors disabled:opacity-40"
+              style={{ backgroundColor: '#6b6bbb' }}
+            >
+              {profileSaveMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-3xl font-bold text-gray-lighter">{username}</h1>
-          <p className="text-sm text-gray-muted">{user?.email}</p>
-          <p className="mt-1 text-sm text-gray-light/60 italic">About: No bio set yet.</p>
+      ) : (
+        /* ── View mode ── */
+        <div className="flex items-center gap-5">
+          <div
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-navy"
+            style={{ backgroundColor: avatarColor }}
+          >
+            {displayInitials}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <h1 className="text-3xl font-bold text-gray-lighter">{displayUsername}</h1>
+            <p className="text-sm text-gray-muted">{user?.email}</p>
+            {displayBio ? (
+              <p className="mt-1 text-sm text-gray-light/60 italic">{displayBio}</p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-light/40 italic">No bio set yet.</p>
+            )}
+          </div>
+          <button
+            onClick={openProfileEdit}
+            className="ml-auto self-start rounded-full p-2 text-gray-muted hover:bg-white/5 hover:text-gray-lighter transition-colors"
+            title="Edit profile"
+          >
+            <svg width="33" height="31" viewBox="1804 5722 33 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1833.2596435546875,5730.2666015625L1820.1424560546875,5742.5888671875C1818.8359375,5743.81640625,1814.958740234375,5744.384765625,1814.09228515625,5743.5712890625C1813.2261962890625,5742.7568359375,1813.8173828125,5739.1142578125,1815.12353515625,5737.88818359375L1828.2548828125,5725.5517578125C1828.5787353515625,5725.22021484375,1828.9705810546875,5724.95361328125,1829.4073486328125,5724.76806640625C1829.843994140625,5724.58203125,1830.3160400390625,5724.48193359375,1830.79541015625,5724.47265625C1831.2744140625,5724.462890625,1831.750732421875,5724.544921875,1832.1951904296875,5724.71240234375C1832.6396484375,5724.88134765625,1833.04345703125,5725.1318359375,1833.3818359375,5725.45068359375C1833.72021484375,5725.76953125,1833.9864501953125,5726.1494140625,1834.1640625,5726.5673828125C1834.342041015625,5726.9853515625,1834.4278564453125,5727.43359375,1834.41650390625,5727.8828125C1834.405029296875,5728.33349609375,1834.296630859375,5728.77685546875,1834.097900390625,5729.18603515625C1833.899169921875,5729.59619140625,1833.6141357421875,5729.9638671875,1833.2596435546875,5730.2666015625Z" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M1819.125,5727.1669921875L1812.25,5727.1669921875C1810.7913818359375,5727.1669921875,1809.392578125,5727.7109375,1808.3609619140625,5728.6806640625C1807.3294677734375,5729.6494140625,1806.75,5730.962890625,1806.75,5732.3330078125L1806.75,5745.25C1806.75,5746.62060546875,1807.3294677734375,5747.9345703125,1808.3609619140625,5748.9033203125C1809.392578125,5749.8720703125,1810.7913818359375,5750.4169921875,1812.25,5750.4169921875L1827.375,5750.4169921875C1830.4136962890625,5750.4169921875,1831.5,5748.091796875,1831.5,5745.25L1831.5,5738.7919921875" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
-        <button
-          className="ml-auto self-start rounded-full p-2 text-gray-muted hover:bg-white/5 hover:text-gray-lighter transition-colors"
-          title="Edit profile"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.364-6.364a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16H8v-2a2 2 0 01.586-1.414z" />
-          </svg>
-        </button>
-      </div>
+      )}
 
       {/* ── Add Friend view ─────────────────────────────────────────────────── */}
       {view === 'add-friend' && (
@@ -862,10 +1019,11 @@ export default function ProfilePage() {
       {/* ── Settings cog ────────────────────────────────────────────────────── */}
       <div className="flex justify-end">
         <button
+          onClick={() => navigate('/settings')}
           className="rounded-full p-2 text-gray-muted hover:bg-white/5 hover:text-gray-lighter transition-colors"
           title="Settings"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>

@@ -147,3 +147,28 @@ export async function addGroupMember(groupId: string, userId: string): Promise<v
 export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
   await apiClient.delete(`/api/groups/${groupId}/members/${userId}`)
 }
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export interface ProfileData {
+  id: string
+  username: string
+  bio: string | null
+  avatar_color: string | null
+  profile_visibility: 'no_one' | 'friends_only' | 'everyone'
+}
+
+export async function getProfile(): Promise<ProfileData> {
+  const { data } = await apiClient.get<ProfileData>('/api/profile/')
+  return data
+}
+
+export async function updateProfile(payload: Partial<{
+  username: string
+  bio: string | null
+  avatar_color: string | null
+  profile_visibility: 'no_one' | 'friends_only' | 'everyone'
+}>): Promise<ProfileData> {
+  const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
+  return data
+}
