@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
-import HomePage from './pages/HomePage'
-import LoginPage from './features/auth/LoginPage'
-import RegisterPage from './features/auth/RegisterPage'
+import AuthPage from './pages/AuthPage'
+import MyMoviesPage from './pages/MyMoviesPage'
 import SearchPage from './features/movies/SearchPage'
 import ProfilePage from './features/profile/ProfilePage'
 
@@ -14,12 +13,10 @@ export default function App() {
   const { setSession, setLoading } = useAuthStore()
 
   useEffect(() => {
-    // Restore session on initial load
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
     })
 
-    // Keep session in sync with Supabase Auth events
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
@@ -31,12 +28,18 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-navy">
+      <div className="min-h-screen">
         <Navbar />
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MyMoviesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/search"
             element={
@@ -53,8 +56,12 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          {/* Legacy redirects */}
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          <Route path="/register" element={<Navigate to="/auth" replace />} />
         </Routes>
       </div>
     </BrowserRouter>
   )
 }
+

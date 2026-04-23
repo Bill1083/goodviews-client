@@ -16,5 +16,5 @@ export default function ProtectedRoute({ children }: Props) {
     )
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />
+  return user ? <>{children}</> : <Navigate to="/auth" replace />
 }

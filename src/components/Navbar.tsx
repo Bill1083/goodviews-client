@@ -1,60 +1,59 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../store/authStore'
-import PrimaryButton from './PrimaryButton'
+
+const NAV_TABS = [
+  { label: 'My Movies', path: '/' },
+  { label: 'Make Review', path: '/search' },
+  { label: 'Profile', path: '/profile' },
+]
 
 export default function Navbar() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/auth')
   }
 
+  if (!user) return null
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-purple/20 bg-navy/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link
-          to="/"
-          className="text-xl font-bold tracking-tight text-teal hover:text-teal-light transition-colors"
+    <header className="w-full border-b border-white/10 bg-transparent">
+      <div className="mx-auto flex max-w-6xl items-end justify-between px-6 pt-4">
+        {/* Logo */}
+        <span
+          className="pb-3 text-xl font-bold tracking-tight text-teal cursor-pointer"
+          onClick={() => navigate('/')}
         >
           GoodViews
-        </Link>
+        </span>
 
-        <nav className="flex items-center gap-3">
-          {user ? (
-            <>
-              <Link
-                to="/search"
-                className="text-sm text-gray-muted hover:text-gray-light transition-colors"
+        {/* Centered Nav Tabs */}
+        <nav className="flex items-end gap-10">
+          {NAV_TABS.map((tab) => {
+            const isActive = location.pathname === tab.path
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`nav-tab${isActive ? ' active' : ''}`}
               >
-                Search
-              </Link>
-              <Link
-                to="/profile"
-                className="text-sm text-gray-muted hover:text-gray-light transition-colors"
-              >
-                Profile
-              </Link>
-              <PrimaryButton variant="secondary" onClick={handleSignOut}>
-                Sign Out
-              </PrimaryButton>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="text-sm text-gray-muted hover:text-gray-light transition-colors"
-              >
-                Sign In
-              </Link>
-              <PrimaryButton onClick={() => navigate('/register')}>
-                Get Started
-              </PrimaryButton>
-            </>
-          )}
+                {tab.label}
+              </button>
+            )
+          })}
         </nav>
+
+        {/* Sign out */}
+        <button
+          onClick={handleSignOut}
+          className="pb-3 text-sm text-gray-muted hover:text-gray-lighter transition-colors"
+        >
+          Sign Out
+        </button>
       </div>
     </header>
   )

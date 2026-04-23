@@ -33,7 +33,7 @@ export default function StarRating({
           className={[
             'transition-transform duration-75',
             readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110',
-            star <= value ? 'text-teal' : 'text-gray-muted',
+            star <= value ? 'text-magenta' : 'text-gray-muted',
           ].join(' ')}
         >
           ★

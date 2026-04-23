@@ -3,27 +3,78 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-navy text-gray-light font-sans antialiased;
+  html, body {
+    min-height: 100vh;
   }
 
-  /* Scrollbar styling for dark theme */
+  body {
+    @apply text-gray-light font-sans antialiased;
+    background: linear-gradient(135deg, #091d5b 0%, #000a29 50%, #200a32 100%);
+    background-attachment: fixed;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-navy;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-purple rounded-full;
+    @apply bg-teal/40 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-teal/70;
   }
 }
 
 @layer components {
   .input-base {
-    @apply w-full rounded-card bg-navy border border-purple/40 px-4 py-2.5
-           text-gray-light placeholder-gray-muted
-           focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent
+    @apply w-full rounded-md bg-navy-card/60 border border-white/10 px-4 py-2.5
+           text-gray-lighter placeholder-gray-muted
+           focus:outline-none focus:ring-2 focus:ring-teal/50 focus:border-teal/50
            transition-colors duration-150;
+  }
+
+  /* Nav tab */
+  .nav-tab {
+    @apply relative pb-3 text-sm font-semibold text-gray-medium
+           transition-colors duration-150 hover:text-gray-lighter cursor-pointer
+           select-none;
+  }
+  .nav-tab.active {
+    @apply text-gray-lighter;
+  }
+  .nav-tab.active::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-teal rounded-full;
+  }
+
+  /* Sidebar category link */
+  .sidebar-link {
+    @apply text-sm font-semibold text-gray-medium
+           transition-colors duration-150 hover:text-gray-lighter cursor-pointer
+           pb-1 select-none;
+  }
+  .sidebar-link.active {
+    @apply text-gray-lighter border-b border-gray-lighter;
+  }
+
+  /* Dark card panel */
+  .panel-card {
+    @apply rounded-card bg-navy-card/60 border border-white/10 backdrop-blur-sm;
+  }
+
+  /* Movie poster card */
+  .poster-card {
+    @apply rounded-card overflow-hidden bg-navy-card/40 cursor-pointer
+           transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-teal/20;
   }
 }
