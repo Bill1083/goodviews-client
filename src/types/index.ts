@@ -41,7 +41,31 @@ export interface Category {
   id: string
   user_id: string
   name: string
+  outline_color: string | null
+  fill_color: string | null
+  description: string | null
   created_at: string
+}
+
+export interface FriendProfile {
+  id: string
+  username: string
+}
+
+export interface FriendGroup {
+  id: string
+  name: string
+  outline_color: string | null
+  fill_color: string | null
+  description: string | null
+  created_at: string
+  members: FriendProfile[]
+}
+
+export interface UserSearchResult {
+  id: string
+  username: string
+  is_friend: boolean
 }
 
 export interface CreateReviewPayload {
@@ -51,6 +75,8 @@ export interface CreateReviewPayload {
   release_date: string | null
   rating: number
   review_text: string
+  category_id?: string | null
+  group_ids?: string[]
 }
 
 export interface PaginatedReviews {
@@ -58,3 +84,4 @@ export interface PaginatedReviews {
   page: number
   page_size: number
 }
+

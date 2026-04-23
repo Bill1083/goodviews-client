@@ -1,6 +1,15 @@
 import axios from 'axios'
 import { supabase } from './supabaseClient'
-import type { CreateReviewPayload, MovieSearchResult, Movie, PaginatedReviews } from '../types'
+import type {
+  CreateReviewPayload,
+  MovieSearchResult,
+  Movie,
+  PaginatedReviews,
+  Category,
+  FriendGroup,
+  FriendProfile,
+  UserSearchResult,
+} from '../types'
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -49,4 +58,92 @@ export async function getMyReviews(page = 1): Promise<PaginatedReviews> {
 
 export async function deleteReview(reviewId: string): Promise<void> {
   await apiClient.delete(`/api/reviews/${reviewId}`)
+}
+
+// ─── Categories ──────────────────────────────────────────────────────────────
+
+export async function getMyCategories(): Promise<Category[]> {
+  const { data } = await apiClient.get<Category[]>('/api/categories/')
+  return data
+}
+
+export async function createCategory(payload: {
+  name: string
+  outline_color: string | null
+  fill_color: string | null
+  description: string | null
+}): Promise<Category> {
+  const { data } = await apiClient.post<Category>('/api/categories/', payload)
+  return data
+}
+
+export async function updateCategory(
+  id: string,
+  payload: Partial<{ name: string; outline_color: string | null; fill_color: string | null; description: string | null }>,
+): Promise<Category> {
+  const { data } = await apiClient.put<Category>(`/api/categories/${id}`, payload)
+  return data
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await apiClient.delete(`/api/categories/${id}`)
+}
+
+// ─── Friends ─────────────────────────────────────────────────────────────────
+
+export async function getMyFriends(): Promise<FriendProfile[]> {
+  const { data } = await apiClient.get<FriendProfile[]>('/api/friends/')
+  return data
+}
+
+export async function searchUsers(q: string): Promise<UserSearchResult[]> {
+  const { data } = await apiClient.get<UserSearchResult[]>('/api/friends/search', {
+    params: { q },
+  })
+  return data
+}
+
+export async function addFriend(friendId: string): Promise<void> {
+  await apiClient.post('/api/friends/', { friend_id: friendId })
+}
+
+export async function removeFriend(friendId: string): Promise<void> {
+  await apiClient.delete(`/api/friends/${friendId}`)
+}
+
+// ─── Friend Groups ────────────────────────────────────────────────────────────
+
+export async function getMyFriendGroups(): Promise<FriendGroup[]> {
+  const { data } = await apiClient.get<FriendGroup[]>('/api/groups/')
+  return data
+}
+
+export async function createFriendGroup(payload: {
+  name: string
+  outline_color: string | null
+  fill_color: string | null
+  description: string | null
+}): Promise<FriendGroup> {
+  const { data } = await apiClient.post<FriendGroup>('/api/groups/', payload)
+  return data
+}
+
+export async function updateFriendGroup(
+  id: string,
+  payload: Partial<{ name: string; outline_color: string | null; fill_color: string | null; description: string | null }>,
+): Promise<FriendGroup> {
+  const { data } = await apiClient.put<FriendGroup>(`/api/groups/${id}`, payload)
+  return data
+}
+
+export async function deleteFriendGroup(id: string): Promise<void> {
+  await apiClient.delete(`/api/groups/${id}`)
+}
+
+export async function addGroupMember(groupId: string, userId: string): Promise<void> {
+  await apiClient.post(`/api/groups/${groupId}/members`, { user_id: userId })
+}
+
+export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
+  await apiClient.delete(`/api/groups/${groupId}/members/${userId}`)
 }

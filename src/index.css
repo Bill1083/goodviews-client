@@ -77,4 +77,36 @@
     @apply rounded-card overflow-hidden bg-navy-card/40 cursor-pointer
            transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-teal/20;
   }
+
+  /* Accordion slide using CSS grid trick */
+  .accordion-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+  }
+  .accordion-body.open {
+    grid-template-rows: 1fr;
+  }
+  .accordion-body > div {
+    overflow: hidden;
+  }
 }
+
+/* ─── Page transition animations ─────────────────────────────────────────── */
+@keyframes slideFromRight {
+  from { transform: translateX(36px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideFromLeft {
+  from { transform: translateX(-36px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.page-slide-right { animation: slideFromRight 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+.page-slide-left  { animation: slideFromLeft  0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+/* ─── Confirm dialog fade/scale ──────────────────────────────────────────── */
+@keyframes scaleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.dialog-scale-in { animation: scaleIn 0.18s ease-out both; }

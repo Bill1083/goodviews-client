@@ -26,7 +26,10 @@ export default {
           card: '#160a2f',      // card / panel background
           wine: '#29112d',      // auth card background
         },
-        // Neutral grays (from Penpot #c9c9c5, #888887, #6b6969)
+        // Pink for destructive/sign-out
+        pink: {
+          brand: '#e05580',
+        },
         gray: {
           muted: '#6b6969',
           medium: '#888887',

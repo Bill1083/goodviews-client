@@ -40,7 +40,7 @@ export default function MyMoviesPage() {
     <div className="mx-auto flex w-full max-w-6xl gap-8 px-6 py-8">
       {/* Sidebar */}
       <aside className="w-60 shrink-0">
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-8">
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.id}>
               <button
