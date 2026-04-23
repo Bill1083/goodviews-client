@@ -87,10 +87,21 @@ export default function SearchPage() {
   // ── Step: search ──────────────────────────────────────────────────────────
   if (step === 'search') {
     return (
-      <main className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-6 py-10">
-        <h1 className="text-2xl font-bold text-gray-lighter">Make a Review</h1>
+      <main className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-12">
+        {/* Icon + title row */}
+        <div className="flex items-center gap-5">
+          <svg width="64" height="65" viewBox="1305 2944 64 65" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M1334.3333740234375,2960.25C1341.697265625,2960.25,1347.6666259765625,2966.312744140625,1347.6666259765625,2973.791748046875M1349.4232177734375,2989.106689453125L1361,3000.875M1355.6666259765625,2973.791748046875C1355.6666259765625,2985.757568359375,1346.115234375,2995.458251953125,1334.3333740234375,2995.458251953125C1322.5513916015625,2995.458251953125,1313,2985.757568359375,1313,2973.791748046875C1313,2961.82568359375,1322.5513916015625,2952.125,1334.3333740234375,2952.125C1346.115234375,2952.125,1355.6666259765625,2961.82568359375,1355.6666259765625,2973.791748046875Z"
+              strokeLinecap="round" strokeLinejoin="round" stroke="white" strokeWidth="2"
+            />
+          </svg>
+          <span style={{ fontFamily: '"Source Sans 3", sans-serif', fontSize: 30, color: 'white', fontWeight: 400 }}>
+            Search for a movie
+          </span>
+        </div>
 
-        <div className="w-full max-w-2xl">
+        <div className="w-full">
           <MovieSearchBar onSearch={handleSearch} isLoading={isFetching} />
         </div>
 
@@ -164,7 +175,7 @@ export default function SearchPage() {
     : FALLBACK_IMG
 
   return (
-    <main className="mx-auto flex max-w-4xl items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl my-8 mx-6">
+    <main className="mx-auto flex max-w-4xl items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl my-8">
       {/* Left — poster */}
       <div className="w-72 shrink-0 bg-navy-card">
         <img

@@ -9,7 +9,7 @@
 
   body {
     @apply text-gray-light font-sans antialiased;
-    background: linear-gradient(135deg, #091d5b 0%, #000a29 50%, #200a32 100%);
+    background: radial-gradient(ellipse at 50% 50%, #162b6b 0%, #040c24 45%, #150a2a 100%);
     background-attachment: fixed;
   }
 

@@ -25,22 +25,22 @@ export default function MovieSearchBar({ onSearch, isLoading = false }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex w-full max-w-xl items-center gap-2">
+    <form onSubmit={handleSubmit} className="relative flex w-full items-center">
       <div className="relative flex-1">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-muted pointer-events-none">
-          🔍
-        </span>
         <input
           type="search"
           value={value}
           onChange={handleChange}
-          placeholder="Search for a movie..."
-          className="input-base pl-10 pr-4"
+          placeholder="Search..."
+          className="w-full rounded-full border border-[#cdcdcd]/30 bg-[#b1b2b5]/20 px-5 py-1.5
+                     text-gray-lighter placeholder-[#a3a3a1]
+                     focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
+          style={{ fontFamily: '"Source Sans 3", sans-serif', fontSize: 18 }}
           autoFocus
         />
       </div>
       {isLoading && (
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal border-t-transparent" />
+        <span className="absolute right-4 h-4 w-4 animate-spin rounded-full border-2 border-teal border-t-transparent" />
       )}
     </form>
   )
