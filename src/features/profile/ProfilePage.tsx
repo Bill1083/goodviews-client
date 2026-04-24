@@ -206,6 +206,16 @@ export default function ProfilePage() {
     },
   })
 
+  const grpSaveForMembersMutation = useMutation({
+    mutationFn: () =>
+      createFriendGroup({ name: grpName, outline_color: grpOutline, fill_color: grpFill, description: grpDesc || null }),
+    onSuccess: (newGroup) => {
+      qc.invalidateQueries({ queryKey: ['friend-groups'] })
+      setEditingGrp(newGroup)
+      setGrpMembersView(true)
+    },
+  })
+
   const grpDeleteMutation = useMutation({
     mutationFn: () => deleteFriendGroup(editingGrp!.id),
     onSuccess: () => {
@@ -750,18 +760,24 @@ export default function ProfilePage() {
                     maxLength={100}
                     className="input-base flex-1"
                   />
-                  {editingGrp && (
-                    <button
+                  <button
                       type="button"
-                      onClick={() => setGrpMembersView(true)}
-                      className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full border border-teal/40 text-sm text-teal hover:bg-teal/10 transition-colors whitespace-nowrap"
+                      onClick={() => {
+                        if (editingGrp) {
+                          setGrpMembersView(true)
+                        } else {
+                          if (!grpName.trim()) return
+                          grpSaveForMembersMutation.mutate()
+                        }
+                      }}
+                      disabled={!grpName.trim() || grpSaveForMembersMutation.isPending}
+                      className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full border border-teal/40 text-sm text-teal hover:bg-teal/10 transition-colors whitespace-nowrap disabled:opacity-40"
                     >
-                      {(liveEditingGrp?.members.length ?? 0) > 0 ? 'See Friends' : 'Add Friends'}
+                      {grpSaveForMembersMutation.isPending ? 'Saving…' : 'Add Friends'}
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
                     </button>
-                  )}
                 </div>
 
                 {/* Color pickers */}

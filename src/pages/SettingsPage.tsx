@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import '../index.css'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
 import { getProfile, updateProfile } from '../services/apiClient'
@@ -69,6 +70,13 @@ export default function SettingsPage() {
 
       {/* Settings list */}
       <div className="flex flex-col divide-y divide-white/10">
+        
+
+        {/* Settings Option 1 */}
+        <div className="flex items-center py-5">
+          <span className="text-base text-gray-light">Settings Option 1</span>
+        </div>
+
         {/* Profile visibility */}
         <div className="flex items-center justify-between py-5">
           <span className="text-base text-gray-light">Decide Who sees your Profile</span>
@@ -81,9 +89,9 @@ export default function SettingsPage() {
               className="appearance-none pl-4 pr-10 py-3 rounded-lg text-sm font-medium text-gray-lighter cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal/50 transition-colors"
               style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
             >
-              <option value="no_one">No one</option>
-              <option value="friends_only">Friends only</option>
-              <option value="everyone">Everyone</option>
+              <option className="custom-option" value="no_one">No one</option>
+              <option className="custom-option" value="friends_only">Friends only</option>
+              <option className="custom-option" value="everyone">Everyone</option>
             </select>
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-muted">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -91,11 +99,6 @@ export default function SettingsPage() {
               </svg>
             </span>
           </div>
-        </div>
-
-        {/* Settings Option 1 */}
-        <div className="flex items-center py-5">
-          <span className="text-base text-gray-light">Settings Option 1</span>
         </div>
 
         {/* Settings Option 2 */}

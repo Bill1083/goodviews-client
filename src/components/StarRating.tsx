@@ -3,6 +3,7 @@ interface Props {
   onChange?: (rating: number) => void
   readOnly?: boolean
   size?: 'sm' | 'md' | 'lg'
+  accentColor?: string
 }
 
 const sizeClasses = {
@@ -16,6 +17,7 @@ export default function StarRating({
   onChange,
   readOnly = false,
   size = 'md',
+  accentColor = 'text-magenta',
 }: Props) {
   return (
     <div
@@ -33,7 +35,7 @@ export default function StarRating({
           className={[
             'transition-transform duration-75',
             readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110',
-            star <= value ? 'text-magenta' : 'text-gray-muted',
+            star <= value ? accentColor : 'text-gray-muted',
           ].join(' ')}
         >
           ★

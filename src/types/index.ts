@@ -77,11 +77,36 @@ export interface CreateReviewPayload {
   review_text: string
   category_id?: string | null
   group_ids?: string[]
+  friend_ids?: string[]
 }
 
 export interface PaginatedReviews {
   reviews: Review[]
   page: number
   page_size: number
+}
+
+export interface WatchlistItem {
+  movie_id: number
+  added_at: string
+  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+}
+
+export interface FriendReview {
+  id: string
+  rating: number
+  review_text: string
+  created_at: string
+  user_id: string
+  profiles: {
+    id: string
+    username: string
+  }
+}
+
+export interface MovieReviewsData {
+  my_review: Review | null
+  friend_reviews: FriendReview[]
+  avg_friend_rating: number | null
 }
 

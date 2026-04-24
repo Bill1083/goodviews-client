@@ -9,6 +9,8 @@ import type {
   FriendGroup,
   FriendProfile,
   UserSearchResult,
+  WatchlistItem,
+  MovieReviewsData,
 } from '../types'
 
 const apiClient = axios.create({
@@ -41,6 +43,22 @@ export async function searchMovies(
 export async function getMovieDetails(movieId: number): Promise<Movie> {
   const { data } = await apiClient.get<Movie>(`/api/movies/${movieId}`)
   return data
+}
+
+export async function getMovieReviews(movieId: number): Promise<MovieReviewsData> {
+  const { data } = await apiClient.get<MovieReviewsData>(`/api/reviews/movie/${movieId}`)
+  return data
+}
+
+export async function recommendMovie(payload: {
+  movie_id: number
+  title: string
+  poster_path: string | null
+  release_date: string | null
+  friend_ids: string[]
+  group_ids: string[]
+}): Promise<void> {
+  await apiClient.post('/api/movies/recommend', payload)
 }
 
 // ─── Reviews ─────────────────────────────────────────────────────────────────
@@ -87,6 +105,26 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string): Promise<void> {
   await apiClient.delete(`/api/categories/${id}`)
+}
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+export async function getWatchlist(): Promise<WatchlistItem[]> {
+  const { data } = await apiClient.get<WatchlistItem[]>('/api/watchlist/')
+  return data
+}
+
+export async function addToWatchlist(payload: {
+  movie_id: number
+  title: string
+  poster_path: string | null
+  release_date: string | null
+}): Promise<void> {
+  await apiClient.post('/api/watchlist/', payload)
+}
+
+export async function removeFromWatchlist(movieId: number): Promise<void> {
+  await apiClient.delete(`/api/watchlist/${movieId}`)
 }
 
 // ─── Friends ─────────────────────────────────────────────────────────────────

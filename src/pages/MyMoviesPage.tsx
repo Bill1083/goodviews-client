@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getMyReviews } from '../services/apiClient'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getMyReviews, getWatchlist, removeFromWatchlist } from '../services/apiClient'
 import MovieCard from '../components/MovieCard'
 import type { Movie } from '../types'
 
@@ -17,6 +17,7 @@ const SIDEBAR_LINKS: { id: SidebarSection; label: string }[] = [
 
 export default function MyMoviesPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [activeSection, setActiveSection] = useState<SidebarSection>('watched')
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
   const [searchQ, setSearchQ] = useState('')
@@ -25,6 +26,17 @@ export default function MyMoviesPage() {
     queryKey: ['my-reviews'],
     queryFn: () => getMyReviews(1),
     enabled: activeSection === 'watched',
+  })
+
+  const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: getWatchlist,
+    enabled: activeSection === 'want-to-watch',
+  })
+
+  const removeFromWatchlistMutation = useMutation({
+    mutationFn: (movieId: number) => removeFromWatchlist(movieId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
   })
 
   // Deduplicate movies by movie_id
@@ -68,7 +80,9 @@ export default function MyMoviesPage() {
           </h2>
         </div>
 
-        {/* Sort / Filter / Search bar */}
+        
+        {/* Sort / Filter / Search bar - for all but recommendations */}
+        {activeSection !== 'Recommendations' && (
         <div className="mb-5 flex items-center gap-3">
           {/* Sort */}
           <button
@@ -102,6 +116,7 @@ export default function MyMoviesPage() {
             className="flex-1 rounded-full border border-white/15 bg-navy-card/40 px-4 py-2 text-sm text-gray-lighter placeholder-gray-muted focus:outline-none focus:ring-2 focus:ring-teal/40"
           />
         </div>
+        )}
 
         {/* Watched — movie grid */}
         {activeSection === 'watched' && (
@@ -149,12 +164,39 @@ export default function MyMoviesPage() {
           </>
         )}
 
-        {/* Want to Watch — placeholder */}
+        {/* Want to Watch */}
         {activeSection === 'want-to-watch' && (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <p className="text-gray-300">Your watchlist is empty.</p>
-            <p className="text-xs text-gray-400">This feature is coming soon.</p>
-          </div>
+          <>
+            {watchlistLoading ? (
+              <div className="flex items-center justify-center py-24">
+                <span className="text-sm text-gray-muted">Loading…</span>
+              </div>
+            ) : watchlistData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+                <p className="text-gray-300">Your watchlist is empty.</p>
+                <p className="text-xs text-gray-400">
+                  Search for movies and click the <strong>+</strong> icon to add them here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-5 sm:grid-cols-4 lg:grid-cols-5">
+                {watchlistData
+                  .filter((w) =>
+                    searchQ.trim()
+                      ? w.movies.title.toLowerCase().includes(searchQ.toLowerCase())
+                      : true,
+                  )
+                  .map((w) => (
+                    <MovieCard
+                      key={w.movie_id}
+                      movie={w.movies as Movie}
+                      watchlistRemoveOnly
+                      onWatchlistRemove={(m) => removeFromWatchlistMutation.mutate(m.id)}
+                    />
+                  ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Favourite Actors — placeholder */}

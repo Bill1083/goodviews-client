@@ -92,6 +92,11 @@
   }
 }
 
+/* Custom dropdown menu colour as the default one is very hard to see on a dark background */
+option.custom-option {
+  @apply bg-navy-card/60 border border-gray-900/10 text-gray-lighter;
+}
+
 /* ─── Page transition animations ─────────────────────────────────────────── */
 @keyframes slideFromRight {
   from { transform: translateX(560px); opacity: 0; }
