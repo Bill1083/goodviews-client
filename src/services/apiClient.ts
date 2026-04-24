@@ -9,6 +9,7 @@ import type {
   FriendGroup,
   FriendProfile,
   UserSearchResult,
+  FriendRequest,
   WatchlistItem,
   MovieReviewsData,
 } from '../types'
@@ -147,6 +148,19 @@ export async function addFriend(friendId: string): Promise<void> {
 
 export async function removeFriend(friendId: string): Promise<void> {
   await apiClient.delete(`/api/friends/${friendId}`)
+}
+
+export async function getFriendRequests(): Promise<FriendRequest[]> {
+  const { data } = await apiClient.get<FriendRequest[]>('/api/friends/requests')
+  return data
+}
+
+export async function acceptFriendRequest(requestId: string): Promise<void> {
+  await apiClient.post(`/api/friends/requests/${requestId}/accept`)
+}
+
+export async function denyFriendRequest(requestId: string): Promise<void> {
+  await apiClient.delete(`/api/friends/requests/${requestId}`)
 }
 
 // ─── Friend Groups ────────────────────────────────────────────────────────────

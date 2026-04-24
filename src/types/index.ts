@@ -66,6 +66,14 @@ export interface UserSearchResult {
   id: string
   username: string
   is_friend: boolean
+  has_pending_request: boolean
+}
+
+export interface FriendRequest {
+  id: string
+  sender_id: string
+  sender_username: string
+  created_at: string
 }
 
 export interface CreateReviewPayload {

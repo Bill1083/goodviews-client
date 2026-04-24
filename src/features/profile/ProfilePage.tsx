@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
 import ColorPicker from '../../components/ColorPicker'
 import type { Category, FriendGroup, UserSearchResult } from '../../types'
+import type { FriendRequest } from '../../types'
 import {
   getMyCategories,
   createCategory,
@@ -18,6 +19,9 @@ import {
   getMyFriends,
   addFriend,
   removeFriend,
+  getFriendRequests,
+  acceptFriendRequest,
+  denyFriendRequest,
   searchUsers,
   getProfile,
   updateProfile,
@@ -143,6 +147,11 @@ export default function ProfilePage() {
     queryKey: ['friends'],
     queryFn: getMyFriends,
   })
+  const { data: friendRequests = [] } = useQuery<FriendRequest[]>({
+    queryKey: ['friend-requests'],
+    queryFn: getFriendRequests,
+    refetchInterval: 30_000,
+  })
 
   // ── View state ────────────────────────────────────────────────────────────
   const [view, setView] = useState<ProfileView>('default')
@@ -239,9 +248,22 @@ export default function ProfilePage() {
     onSuccess: (_data, friendId) => {
       qc.invalidateQueries({ queryKey: ['friends'] })
       setFriendSearchResults((prev) =>
-        prev.map((r) => (r.id === friendId ? { ...r, is_friend: true } : r)),
+        prev.map((r) => (r.id === friendId ? { ...r, has_pending_request: true } : r)),
       )
     },
+  })
+
+  const acceptRequestMutation = useMutation({
+    mutationFn: (requestId: string) => acceptFriendRequest(requestId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['friends'] })
+      qc.invalidateQueries({ queryKey: ['friend-requests'] })
+    },
+  })
+
+  const denyRequestMutation = useMutation({
+    mutationFn: (requestId: string) => denyFriendRequest(requestId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['friend-requests'] }),
   })
 
   const removeFriendMutation = useMutation({
@@ -518,12 +540,14 @@ export default function ProfilePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
+                  ) : r.has_pending_request ? (
+                    <span className="text-xs text-gray-muted italic">Pending…</span>
                   ) : (
                     <button
                       onClick={() => addFriendMutation.mutate(r.id)}
                       disabled={addFriendMutation.isPending}
                       className="text-gray-muted hover:text-teal transition-colors"
-                      title="Add friend"
+                      title="Send friend request"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -1029,6 +1053,36 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Friend Request Notifications ─────────────────────────────────────── */}
+      {view === 'default' && friendRequests.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {friendRequests.map((req) => (
+            <div key={req.id} className="flex items-center gap-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0 text-gray-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span className="flex-1 text-sm text-gray-light">{req.sender_username}</span>
+              <button
+                onClick={() => acceptRequestMutation.mutate(req.id)}
+                disabled={acceptRequestMutation.isPending}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                style={{ backgroundColor: '#6b6bbb' }}
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => denyRequestMutation.mutate(req.id)}
+                disabled={denyRequestMutation.isPending}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                style={{ backgroundColor: '#7b1c4a' }}
+              >
+                Deny
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
