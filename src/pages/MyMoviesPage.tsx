@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getMyReviews, getWatchlist, removeFromWatchlist } from '../services/apiClient'
+import { getMyReviews, getWatchlist, removeFromWatchlist, getRecommendations } from '../services/apiClient'
 import MovieCard from '../components/MovieCard'
+import RecommendationsSection from '../features/movies/RecommendationsSection'
 import type { Movie } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations'
@@ -34,6 +35,14 @@ export default function MyMoviesPage() {
     enabled: activeSection === 'want-to-watch',
   })
 
+  // Fetch recommendations count for the badge (lightweight — just used for the badge)
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ['recommendations'],
+    queryFn: getRecommendations,
+    refetchInterval: 30_000,
+  })
+  const unreadRecCount = recommendations.filter((r) => !r.is_read).length
+
   const removeFromWatchlistMutation = useMutation({
     mutationFn: (movieId: number) => removeFromWatchlist(movieId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
@@ -62,9 +71,14 @@ export default function MyMoviesPage() {
             <li key={link.id}>
               <button
                 onClick={() => { setActiveSection(link.id); setSelectedMovie(null) }}
-                className={`sidebar-link w-full text-left${activeSection === link.id ? ' active' : ''}`}
+                className={`sidebar-link w-full text-left flex items-center gap-2${activeSection === link.id ? ' active' : ''}`}
               >
                 {link.label}
+                {link.id === 'Recommendations' && unreadRecCount > 0 && (
+                  <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">
+                    {unreadRecCount}
+                  </span>
+                )}
               </button>
             </li>
           ))}
@@ -73,12 +87,14 @@ export default function MyMoviesPage() {
 
       {/* Main content */}
       <main className="min-w-0 flex-1">
-        {/* Section header */}
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-lighter">
-            {SIDEBAR_LINKS.find((l) => l.id === activeSection)?.label}
-          </h2>
-        </div>
+        {/* Section header — hidden for Recommendations (it has its own header) */}
+        {activeSection !== 'Recommendations' && (
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-lighter">
+              {SIDEBAR_LINKS.find((l) => l.id === activeSection)?.label}
+            </h2>
+          </div>
+        )}
 
         
         {/* Sort / Filter / Search bar - for all but recommendations */}
@@ -215,12 +231,9 @@ export default function MyMoviesPage() {
           </div>
         )}
 
-        {/* Recommendations — placeholder */}
+        {/* Recommendations */}
         {activeSection === 'Recommendations' && (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <p className="text-gray-300">No recommendations available yet.</p>
-            <p className="text-xs text-gray-400">This feature is coming soon.</p>
-          </div>
+          <RecommendationsSection />
         )}
       </main>
 

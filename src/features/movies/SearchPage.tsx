@@ -462,7 +462,7 @@ export default function SearchPage() {
               {/* Friends avg rating row */}
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-gray-lighter">Avg Rating Between Friends:</p>
+                  <p className="text-sm font-medium text-gray-lighter">Avg Rating (You &amp; Friends):</p>
                   {avgRating !== null ? (
                     <div className="flex items-center gap-2">
                       <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />

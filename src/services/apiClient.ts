@@ -12,6 +12,7 @@ import type {
   FriendRequest,
   WatchlistItem,
   MovieReviewsData,
+  Recommendation,
 } from '../types'
 
 const apiClient = axios.create({
@@ -223,4 +224,19 @@ export async function updateProfile(payload: Partial<{
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data
+}
+
+// ─── Notifications / Recommendations ─────────────────────────────────────────
+
+export async function getRecommendations(): Promise<Recommendation[]> {
+  const { data } = await apiClient.get<Recommendation[]>('/api/notifications/recommendations')
+  return data
+}
+
+export async function markRecommendationRead(notifId: string): Promise<void> {
+  await apiClient.patch(`/api/notifications/${notifId}/read`)
+}
+
+export async function dismissRecommendation(notifId: string): Promise<void> {
+  await apiClient.patch(`/api/notifications/${notifId}/dismiss`)
 }

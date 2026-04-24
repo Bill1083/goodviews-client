@@ -115,3 +115,29 @@ option.custom-option {
   to   { transform: scale(1);    opacity: 1; }
 }
 .dialog-scale-in { animation: scaleIn 0.18s ease-out both; }
+
+/* ─── Notification bell wiggle ───────────────────────────────────────────── */
+@keyframes bellWiggle {
+  0%   { transform: rotate(0deg); }
+  10%  { transform: rotate(14deg); }
+  20%  { transform: rotate(-10deg); }
+  30%  { transform: rotate(14deg); }
+  40%  { transform: rotate(-6deg); }
+  50%  { transform: rotate(10deg); }
+  60%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+.bell-wiggle {
+  animation: bellWiggle 0.7s ease-in-out;
+  transform-origin: top center;
+}
+
+/* ─── Recommendation card pink pulse ─────────────────────────────────────── */
+@keyframes pinkPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #dd3ee3, 0 0 10px 1px rgba(221,62,227,0.35); }
+  50%      { box-shadow: 0 0 0 2px rgba(221,62,227,0.35), 0 0 4px 0 rgba(221,62,227,0.1); }
+}
+.rec-card-new {
+  animation: pinkPulse 1.8s ease-in-out infinite;
+  border-radius: 0.5rem;
+}

@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 
 const NAV_TABS = [
   { label: 'My Movies', path: '/' },
-  { label: 'Make Review', path: '/search' },
+  { label: 'Search', path: '/search' },
   { label: 'Profile', path: '/profile' },
 ]
 

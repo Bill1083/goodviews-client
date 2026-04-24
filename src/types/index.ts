@@ -118,3 +118,20 @@ export interface MovieReviewsData {
   avg_friend_rating: number | null
 }
 
+export interface Recommendation {
+  id: string
+  movie_id: number
+  is_read: boolean
+  dismissed: boolean
+  created_at: string
+  sender_id: string
+  sender: { id: string; username: string } | null
+  sender_review: {
+    id: string
+    rating: number
+    review_text: string
+    created_at: string
+  } | null
+  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+}
+
