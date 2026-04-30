@@ -235,7 +235,7 @@ export default function SearchPage() {
         release_date: selectedMovie!.release_date,
         rating,
         review_text: reviewText,
-        category_id: selectedCategoryId || null,
+        category_ids: selectedCategoryId ? [selectedCategoryId] : undefined,
         group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
         friend_ids: selectedFriendIds.length > 0 ? selectedFriendIds : undefined,
       }),
