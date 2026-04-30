@@ -286,8 +286,10 @@ function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch,
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="panel-card flex max-w-2xl w-full gap-6 p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="w-40 shrink-0">
+      {/* Refactored for mobile: stack poster and details vertically on mobile, row on sm+ */}
+      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
+        <div className="w-28 shrink-0 self-center sm:w-40 sm:self-start">
           <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
             <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
           </div>
@@ -363,8 +365,10 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview }: {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="panel-card flex max-w-2xl w-full gap-6 p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="w-40 shrink-0">
+      {/* Refactored for mobile: stack poster and details vertically on mobile, row on sm+ */}
+      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
+        <div className="w-28 shrink-0 self-center sm:w-40 sm:self-start">
           <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
             <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
           </div>
@@ -445,7 +449,8 @@ function FriendsActivitySection({
             <h3 className="text-sm font-semibold text-gray-lighter">
               <span className="text-teal-light">{friend.username}</span> recently watched
             </h3>
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+              {/* Refactored for mobile: 2 cols on mobile for friends activity grid */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
               {friend.reviews.map((review) => {
                 const m = review.movies
                 const posterUrl = m.poster_path ? `${TMDB_IMG}${m.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
@@ -498,8 +503,10 @@ function FriendReviewModal({ friendName, review, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="panel-card flex max-w-2xl w-full gap-6 p-6 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="w-36 shrink-0">
+      {/* Refactored for mobile: stack poster and friend review vertically on mobile, row on sm+ */}
+      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
+        <div className="w-28 shrink-0 self-center sm:w-36 sm:self-start">
           <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
             <img src={posterUrl} alt={movie.title} className="h-full w-full object-cover" />
           </div>
@@ -751,8 +758,10 @@ export default function MyMoviesPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl gap-8 px-6 py-8">
-      <aside className="w-60 shrink-0">
+    // Refactored for mobile: flex-col on mobile stacks sidebar below content; switches to row on md+
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8">
+      {/* Refactored for mobile: sidebar hidden on small screens, shown md+ */}
+      <aside className="hidden w-60 shrink-0 md:block">
         <ul className="flex flex-col gap-8">
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.id}>
@@ -769,6 +778,25 @@ export default function MyMoviesPage() {
           ))}
         </ul>
       </aside>
+
+      {/* Refactored for mobile: horizontal scroll nav replaces sidebar on small screens */}
+      <nav className="md:hidden flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {SIDEBAR_LINKS.map((link) => (
+          <button
+            key={link.id}
+            onClick={() => { setActiveSection(link.id); resetSectionState() }}
+            className={['flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap',
+              activeSection === link.id
+                ? 'border-teal/60 bg-teal/10 text-teal-light'
+                : 'border-white/15 bg-navy-card/40 text-gray-muted'].join(' ')}
+          >
+            {link.label}
+            {link.id === 'Recommendations' && unreadRecCount > 0 && (
+              <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
+            )}
+          </button>
+        ))}
+      </nav>
 
       <main className="min-w-0 flex-1">
         {activeSection !== 'Recommendations' && (
@@ -822,7 +850,7 @@ export default function MyMoviesPage() {
                 <p className="text-xs text-gray-400">Head to <strong className="text-teal-500">Make Review</strong> to add your first one.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-5 sm:grid-cols-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5"> {/* Refactored for mobile: 2 cols on mobile */}
                 {filteredWatched.map(({ movie, review }) => (
                   <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
                 ))}
@@ -846,7 +874,7 @@ export default function MyMoviesPage() {
                 <p className="text-xs text-gray-400">Search for movies and click the <strong>+</strong> icon to add them here.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-5 sm:grid-cols-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5"> {/* Refactored for mobile: 2 cols on mobile */}
                 {filteredWatchlist.map((w) => (
                   <MovieCard key={w.movie_id} movie={w.movies as Movie} onSelect={(m) => setWatchlistDetail(m)} />
                 ))}

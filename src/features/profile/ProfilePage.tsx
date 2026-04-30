@@ -336,14 +336,16 @@ export default function ProfilePage() {
   const displayInitials = displayUsername.slice(0, 2).toUpperCase()
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10">
+    // Refactored for mobile: reduced padding/gap on small screens
+    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
       {/* ── Profile Header ─────────────────────────────────────────────────── */}
       {isEditingProfile ? (
         /* ── Edit mode ── */
-        <div className="flex items-start gap-5">
-          {/* Avatar */}
+        // Refactored for mobile: stack avatar/inputs/colorpicker vertically on mobile, row on sm+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          {/* Avatar: Refactored for mobile: centered when stacked */}
           <div
-            className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-navy"
+            className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-navy self-center sm:self-start"
             style={{ backgroundColor: editAvatarColor ?? avatarColor }}
           >
             {displayInitials}
@@ -401,8 +403,8 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Colour picker + Save */}
-          <div className="flex flex-col items-center gap-3 shrink-0">
+          {/* Colour picker + Save: Refactored for mobile: row on mobile (beside avatar area), column always */}
+          <div className="flex flex-row items-center gap-4 sm:flex-col sm:items-center sm:gap-3 sm:shrink-0">
             <span className="text-sm text-gray-muted">Colour</span>
             <div className="relative">
               <button
@@ -435,15 +437,17 @@ export default function ProfilePage() {
         </div>
       ) : (
         /* ── View mode ── */
-        <div className="flex items-center gap-5">
+        // Refactored for mobile: smaller gap and scalable title on mobile
+        <div className="flex items-center gap-3 sm:gap-5">
           <div
             className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-navy"
             style={{ backgroundColor: avatarColor }}
           >
             {displayInitials}
           </div>
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-3xl font-bold text-gray-lighter">{displayUsername}</h1>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            {/* Refactored for mobile: scale down title text on small screens */}
+            <h1 className="text-2xl font-bold text-gray-lighter sm:text-3xl">{displayUsername}</h1>
             <p className="text-sm text-gray-muted">{user?.email}</p>
             {displayBio ? (
               <p className="mt-1 text-sm text-gray-light/60 italic">{displayBio}</p>
@@ -466,9 +470,10 @@ export default function ProfilePage() {
 
       {/* ── Add Friend view ─────────────────────────────────────────────────── */}
       {view === 'add-friend' && (
-        <div className="flex gap-6">
-          {/* Friends List */}
-          <div className="flex w-64 shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4">
+        // Refactored for mobile: stack friends list and search vertically on mobile, row on sm+
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+          {/* Friends List: Refactored for mobile: full width when stacked */}
+          <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:w-64">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-lighter">Friends List</h2>
               <button
@@ -566,7 +571,8 @@ export default function ProfilePage() {
 
       {/* ── Category Editor view ────────────────────────────────────────────── */}
       {view === 'edit-category' && (
-        <div className="flex gap-6">
+        // Refactored for mobile: stack form and sidebar vertically on mobile, row on sm+
+        <div className="flex flex-col gap-6 sm:flex-row">
           {/* Editor form */}
           <div className="flex flex-1 flex-col gap-4">
             <h2 className="text-sm font-semibold text-gray-lighter uppercase tracking-wide">
@@ -670,8 +676,8 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Right: categories list */}
-          <div className="w-56 shrink-0 flex flex-col gap-3">
+          {/* Right: categories list: Refactored for mobile: full width when stacked */}
+          <div className="w-full shrink-0 flex flex-col gap-3 sm:w-56">
             <h3 className="text-sm font-semibold text-gray-lighter">My Movie Categories</h3>
             <div className="flex flex-col gap-2">
               {catsLoading ? (
@@ -694,7 +700,8 @@ export default function ProfilePage() {
 
       {/* ── Group Editor view ───────────────────────────────────────────────── */}
       {view === 'edit-group' && (
-        <div className="flex gap-6">
+        // Refactored for mobile: stack form and sidebar vertically on mobile, row on sm+
+        <div className="flex flex-col gap-6 sm:flex-row">
           <div className="flex flex-1 flex-col gap-4">
             {grpMembersView ? (
               /* Members management */
@@ -710,9 +717,10 @@ export default function ProfilePage() {
                   Edit Group
                 </button>
 
-                <div className="flex gap-4">
-                  {/* Friends picker */}
-                  <div className="flex flex-col gap-2 w-44">
+                {/* Refactored for mobile: stack friends picker and members list on mobile, row on sm+ */}
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  {/* Friends picker: Refactored for mobile: full width when stacked */}
+                  <div className="flex flex-col gap-2 w-full sm:w-44">
                     <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Friends List</p>
                     <input
                       type="text"
@@ -894,8 +902,8 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Right: groups + categories list */}
-          <div className="w-56 shrink-0 flex flex-col gap-5">
+          {/* Right: groups + categories list: Refactored for mobile: full width when stacked */}
+          <div className="w-full shrink-0 flex flex-col gap-5 sm:w-56">
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-semibold text-gray-lighter">My Movie Categories</h3>
               {categories.map((cat) => (
@@ -924,9 +932,10 @@ export default function ProfilePage() {
 
       {/* ── Default view ────────────────────────────────────────────────────── */}
       {view === 'default' && (
-        <div className="flex gap-6">
-          {/* Friends list panel */}
-          <div className="flex w-64 shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4">
+        // Refactored for mobile: stack friends panel and accordions vertically on mobile, row on sm+
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+          {/* Friends list panel: Refactored for mobile: full width when stacked */}
+          <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:w-64">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-lighter">Friends List</h2>
               <button
@@ -1060,7 +1069,8 @@ export default function ProfilePage() {
       {view === 'default' && friendRequests.length > 0 && (
         <div className="flex flex-col gap-3">
           {friendRequests.map((req) => (
-            <div key={req.id} className="flex w-1/3 items-center gap-4">
+            // Refactored for mobile: full width instead of w-1/3 to prevent overflow
+            <div key={req.id} className="flex w-full items-center gap-3 sm:gap-4 sm:w-2/3 lg:w-1/3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0 text-gray-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>

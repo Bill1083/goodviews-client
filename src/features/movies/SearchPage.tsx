@@ -50,9 +50,10 @@ function FriendGroupsPicker({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm font-semibold text-gray-lighter">Send to a Friend to watch</p>
-      <div className="flex gap-3">
-        {/* Friends list */}
-        <div className="flex flex-col gap-1.5 w-44 shrink-0">
+      {/* Refactored for mobile: stack columns vertically, side-by-side on sm+ */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        {/* Friends list: Refactored for mobile: full width when stacked */}
+        <div className="flex flex-col gap-1.5 w-full sm:w-44 sm:shrink-0">
           <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Friends List</p>
           <input
             type="text"
@@ -111,9 +112,9 @@ function FriendGroupsPicker({
           </ul>
         </div>
 
-        {/* Friend Groups */}
+        {/* Friend Groups: Refactored for mobile: full width when stacked */}
         {groups.length > 0 && (
-          <div className="flex flex-col gap-1.5 w-36 shrink-0">
+          <div className="flex flex-col gap-1.5 w-full sm:w-36 sm:shrink-0">
             <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Friend Groups</p>
             <div className="flex flex-col gap-1.5">
               {groups.map((grp) => {
@@ -328,7 +329,8 @@ export default function SearchPage() {
     return (
       <main
         style={{ opacity: isFetching ? 0.5 : 1, pointerEvents: isFetching ? 'none' : 'auto' }}
-        className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-12"
+        // Refactored for mobile: reduced padding/gap scale up at sm
+        className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-12"
       >
         {/* Icon + title row */}
         <div className="flex items-center gap-5">
@@ -353,7 +355,8 @@ export default function SearchPage() {
 
         {data && data.results.length > 0 && (
           <>
-            <div className="grid w-full grid-cols-3 gap-5 sm:grid-cols-4 lg:grid-cols-5">
+            {/* Refactored for mobile: 2 cols on mobile, scales up */}
+            <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
               {data.results.map((movie) => (
                 <MovieCard
                   key={movie.id}
@@ -409,17 +412,17 @@ export default function SearchPage() {
     const avgRating = movieReviews?.avg_friend_rating ?? null
 
     return (
-      <main className="mx-auto flex max-w-5xl items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl my-8">
-        {/* Left — poster */}
-        <div className="w-64 shrink-0 bg-navy-card relative">
+      <main className="mx-4 my-4 flex max-w-5xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
+        {/* Left — poster: Refactored for mobile: full-width with fixed height when stacked */}
+        <div className="relative w-full h-52 shrink-0 bg-navy-card sm:h-64 md:h-auto md:w-64">
           <img src={posterUrl} alt={`${selectedMovie?.title} poster`} className="h-full w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-3">
             <p className="text-sm font-bold text-white leading-tight">{selectedMovie?.title}</p>
           </div>
         </div>
 
-        {/* Right — overview */}
-        <div className="flex flex-1 flex-col gap-5 bg-navy-wine/90 p-8 overflow-y-auto max-h-[80vh]">
+        {/* Right — overview: Refactored for mobile: smaller padding, no height cap on mobile */}
+        <div className="flex flex-1 flex-col gap-4 bg-navy-wine/90 p-4 overflow-y-auto sm:gap-5 sm:p-6 md:max-h-[80vh] md:p-8">
           <button onClick={handleBack} className="self-start text-xs text-gray-muted hover:text-gray-lighter transition-colors">
             ← Back
           </button>
@@ -548,14 +551,14 @@ export default function SearchPage() {
 
   // ── Steps rate / share / send — shared poster layout ──────────────────────
   return (
-    <main className="mx-auto flex max-w-4xl items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl my-8">
-      {/* Left — poster */}
-      <div className="w-72 shrink-0 bg-navy-card">
+    <main className="mx-4 my-4 flex max-w-4xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
+      {/* Left — poster: Refactored for mobile: full-width with fixed height when stacked */}
+      <div className="w-full h-48 shrink-0 bg-navy-card sm:h-60 md:h-auto md:w-72">
         <img src={posterUrl} alt={`${selectedMovie?.title} poster`} className="h-full w-full object-cover" />
       </div>
 
-      {/* Right — form panel */}
-      <div className="flex flex-1 flex-col gap-5 bg-navy-wine/90 p-8 overflow-y-auto max-h-[80vh]">
+      {/* Right — form panel: Refactored for mobile: smaller padding, no height cap on mobile */}
+      <div className="flex flex-1 flex-col gap-4 bg-navy-wine/90 p-4 overflow-y-auto sm:gap-5 sm:p-6 md:max-h-[80vh] md:p-8">
         <button onClick={handleBack} className="self-start text-xs text-gray-muted hover:text-gray-lighter transition-colors">
           ← Back
         </button>
