@@ -31,10 +31,12 @@ export interface Review {
   user_id: string
   movie_id: number
   category_id: string | null
+  category_ids: string[]
   rating: number
   review_text: string
+  rewatch_count: number
   created_at: string
-  movies?: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+  movies?: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date' | 'vote_average'>
 }
 
 export interface Category {
@@ -83,7 +85,7 @@ export interface CreateReviewPayload {
   release_date: string | null
   rating: number
   review_text: string
-  category_id?: string | null
+  category_ids?: string[]
   group_ids?: string[]
   friend_ids?: string[]
 }
@@ -104,6 +106,7 @@ export interface FriendReview {
   id: string
   rating: number
   review_text: string
+  rewatch_count: number
   created_at: string
   user_id: string
   profiles: {
@@ -133,5 +136,22 @@ export interface Recommendation {
     created_at: string
   } | null
   movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+}
+
+export interface FriendActivityReview {
+  id: string
+  user_id: string
+  movie_id: number
+  rating: number
+  review_text: string
+  rewatch_count: number
+  created_at: string
+  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+}
+
+export interface FriendActivityItem {
+  friend_id: string
+  username: string
+  reviews: FriendActivityReview[]
 }
 

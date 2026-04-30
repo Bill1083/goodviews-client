@@ -13,6 +13,7 @@ import type {
   WatchlistItem,
   MovieReviewsData,
   Recommendation,
+  FriendActivityItem,
 } from '../types'
 
 const apiClient = axios.create({
@@ -69,10 +70,38 @@ export async function createReview(payload: CreateReviewPayload): Promise<void> 
   await apiClient.post('/api/reviews/', payload)
 }
 
-export async function getMyReviews(page = 1): Promise<PaginatedReviews> {
+export async function getMyReviews(page = 1, perPage = 20): Promise<PaginatedReviews> {
   const { data } = await apiClient.get<PaginatedReviews>('/api/reviews/me', {
-    params: { page },
+    params: { page, page_size: perPage },
   })
+  return data
+}
+
+export async function updateReview(
+  reviewId: string,
+  payload: {
+    rating?: number
+    review_text?: string
+    category_ids?: string[]
+    group_ids?: string[]
+    friend_ids?: string[]
+  },
+): Promise<void> {
+  await apiClient.put(`/api/reviews/${reviewId}`, payload)
+}
+
+export async function incrementRewatch(reviewId: string): Promise<{ rewatch_count: number }> {
+  const { data } = await apiClient.patch<{ rewatch_count: number }>(`/api/reviews/${reviewId}/rewatch`)
+  return data
+}
+
+export async function decrementRewatch(reviewId: string): Promise<{ rewatch_count: number }> {
+  const { data } = await apiClient.patch<{ rewatch_count: number }>(`/api/reviews/${reviewId}/rewatch/decrement`)
+  return data
+}
+
+export async function getBulkFriendRatings(): Promise<Record<string, number>> {
+  const { data } = await apiClient.get<Record<string, number>>('/api/reviews/bulk-friend-ratings')
   return data
 }
 
@@ -209,6 +238,7 @@ export interface ProfileData {
   bio: string | null
   avatar_color: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
+  hide_recent_movies: boolean
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -221,6 +251,7 @@ export async function updateProfile(payload: Partial<{
   bio: string | null
   avatar_color: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
+  hide_recent_movies: boolean
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data
@@ -239,4 +270,9 @@ export async function markRecommendationRead(notifId: string): Promise<void> {
 
 export async function dismissRecommendation(notifId: string): Promise<void> {
   await apiClient.patch(`/api/notifications/${notifId}/dismiss`)
+}
+
+export async function getFriendActivity(): Promise<FriendActivityItem[]> {
+  const { data } = await apiClient.get<FriendActivityItem[]>('/api/friends/recent-activity')
+  return data
 }

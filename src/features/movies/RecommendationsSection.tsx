@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ReviewModal from '../reviews/ReviewModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRecommendations,
@@ -66,6 +67,7 @@ function MovieOverviewModal({
   const myReview = reviewData?.my_review ?? null
   const friendReviews = reviewData?.friend_reviews ?? []
   const avgRating = reviewData?.avg_friend_rating ?? null
+  const [showReviewModal, setShowReviewModal] = useState(false)
 
   // Separate sender review from others so we can pin it at top
   const senderReview = recommendation.sender_review
@@ -138,34 +140,45 @@ function MovieOverviewModal({
                 )}
               </div>
 
-              {/* Watchlist button */}
-              <button
-                onClick={() =>
-                  inWatchlist ? onRemoveWatchlist(movie) : onAddWatchlist(movie)
-                }
-                className={[
-                  'self-start flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
-                  inWatchlist
-                    ? 'bg-navy-card/80 border border-white/15 text-gray-lighter hover:bg-white/10'
-                    : 'bg-magenta text-white hover:bg-magenta/90 active:scale-95',
-                ].join(' ')}
-              >
-                {inWatchlist ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    In Watchlist
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add to Watchlist
-                  </>
-                )}
-              </button>
+              {/* Watchlist + Review buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() =>
+                    inWatchlist ? onRemoveWatchlist(movie) : onAddWatchlist(movie)
+                  }
+                  className={[
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
+                    inWatchlist
+                      ? 'bg-navy-card/80 border border-white/15 text-gray-lighter hover:bg-white/10'
+                      : 'bg-magenta text-white hover:bg-magenta/90 active:scale-95',
+                  ].join(' ')}
+                >
+                  {inWatchlist ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      In Watchlist
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add to Watchlist
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowReviewModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-teal/10 border border-teal/40 text-teal-light hover:bg-teal/20"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {myReview ? 'Edit Review' : 'Write a Review'}
+                </button>
+              </div>
 
               {/* Reviews */}
               <div className="flex flex-col gap-3">
@@ -246,6 +259,17 @@ function MovieOverviewModal({
           )}
         </div>
       </div>
+      {showReviewModal && (
+        <ReviewModal
+          movie={movie}
+          mode={myReview ? 'edit' : 'create'}
+          reviewId={myReview?.id}
+          initialRating={myReview?.rating}
+          initialReviewText={myReview?.review_text ?? undefined}
+          initialCategoryId={myReview?.category_id ?? ''}
+          onClose={() => setShowReviewModal(false)}
+        />
+      )}
     </div>
   )
 }
@@ -501,7 +525,7 @@ export default function RecommendationsSection() {
                 <p className="mb-3 text-sm font-semibold text-gray-lighter">
                   {sender?.username ?? 'Someone'} Recommends:
                 </p>
-                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 my-2">
                   {group.map((rec) => (
                     <RecMovieCard
                       key={rec.id}

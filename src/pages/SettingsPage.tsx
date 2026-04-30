@@ -22,6 +22,11 @@ export default function SettingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
   })
 
+  const hideRecentMutation = useMutation({
+    mutationFn: (val: boolean) => updateProfile({ hide_recent_movies: val }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/auth')
@@ -99,6 +104,22 @@ export default function SettingsPage() {
               </svg>
             </span>
           </div>
+        </div>
+
+        {/* Hide recent movies */}
+        <div className="flex items-center justify-between py-5">
+          <div>
+            <span className="text-base text-gray-light">Hide recent Movies</span>
+            <p className="text-xs text-gray-muted mt-0.5">Prevents your recently watched movies from appearing in friends' activity feeds</p>
+          </div>
+          <button
+            onClick={() => hideRecentMutation.mutate(!(profile?.hide_recent_movies ?? false))}
+            className={['relative w-12 h-6 rounded-full transition-colors', profile?.hide_recent_movies ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            role="switch"
+            aria-checked={profile?.hide_recent_movies ?? false}
+          >
+            <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.hide_recent_movies ? 'translate-x-6' : ''].join(' ')} />
+          </button>
         </div>
 
         {/* Settings Option 2 */}
