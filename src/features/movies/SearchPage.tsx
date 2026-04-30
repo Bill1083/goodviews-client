@@ -451,15 +451,41 @@ export default function SearchPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={handleWriteReview}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-navy-card/80 border border-white/15 text-sm text-gray-lighter hover:bg-white/10 transition-colors whitespace-nowrap"
-                >
-                  Write a Review
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Watchlist toggle */}
+                  {watchlistIds.has(selectedMovie!.id) ? (
+                    <button
+                      onClick={() => watchlistRemoveMutation.mutate(selectedMovie!)}
+                      disabled={watchlistRemoveMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-teal/50 bg-teal/10 text-sm text-teal hover:bg-teal/20 transition-colors whitespace-nowrap disabled:opacity-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Remove from Watchlist
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => watchlistAddMutation.mutate(selectedMovie!)}
+                      disabled={watchlistAddMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-navy-card/80 border border-white/15 text-sm text-gray-lighter hover:bg-white/10 transition-colors whitespace-nowrap disabled:opacity-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add to Watchlist
+                    </button>
+                  )}
+                  <button
+                    onClick={handleWriteReview}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-navy-card/80 border border-white/15 text-sm text-gray-lighter hover:bg-white/10 transition-colors whitespace-nowrap"
+                  >
+                    Write a Review
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Friends avg rating row */}
