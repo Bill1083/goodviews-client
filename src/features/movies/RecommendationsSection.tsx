@@ -11,6 +11,8 @@ import {
   getWatchlist,
 } from '../../services/apiClient'
 import StarRating from '../../components/StarRating'
+import MovieDescriptionPanel from '../../components/MovieDescriptionPanel'
+import PersonModal from '../../components/PersonModal'
 import type { Recommendation, Movie, MovieReviewsData } from '../../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
@@ -68,6 +70,7 @@ function MovieOverviewModal({
   const friendReviews = reviewData?.friend_reviews ?? []
   const avgRating = reviewData?.avg_friend_rating ?? null
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const [personModalId, setPersonModalId] = useState<number | null>(null)
 
   // Separate sender review from others so we can pin it at top
   const senderReview = recommendation.sender_review
@@ -76,17 +79,19 @@ function MovieOverviewModal({
   const senderFromFriends = friendReviews.find((r) => r.user_id === senderUserId)
 
   return (
+    <>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
+      {/* Responsive: stacks vertically on mobile, side-by-side on md+ */}
       <div
-        className="mx-auto flex max-w-4xl w-full items-stretch rounded-2xl overflow-hidden shadow-2xl"
+        className="mx-auto flex flex-col w-full max-w-4xl rounded-none rounded-b-2xl overflow-hidden shadow-2xl sm:rounded-2xl md:flex-row md:items-stretch"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: '90vh' }}
+        style={{ maxHeight: '95vh' }}
       >
-        {/* Left — poster */}
-        <div className="w-56 shrink-0 relative bg-navy-card">
+        {/* Poster — full-width fixed height on mobile, fixed-width on md+ */}
+        <div className="relative w-full h-52 shrink-0 bg-navy-card sm:h-64 md:h-auto md:w-56">
           <img
             src={posterUrl}
             alt={`${movie.title} poster`}
@@ -97,8 +102,8 @@ function MovieOverviewModal({
           </div>
         </div>
 
-        {/* Right — details */}
-        <div className="flex flex-1 flex-col gap-5 bg-navy-wine/95 p-7 overflow-y-auto">
+        {/* Details — scrollable */}
+        <div className="flex flex-1 flex-col gap-4 bg-navy-wine/95 p-4 overflow-y-auto sm:gap-5 sm:p-6 md:p-7">
           <button
             onClick={onClose}
             className="self-start text-xs text-gray-muted hover:text-gray-lighter transition-colors"
@@ -106,7 +111,7 @@ function MovieOverviewModal({
             ← Back
           </button>
 
-          <h2 className="text-2xl font-bold text-gray-lighter text-center">{movie.title}</h2>
+          <h2 className="text-xl font-bold text-gray-lighter text-center sm:text-2xl">{movie.title}</h2>
 
           {reviewsLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -179,6 +184,8 @@ function MovieOverviewModal({
                   {myReview ? 'Edit Review' : 'Write a Review'}
                 </button>
               </div>
+
+              <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={(pid) => setPersonModalId(pid)} />
 
               {/* Reviews */}
               <div className="flex flex-col gap-3">
@@ -271,6 +278,14 @@ function MovieOverviewModal({
         />
       )}
     </div>
+
+    {personModalId !== null && (
+      <PersonModal
+        personId={personModalId}
+        onClose={() => setPersonModalId(null)}
+      />
+    )}
+  </>
   )
 }
 

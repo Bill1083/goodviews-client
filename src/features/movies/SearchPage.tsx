@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   searchMovies,
+  searchPeople,
   createReview,
   getMovieReviews,
   getMyCategories,
@@ -15,9 +16,12 @@ import {
 import MovieSearchBar from './MovieSearchBar'
 import StarRating from '../../components/StarRating'
 import MovieCard from '../../components/MovieCard'
-import type { Movie, FriendProfile, FriendGroup } from '../../types'
+import MovieDescriptionPanel from '../../components/MovieDescriptionPanel'
+import PersonModal from '../../components/PersonModal'
+import type { Movie, FriendProfile, FriendGroup, PersonSearchResult } from '../../types'
 
 type Step = 'search' | 'overview' | 'rate' | 'share' | 'send'
+type SearchTab = 'movies' | 'people'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
@@ -146,14 +150,50 @@ function FriendGroupsPicker({
   )
 }
 
+// ─── People search result card ────────────────────────────────────────────────
+const TMDB_PROFILE_IMG = 'https://image.tmdb.org/t/p/w185'
+
+function PersonCard({ person, onClick }: { person: PersonSearchResult; onClick: () => void }) {
+  const profileUrl = person.profile_path ? `${TMDB_PROFILE_IMG}${person.profile_path}` : null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 hover:border-magenta/40 hover:bg-navy-card/70 transition-all text-center"
+    >
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-white/10 bg-navy-card/60 group-hover:border-magenta/40 transition-colors">
+        {profileUrl ? (
+          <img src={profileUrl} alt={person.name} className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+            {person.name.charAt(0)}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col gap-0.5 w-full">
+        <p className="text-xs font-semibold text-gray-lighter leading-tight line-clamp-2 group-hover:text-magenta transition-colors">
+          {person.name}
+        </p>
+        {person.known_for_department && (
+          <p className="text-[10px] text-gray-muted">{person.known_for_department}</p>
+        )}
+      </div>
+    </button>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function SearchPage() {
   const qc = useQueryClient()
 
   const [step, setStep] = useState<Step>('search')
+  const [searchTab, setSearchTab] = useState<SearchTab>('movies')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
+  const [personQuery, setPersonQuery] = useState('')
+  const [personPage, setPersonPage] = useState(1)
+  const [personModalId, setPersonModalId] = useState<number | null>(null)
 
   // Rate step state
   const [rating, setRating] = useState(0)
@@ -177,7 +217,14 @@ export default function SearchPage() {
   const { data, isFetching, isError } = useQuery({
     queryKey: ['movies', 'search', query, page],
     queryFn: () => searchMovies(query, page),
-    enabled: query.length >= 2,
+    enabled: query.length >= 2 && searchTab === 'movies',
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: peopleData, isFetching: peopleFetching, isError: peopleError } = useQuery({
+    queryKey: ['people', 'search', personQuery, personPage],
+    queryFn: () => searchPeople(personQuery, personPage),
+    enabled: personQuery.length >= 2 && searchTab === 'people',
     staleTime: 1000 * 60 * 5,
   })
 
@@ -326,10 +373,10 @@ export default function SearchPage() {
 
   // ── Step: search ──────────────────────────────────────────────────────────
   if (step === 'search') {
+    const activeIsFetching = searchTab === 'movies' ? isFetching : peopleFetching
     return (
       <main
-        style={{ opacity: isFetching ? 0.5 : 1, pointerEvents: isFetching ? 'none' : 'auto' }}
-        // Refactored for mobile: reduced padding/gap scale up at sm
+        style={{ opacity: activeIsFetching ? 0.7 : 1, pointerEvents: activeIsFetching ? 'none' : 'auto' }}
         className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-12"
       >
         {/* Icon + title row */}
@@ -341,60 +388,118 @@ export default function SearchPage() {
             />
           </svg>
           <span style={{ fontFamily: '"Source Sans 3", sans-serif', fontSize: 30, color: 'white', fontWeight: 400 }}>
-            Search for a movie
+            Search
           </span>
         </div>
 
-        <div className="w-full">
-          <MovieSearchBar onSearch={handleSearch} isLoading={isFetching} />
+        {/* Tab switcher */}
+        <div className="flex rounded-xl border border-white/10 bg-navy-card/30 p-1 gap-1 self-center">
+          <button
+            onClick={() => setSearchTab('movies')}
+            className={['px-5 py-2 rounded-lg text-sm font-medium transition-all', searchTab === 'movies' ? 'bg-navy-card text-gray-lighter shadow' : 'text-gray-muted hover:text-gray-lighter'].join(' ')}
+          >
+            Movies
+          </button>
+          <button
+            onClick={() => setSearchTab('people')}
+            className={['px-5 py-2 rounded-lg text-sm font-medium transition-all', searchTab === 'people' ? 'bg-navy-card text-gray-lighter shadow' : 'text-gray-muted hover:text-gray-lighter'].join(' ')}
+          >
+            People
+          </button>
         </div>
 
-        {isError && (
-          <p className="text-sm text-red-400">Something went wrong. Please try again.</p>
-        )}
+        {/* Search bar */}
+        <div className="w-full">
+          {searchTab === 'movies' ? (
+            <MovieSearchBar onSearch={handleSearch} isLoading={isFetching} />
+          ) : (
+            <MovieSearchBar
+              onSearch={(q) => { setPersonQuery(q); setPersonPage(1) }}
+              isLoading={peopleFetching}
+              placeholder="Search actors, directors…"
+            />
+          )}
+        </div>
 
-        {data && data.results.length > 0 && (
+        {/* Movie results */}
+        {searchTab === 'movies' && (
           <>
-            {/* Refactored for mobile: 2 cols on mobile, scales up */}
-            <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
-              {data.results.map((movie) => (
-                <MovieCard
-                  key={movie.id}
-                  movie={movie}
-                  onSelect={handleSelectMovie}
-                  isInWatchlist={watchlistIds.has(movie.id)}
-                  onWatchlistAdd={(m) => watchlistAddMutation.mutate(m)}
-                  onWatchlistRemove={(m) => watchlistRemoveMutation.mutate(m)}
-                />
-              ))}
-            </div>
+            {isError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
 
-            {data.total_pages > 1 && (
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80"
-                >
-                  ← Prev
-                </button>
-                <span className="text-sm text-gray-muted">
-                  Page {page} of {data.total_pages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
-                  disabled={page === data.total_pages}
-                  className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80"
-                >
-                  Next →
-                </button>
-              </div>
+            {data && data.results.length > 0 && (
+              <>
+                <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+                  {data.results.map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      onSelect={handleSelectMovie}
+                      isInWatchlist={watchlistIds.has(movie.id)}
+                      onWatchlistAdd={(m) => watchlistAddMutation.mutate(m)}
+                      onWatchlistRemove={(m) => watchlistRemoveMutation.mutate(m)}
+                    />
+                  ))}
+                </div>
+
+                {data.total_pages > 1 && (
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
+                    <span className="text-sm text-gray-muted">Page {page} of {data.total_pages}</span>
+                    <button onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))} disabled={page === data.total_pages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!query && !isFetching && (
+              <p className="text-sm text-gray-muted">Type at least 2 characters to search for movies.</p>
             )}
           </>
         )}
 
-        {!query && !isFetching && (
-          <p className="text-sm text-gray-muted">Type at least 2 characters to search for movies.</p>
+        {/* People results */}
+        {searchTab === 'people' && (
+          <>
+            {peopleError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
+
+            {peopleData && peopleData.results.length > 0 && (
+              <>
+                <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                  {peopleData.results.map((person) => (
+                    <PersonCard
+                      key={person.id}
+                      person={person}
+                      onClick={() => setPersonModalId(person.id)}
+                    />
+                  ))}
+                </div>
+
+                {peopleData.total_pages > 1 && (
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setPersonPage((p) => Math.max(1, p - 1))} disabled={personPage === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
+                    <span className="text-sm text-gray-muted">Page {personPage} of {peopleData.total_pages}</span>
+                    <button onClick={() => setPersonPage((p) => Math.min(peopleData.total_pages, p + 1))} disabled={personPage === peopleData.total_pages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!personQuery && !peopleFetching && (
+              <p className="text-sm text-gray-muted">Type at least 2 characters to search for actors and directors.</p>
+            )}
+          </>
+        )}
+
+        {/* Person modal */}
+        {personModalId !== null && (
+          <PersonModal
+            personId={personModalId}
+            onClose={() => setPersonModalId(null)}
+            onMovieSelect={(movie) => {
+              setPersonModalId(null)
+              handleSelectMovie(movie)
+            }}
+          />
         )}
       </main>
     )
@@ -412,7 +517,8 @@ export default function SearchPage() {
     const avgRating = movieReviews?.avg_friend_rating ?? null
 
     return (
-      <main className="mx-4 my-4 flex max-w-5xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
+      <>
+        <main className="mx-4 my-4 flex max-w-5xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
         {/* Left — poster: Refactored for mobile: full-width with fixed height when stacked */}
         <div className="relative w-full h-52 shrink-0 bg-navy-card sm:h-64 md:h-auto md:w-64">
           <img src={posterUrl} alt={`${selectedMovie?.title} poster`} className="h-full w-full object-cover" />
@@ -515,6 +621,12 @@ export default function SearchPage() {
                 </button>
               </div>
 
+              <MovieDescriptionPanel
+                movieId={selectedMovie!.id}
+                overview={selectedMovie?.overview}
+                onPersonClick={(pid, _name, _type) => setPersonModalId(pid)}
+              />
+
               {/* Friend reviews */}
               <div className="flex flex-col gap-3">
                 <p className="text-sm font-medium text-gray-lighter">Reviews:</p>
@@ -571,13 +683,25 @@ export default function SearchPage() {
             </>
           )}
         </div>
-      </main>
+        </main>
+        {personModalId !== null && (
+          <PersonModal
+            personId={personModalId}
+            onClose={() => setPersonModalId(null)}
+            onMovieSelect={(movie) => {
+              setPersonModalId(null)
+              handleSelectMovie(movie)
+            }}
+          />
+        )}
+      </>
     )
   }
 
   // ── Steps rate / share / send — shared poster layout ──────────────────────
   return (
-    <main className="mx-4 my-4 flex max-w-4xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
+    <>
+      <main className="mx-4 my-4 flex max-w-4xl flex-col items-stretch gap-0 rounded-2xl overflow-hidden shadow-2xl sm:my-6 md:mx-auto md:flex-row md:my-8"> {/* Refactored for mobile: stacks vertically on mobile, side-by-side on md+ */}
       {/* Left — poster: Refactored for mobile: full-width with fixed height when stacked */}
       <div className="w-full h-48 shrink-0 bg-navy-card sm:h-60 md:h-auto md:w-72">
         <img src={posterUrl} alt={`${selectedMovie?.title} poster`} className="h-full w-full object-cover" />
@@ -766,5 +890,6 @@ export default function SearchPage() {
         )}
       </div>
     </main>
+    </>
   )
 }

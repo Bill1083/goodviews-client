@@ -4,6 +4,7 @@ import type {
   CreateReviewPayload,
   MovieSearchResult,
   Movie,
+  MovieDetails,
   PaginatedReviews,
   Category,
   FriendGroup,
@@ -14,6 +15,10 @@ import type {
   MovieReviewsData,
   Recommendation,
   FriendActivityItem,
+  PersonSearchResult,
+  PersonDetails,
+  FavouriteActor,
+  FavouriteDirector,
 } from '../types'
 
 const apiClient = axios.create({
@@ -43,8 +48,8 @@ export async function searchMovies(
   return data
 }
 
-export async function getMovieDetails(movieId: number): Promise<Movie> {
-  const { data } = await apiClient.get<Movie>(`/api/movies/${movieId}`)
+export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
+  const { data } = await apiClient.get<MovieDetails>(`/api/movies/${movieId}`)
   return data
 }
 
@@ -275,4 +280,55 @@ export async function dismissRecommendation(notifId: string): Promise<void> {
 export async function getFriendActivity(): Promise<FriendActivityItem[]> {
   const { data } = await apiClient.get<FriendActivityItem[]>('/api/friends/recent-activity')
   return data
+}
+
+// ─── People ───────────────────────────────────────────────────────────────────
+
+export async function searchPeople(
+  query: string,
+  page: number = 1,
+): Promise<{ results: PersonSearchResult[]; total_pages: number; page: number }> {
+  const { data } = await apiClient.get('/api/people/search', { params: { q: query, page } })
+  return data
+}
+
+export async function getPersonDetails(personId: number): Promise<PersonDetails> {
+  const { data } = await apiClient.get<PersonDetails>(`/api/people/${personId}`)
+  return data
+}
+
+// ─── Favourites ───────────────────────────────────────────────────────────────
+
+export async function getFavouriteActors(): Promise<FavouriteActor[]> {
+  const { data } = await apiClient.get<FavouriteActor[]>('/api/favourites/actors')
+  return data
+}
+
+export async function addFavouriteActor(payload: {
+  person_id: number
+  name: string
+  profile_path: string | null
+}): Promise<void> {
+  await apiClient.post('/api/favourites/actors', payload)
+}
+
+export async function removeFavouriteActor(personId: number): Promise<void> {
+  await apiClient.delete(`/api/favourites/actors/${personId}`)
+}
+
+export async function getFavouriteDirectors(): Promise<FavouriteDirector[]> {
+  const { data } = await apiClient.get<FavouriteDirector[]>('/api/favourites/directors')
+  return data
+}
+
+export async function addFavouriteDirector(payload: {
+  person_id: number
+  name: string
+  profile_path: string | null
+}): Promise<void> {
+  await apiClient.post('/api/favourites/directors', payload)
+}
+
+export async function removeFavouriteDirector(personId: number): Promise<void> {
+  await apiClient.delete(`/api/favourites/directors/${personId}`)
 }

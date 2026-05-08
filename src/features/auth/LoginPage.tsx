@@ -5,7 +5,7 @@ import PrimaryButton from '../../components/PrimaryButton'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -15,17 +15,40 @@ export default function LoginPage() {
     setError(null)
     setIsLoading(true)
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
+    try {
+      let email = login.trim()
 
-    setIsLoading(false)
+      // If the user entered a username (no @), resolve it to an email first
+      if (!email.includes('@')) {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/auth/resolve-login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ login: email }),
+          }
+        )
+        if (!res.ok) {
+          setError('No account found with that username.')
+          setIsLoading(false)
+          return
+        }
+        const data = await res.json()
+        email = data.email
+      }
 
-    if (authError) {
-      setError(authError.message)
-    } else {
-      navigate('/')
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError) {
+        setError(authError.message)
+      } else {
+        navigate('/')
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -39,18 +62,18 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <label htmlFor="email" className="text-xs font-medium text-gray-muted uppercase tracking-wide">
-              Email
+            <label htmlFor="login" className="text-xs font-medium text-gray-muted uppercase tracking-wide">
+              Email or Username
             </label>
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
+              id="login"
+              type="text"
+              autoComplete="username email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
               className="input-base"
-              placeholder="you@example.com"
+              placeholder="you@example.com or username"
             />
           </div>
 

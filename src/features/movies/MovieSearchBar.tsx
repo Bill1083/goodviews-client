@@ -3,9 +3,10 @@ import { useState, useRef } from 'react'
 interface Props {
   onSearch: (query: string) => void
   isLoading?: boolean
+  placeholder?: string
 }
 
-export default function MovieSearchBar({ onSearch, isLoading = false }: Props) {
+export default function MovieSearchBar({ onSearch, isLoading = false, placeholder = 'Search...' }: Props) {
   const [value, setValue] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -31,7 +32,7 @@ export default function MovieSearchBar({ onSearch, isLoading = false }: Props) {
           type="search"
           value={value}
           onChange={handleChange}
-          placeholder="Search..."
+          placeholder={placeholder}
           className="w-full rounded-full border border-[#cdcdcd]/30 bg-[#b1b2b5]/20 px-5 py-1.5
                      text-gray-lighter placeholder-[#a3a3a1]
                      focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"

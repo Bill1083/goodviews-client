@@ -18,6 +18,30 @@ export interface Movie {
   genre_ids?: number[]
 }
 
+export interface CastMember {
+  id: number
+  name: string
+  character: string
+  profile_path: string | null
+}
+
+export interface CrewMember {
+  id: number
+  name: string
+  job: string
+  department: string
+}
+
+export interface MovieDetails extends Movie {
+  credits?: {
+    cast: CastMember[]
+    crew: CrewMember[]
+  }
+  genres?: Array<{ id: number; name: string }>
+  runtime?: number
+  tagline?: string
+}
+
 /** TMDB search results page */
 export interface MovieSearchResult {
   page: number
@@ -153,5 +177,53 @@ export interface FriendActivityItem {
   friend_id: string
   username: string
   reviews: FriendActivityReview[]
+}
+
+// ─── People & Favourites ──────────────────────────────────────────────────────
+
+export interface PersonSearchResult {
+  id: number
+  name: string
+  profile_path: string | null
+  known_for_department: string
+  known_for: Array<{ id: number; title: string; poster_path: string | null }>
+}
+
+export interface FilmographyEntry {
+  id: number
+  title: string
+  poster_path: string | null
+  release_date: string | null
+  character?: string
+  job?: string
+  vote_average?: number
+  popularity?: number
+}
+
+export interface PersonDetails {
+  id: number
+  name: string
+  biography: string
+  birthday: string | null
+  deathday: string | null
+  profile_path: string | null
+  known_for_department: string
+  place_of_birth: string | null
+  movie_credits: {
+    cast: FilmographyEntry[]
+    crew: FilmographyEntry[]
+  }
+}
+
+export interface FavouriteActor {
+  actor_id: number
+  actor_name: string
+  profile_path: string | null
+}
+
+export interface FavouriteDirector {
+  director_id: number
+  director_name: string
+  profile_path: string | null
 }
 

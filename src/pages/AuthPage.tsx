@@ -59,15 +59,39 @@ export default function AuthPage() {
     e.preventDefault()
     setLoginError(null)
     setLoginLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail.trim(),
-      password: loginPassword,
-    })
-    setLoginLoading(false)
-    if (error) {
-      setLoginError(error.message)
-    } else {
-      navigate('/')
+    try {
+      let email = loginEmail.trim()
+
+      // If input has no @, treat it as a username and resolve to email first
+      if (!email.includes('@')) {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/auth/resolve-login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ login: email }),
+          }
+        )
+        if (!res.ok) {
+          setLoginError('No account found with that username.')
+          setLoginLoading(false)
+          return
+        }
+        const data = await res.json()
+        email = data.email
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: loginPassword,
+      })
+      if (error) {
+        setLoginError(error.message)
+      } else {
+        navigate('/')
+      }
+    } finally {
+      setLoginLoading(false)
     }
   }
 

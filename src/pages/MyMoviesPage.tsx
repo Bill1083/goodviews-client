@@ -13,8 +13,14 @@ import {
   getFriendActivity,
   getMovieReviews,
   getMyFriends,
+  getFavouriteActors,
+  getFavouriteDirectors,
+  removeFavouriteActor,
+  removeFavouriteDirector,
 } from '../services/apiClient'
 import MovieCard from '../components/MovieCard'
+import MovieDescriptionPanel from '../components/MovieDescriptionPanel'
+import PersonModal from '../components/PersonModal'
 import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
@@ -277,9 +283,10 @@ function ReviewsListModal({ movie, myReview, onClose }: {
 }
 
 // ─── Watched Movie Detail Modal ───────────────────────────────────────────────
-function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch, onDecrementRewatch, onGoToReviews }: {
+function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch, onDecrementRewatch, onGoToReviews, onPersonClick }: {
   movie: Movie; review: Review; onClose: () => void; onEdit: () => void; onShare: () => void
   onRewatch: () => void; onDecrementRewatch: () => void; onGoToReviews: () => void
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
   const rewatchCount = review.rewatch_count ?? 0
@@ -331,6 +338,7 @@ function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch,
               Re-watched
             </button>
           </div>
+          <MovieDescriptionPanel movieId={movie.id} onPersonClick={onPersonClick} />
           <div className="mt-auto flex flex-wrap gap-2">
             <button onClick={onEdit} className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-4 py-2 text-sm font-medium text-teal-light hover:bg-teal/20 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -358,8 +366,9 @@ function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch,
 }
 
 // ─── Watchlist Movie Detail Modal ─────────────────────────────────────────────
-function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview }: {
+function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview, onPersonClick }: {
   movie: Movie; onClose: () => void; onRemove: () => void; onWriteReview: () => void
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
 
@@ -381,8 +390,8 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview }: {
             </div>
             <button onClick={onClose} className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0">×</button>
           </div>
-          {movie.overview && <p className="text-sm text-gray-light/80 leading-relaxed line-clamp-5">{movie.overview}</p>}
           <p className="text-sm text-gray-muted italic">You haven't watched this yet.</p>
+          <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={onPersonClick} />
           <div className="mt-auto flex flex-wrap gap-2">
             <button onClick={onWriteReview} className="flex items-center gap-1.5 rounded-lg bg-magenta px-4 py-2 text-sm font-semibold text-white hover:bg-magenta/90 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -405,11 +414,12 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview }: {
 
 // ─── Friends Activity Section ─────────────────────────────────────────────────
 function FriendsActivitySection({
-  friendActivity, myFriendsCount, onNavigateToProfile,
+  friendActivity, myFriendsCount, onNavigateToProfile, onPersonClick,
 }: {
   friendActivity: FriendActivityItem[]
   myFriendsCount: number
   onNavigateToProfile: () => void
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const [selectedReview, setSelectedReview] = useState<{
     friendName: string
@@ -477,6 +487,7 @@ function FriendsActivitySection({
           friendName={selectedReview.friendName}
           review={selectedReview.review}
           onClose={() => setSelectedReview(null)}
+          onPersonClick={onPersonClick}
         />
       )}
     </>
@@ -484,10 +495,11 @@ function FriendsActivitySection({
 }
 
 // ─── Friend Review Detail Modal ────────────────────────────────────────────────
-function FriendReviewModal({ friendName, review, onClose }: {
+function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
   friendName: string
   review: FriendActivityItem['reviews'][number]
   onClose: () => void
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const movie = review.movies
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
@@ -533,13 +545,14 @@ function FriendReviewModal({ friendName, review, onClose }: {
             {review.review_text && <p className="text-sm text-gray-light/80 leading-relaxed">{review.review_text}</p>}
           </div>
 
+          <MovieDescriptionPanel movieId={movie.id} onPersonClick={onPersonClick} />
+
           {/* Other friend reviews */}
           {isLoading ? (
             <p className="text-xs text-gray-muted">Loading other reviews…</p>
           ) : otherFriendReviews.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Other Friends</p>
-              <ul className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Other Friends</p>              <ul className="flex flex-col gap-2">
                 {otherFriendReviews.map((fr) => (
                   <li key={fr.id} className="flex flex-col gap-1 rounded-lg border border-white/10 bg-navy-card/40 p-3">
                     <div className="flex items-center justify-between">
@@ -569,6 +582,8 @@ export default function MyMoviesPage() {
 
   const [activeSection, setActiveSection] = useState<SidebarSection>('watched')
   const [searchQ, setSearchQ] = useState('')
+  const [friendsViewed, setFriendsViewed] = useState(false)
+  const [personModalId, setPersonModalId] = useState<number | null>(null)
 
   const [showSortPanel, setShowSortPanel] = useState(false)
   const [showFilterPanel, setShowFilterPanel] = useState(false)
@@ -654,7 +669,6 @@ export default function MyMoviesPage() {
   const { data: friendActivity = [] } = useQuery({
     queryKey: ['friend-activity'],
     queryFn: getFriendActivity,
-    enabled: activeSection === 'Friends',
     refetchInterval: 60_000,
   })
 
@@ -662,6 +676,28 @@ export default function MyMoviesPage() {
     queryKey: ['my-friends'],
     queryFn: getMyFriends,
     enabled: activeSection === 'Friends',
+  })
+
+  const { data: favActors = [] } = useQuery({
+    queryKey: ['favourite-actors'],
+    queryFn: getFavouriteActors,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: favDirectors = [] } = useQuery({
+    queryKey: ['favourite-directors'],
+    queryFn: getFavouriteDirectors,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const removeActorMutation = useMutation({
+    mutationFn: (actorId: number) => removeFavouriteActor(actorId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+  })
+
+  const removeDirectorMutation = useMutation({
+    mutationFn: (directorId: number) => removeFavouriteDirector(directorId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
   })
 
   const movieReviewPairs: { movie: Movie; review: Review }[] = []
@@ -750,6 +786,23 @@ export default function MyMoviesPage() {
   const showSortFilter = activeSection !== 'Recommendations' && activeSection !== 'favourite-actors' && activeSection !== 'favourite-directors' && activeSection !== 'Friends'
   const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActor, filterDirector].filter(Boolean).length
 
+  const hasUnreadRecs = unreadRecCount > 0
+  const hasNewFriendActivity = friendActivity.length > 0 && !friendsViewed
+
+  // Reorder mobile tabs so priority tabs sit directly after the active tab
+  function getMobileTabOrder() {
+    const priorityIds: SidebarSection[] = []
+    if (hasUnreadRecs && activeSection !== 'Recommendations') priorityIds.push('Recommendations')
+    if (hasNewFriendActivity && activeSection !== 'Friends') priorityIds.push('Friends')
+    if (priorityIds.length === 0) return SIDEBAR_LINKS
+    const base = SIDEBAR_LINKS.filter((l) => !priorityIds.includes(l.id))
+    const activeIdx = base.findIndex((l) => l.id === activeSection)
+    const result = [...base]
+    result.splice(activeIdx + 1, 0, ...priorityIds.map((id) => SIDEBAR_LINKS.find((l) => l.id === id)!))
+    return result
+  }
+  const mobileTabs = getMobileTabOrder()
+
   const resetSectionState = () => {
     setWatchedDetail(null); setWatchlistDetail(null)
     setSortBy(null); setFilterCategoryIds([])
@@ -766,7 +819,7 @@ export default function MyMoviesPage() {
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.id}>
               <button
-                onClick={() => { setActiveSection(link.id); resetSectionState() }}
+                onClick={() => { setActiveSection(link.id); resetSectionState(); if (link.id === 'Friends') setFriendsViewed(true) }}
                 className={`sidebar-link w-full text-left flex items-center gap-2${activeSection === link.id ? ' active' : ''}`}
               >
                 {link.label}
@@ -781,21 +834,39 @@ export default function MyMoviesPage() {
 
       {/* Refactored for mobile: horizontal scroll nav replaces sidebar on small screens */}
       <nav className="md:hidden flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {SIDEBAR_LINKS.map((link) => (
-          <button
-            key={link.id}
-            onClick={() => { setActiveSection(link.id); resetSectionState() }}
-            className={['flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap',
-              activeSection === link.id
-                ? 'border-teal/60 bg-teal/10 text-teal-light'
-                : 'border-white/15 bg-navy-card/40 text-gray-muted'].join(' ')}
-          >
-            {link.label}
-            {link.id === 'Recommendations' && unreadRecCount > 0 && (
-              <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
-            )}
-          </button>
-        ))}
+        {mobileTabs.map((link) => {
+          const isActive = activeSection === link.id
+          const isPriority = !isActive && (
+            (link.id === 'Recommendations' && hasUnreadRecs) ||
+            (link.id === 'Friends' && hasNewFriendActivity)
+          )
+          return (
+            <button
+              key={link.id}
+              onClick={() => {
+                setActiveSection(link.id)
+                resetSectionState()
+                if (link.id === 'Friends') setFriendsViewed(true)
+              }}
+              className={[
+                'flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap',
+                isActive
+                  ? 'border-teal/60 bg-teal/10 text-teal-light'
+                  : isPriority
+                  ? 'border-magenta/60 bg-magenta/10 text-magenta'
+                  : 'border-white/15 bg-navy-card/40 text-gray-muted',
+              ].join(' ')}
+            >
+              {link.label}
+              {link.id === 'Recommendations' && unreadRecCount > 0 && (
+                <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
+              )}
+              {link.id === 'Friends' && hasNewFriendActivity && (
+                <span className="h-2 w-2 rounded-full bg-magenta shrink-0" />
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       <main className="min-w-0 flex-1">
@@ -889,16 +960,92 @@ export default function MyMoviesPage() {
         )}
 
         {activeSection === 'favourite-actors' && (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <p className="text-gray-300">No favourite actors saved yet.</p>
-            <p className="text-xs text-gray-400">This feature is coming soon.</p>
+          <div className="flex flex-col gap-4">
+            {favActors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <p className="text-gray-300">No favourite actors saved yet.</p>
+                <p className="text-xs text-gray-400">Find an actor in the Search tab and add them to your favourites.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                {favActors.map((actor) => {
+                  const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
+                  return (
+                    <div key={actor.actor_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setPersonModalId(actor.actor_id)}
+                        className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+                      >
+                        <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+                          {profileUrl ? (
+                            <img src={profileUrl} alt={actor.actor_name ?? ''} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                              {(actor.actor_name ?? '?').charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{actor.actor_name}</p>
+                      </button>
+                      <button
+                        onClick={() => removeActorMutation.mutate(actor.actor_id)}
+                        disabled={removeActorMutation.isPending}
+                        className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
+                        title="Remove from favourites"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
         {activeSection === 'favourite-directors' && (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <p className="text-gray-300">No favourite directors saved yet.</p>
-            <p className="text-xs text-gray-400">This feature is coming soon.</p>
+          <div className="flex flex-col gap-4">
+            {favDirectors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <p className="text-gray-300">No favourite directors saved yet.</p>
+                <p className="text-xs text-gray-400">Find a director in the Search tab and add them to your favourites.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                {favDirectors.map((director) => {
+                  const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
+                  return (
+                    <div key={director.director_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setPersonModalId(director.director_id)}
+                        className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+                      >
+                        <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+                          {profileUrl ? (
+                            <img src={profileUrl} alt={director.director_name ?? ''} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                              {(director.director_name ?? '?').charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{director.director_name}</p>
+                      </button>
+                      <button
+                        onClick={() => removeDirectorMutation.mutate(director.director_id)}
+                        disabled={removeDirectorMutation.isPending}
+                        className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
+                        title="Remove from favourites"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -909,6 +1056,7 @@ export default function MyMoviesPage() {
             friendActivity={friendActivity}
             myFriendsCount={myFriends.length}
             onNavigateToProfile={() => navigate('/profile')}
+            onPersonClick={(pid) => setPersonModalId(pid)}
           />
         )}
       </main>
@@ -935,6 +1083,7 @@ export default function MyMoviesPage() {
           onRewatch={() => incrementRewatchMutation.mutate(watchedDetail.review.id)}
           onDecrementRewatch={() => decrementRewatchMutation.mutate(watchedDetail.review.id)}
           onGoToReviews={() => setShowReviewsModal(true)}
+          onPersonClick={(pid) => setPersonModalId(pid)}
         />
       )}
 
@@ -955,6 +1104,7 @@ export default function MyMoviesPage() {
             mode: 'create', movie: watchlistDetail,
             onSaved: () => { removeFromWatchlistMutation.mutate(watchlistDetail.id); setWatchlistDetail(null) },
           })}
+          onPersonClick={(pid) => setPersonModalId(pid)}
         />
       )}
 
@@ -968,6 +1118,13 @@ export default function MyMoviesPage() {
           initialCategoryIds={reviewModal.initialCategoryIds}
           onSaved={reviewModal.onSaved}
           onClose={() => setReviewModal(null)}
+        />
+      )}
+
+      {personModalId !== null && (
+        <PersonModal
+          personId={personModalId}
+          onClose={() => setPersonModalId(null)}
         />
       )}
     </div>
