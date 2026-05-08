@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getMyReviews,
   getWatchlist,
+  addToWatchlist,
   removeFromWatchlist,
   getRecommendations,
   getMyCategories,
@@ -13,6 +14,10 @@ import {
   getFriendActivity,
   getMovieReviews,
   getMyFriends,
+  getMyFriendGroups,
+  recommendMovie,
+  getPersonDetails,
+  searchPeople,
   getFavouriteActors,
   getFavouriteDirectors,
   removeFavouriteActor,
@@ -115,10 +120,21 @@ function SortPanel({
 }
 
 // ─── Filter Panel ─────────────────────────────────────────────────────────────
+const TMDB_GENRES = [
+  { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, { id: 16, name: 'Animation' },
+  { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, { id: 99, name: 'Documentary' },
+  { id: 18, name: 'Drama' }, { id: 10751, name: 'Family' }, { id: 14, name: 'Fantasy' },
+  { id: 36, name: 'History' }, { id: 27, name: 'Horror' }, { id: 10402, name: 'Music' },
+  { id: 9648, name: 'Mystery' }, { id: 10749, name: 'Romance' }, { id: 878, name: 'Sci-Fi' },
+  { id: 53, name: 'Thriller' }, { id: 10752, name: 'War' }, { id: 37, name: 'Western' },
+]
+
 function FilterPanel({
   open, onClose, categories, filterCategoryIds, setFilterCategoryIds,
   filterYearFrom, setFilterYearFrom, filterYearTo, setFilterYearTo,
-  filterActor, setFilterActor, filterDirector, setFilterDirector,
+  filterActor, setFilterActor, filterActorId, setFilterActorId,
+  filterDirector, setFilterDirector, filterDirectorId, setFilterDirectorId,
+  filterGenreIds, setFilterGenreIds,
 }: {
   open: boolean; onClose: () => void
   categories: { id: string; name: string; outline_color: string | null; fill_color: string | null }[]
@@ -126,9 +142,16 @@ function FilterPanel({
   filterYearFrom: string; setFilterYearFrom: (y: string) => void
   filterYearTo: string; setFilterYearTo: (y: string) => void
   filterActor: string; setFilterActor: (a: string) => void
+  filterActorId: number | null; setFilterActorId: (id: number | null) => void
   filterDirector: string; setFilterDirector: (d: string) => void
+  filterDirectorId: number | null; setFilterDirectorId: (id: number | null) => void
+  filterGenreIds: number[]; setFilterGenreIds: (ids: number[]) => void
 }) {
   const [myCatsOpen, setMyCatsOpen] = useState(true)
+  const [genresOpen, setGenresOpen] = useState(true)
+  const [actorQuery, setActorQuery] = useState(filterActor)
+  const [directorQuery, setDirectorQuery] = useState(filterDirector)
+
   useEffect(() => {
     if (!open) return
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -136,12 +159,41 @@ function FilterPanel({
     return () => window.removeEventListener('keydown', handleKey)
   }, [open, onClose])
 
-  const hasFilters = filterCategoryIds.length > 0 || filterYearFrom || filterYearTo || filterActor || filterDirector
+  // Sync local text when external value is cleared
+  useEffect(() => { if (!filterActorId) setActorQuery(filterActor) }, [filterActor, filterActorId])
+  useEffect(() => { if (!filterDirectorId) setDirectorQuery(filterDirector) }, [filterDirector, filterDirectorId])
 
-  const toggleCategory = (id: string) => {
-    setFilterCategoryIds(
-      filterCategoryIds.includes(id) ? filterCategoryIds.filter((c) => c !== id) : [...filterCategoryIds, id]
-    )
+  const { data: actorSearchData } = useQuery({
+    queryKey: ['people-search-filter-actor', actorQuery],
+    queryFn: () => searchPeople(actorQuery),
+    enabled: actorQuery.length >= 2 && !filterActorId,
+    staleTime: 1000 * 60 * 5,
+  })
+  const { data: directorSearchData } = useQuery({
+    queryKey: ['people-search-filter-director', directorQuery],
+    queryFn: () => searchPeople(directorQuery),
+    enabled: directorQuery.length >= 2 && !filterDirectorId,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const actorSuggestions = (actorSearchData?.results ?? []).filter(p => p.known_for_department === 'Acting').slice(0, 5)
+  const directorSuggestions = (directorSearchData?.results ?? []).filter(p => p.known_for_department === 'Directing').slice(0, 5)
+
+  const hasFilters = filterCategoryIds.length > 0 || filterGenreIds.length > 0 || filterYearFrom || filterYearTo || filterActorId || filterDirectorId
+
+  const toggleCategory = (id: string) =>
+    setFilterCategoryIds(filterCategoryIds.includes(id) ? filterCategoryIds.filter((c) => c !== id) : [...filterCategoryIds, id])
+
+  const toggleGenre = (id: number) =>
+    setFilterGenreIds(filterGenreIds.includes(id) ? filterGenreIds.filter((g) => g !== id) : [...filterGenreIds, id])
+
+  const clearActor = () => { setFilterActor(''); setFilterActorId(null); setActorQuery('') }
+  const clearDirector = () => { setFilterDirector(''); setFilterDirectorId(null); setDirectorQuery('') }
+
+  const clearAll = () => {
+    setFilterCategoryIds([]); setFilterGenreIds([])
+    setFilterYearFrom(''); setFilterYearTo('')
+    clearActor(); clearDirector()
   }
 
   return (
@@ -153,13 +205,13 @@ function FilterPanel({
           <h3 className="text-base font-semibold text-gray-lighter">Filter By:</h3>
           <div className="flex items-center gap-2">
             {hasFilters && (
-              <button onClick={() => { setFilterCategoryIds([]); setFilterYearFrom(''); setFilterYearTo(''); setFilterActor(''); setFilterDirector('') }}
-                className="text-xs text-gray-muted hover:text-pink-brand transition-colors">Clear all</button>
+              <button onClick={clearAll} className="text-xs text-gray-muted hover:text-pink-brand transition-colors">Clear all</button>
             )}
             <button onClick={onClose} className="text-gray-muted hover:text-gray-lighter text-xl leading-none">×</button>
           </div>
         </div>
 
+        {/* My Movie Categories */}
         <div className="flex flex-col gap-2">
           <button onClick={() => setMyCatsOpen(v => !v)}
             className="flex items-center justify-between w-full rounded-lg border border-white/15 bg-navy/50 px-4 py-2.5 text-sm font-medium text-gray-lighter hover:border-white/30 transition-colors">
@@ -178,7 +230,7 @@ function FilterPanel({
                 const bg = isSelected ? (cat.fill_color ?? cat.outline_color ?? '#ffffff20') : 'transparent'
                 return (
                   <button key={cat.id} onClick={() => toggleCategory(cat.id)}
-                    className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                    className="w-fit px-3 py-1 rounded-full text-xs font-medium transition-all"
                     style={{ border: `2px solid ${border}`, backgroundColor: bg, color: '#e9e9e9', opacity: isSelected ? 1 : 0.7 }}>
                     {cat.name}
                   </button>
@@ -188,6 +240,32 @@ function FilterPanel({
           )}
         </div>
 
+        {/* Genres */}
+        <div className="flex flex-col gap-2">
+          <button onClick={() => setGenresOpen(v => !v)}
+            className="flex items-center justify-between w-full rounded-lg border border-white/15 bg-navy/50 px-4 py-2.5 text-sm font-medium text-gray-lighter hover:border-white/30 transition-colors">
+            <span>Genres {filterGenreIds.length > 0 && <span className="ml-1 text-magenta text-xs">({filterGenreIds.length} selected)</span>}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${genresOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          {genresOpen && (
+            <div className="flex flex-wrap gap-2 pl-1">
+              {TMDB_GENRES.map((genre) => {
+                const isSelected = filterGenreIds.includes(genre.id)
+                return (
+                  <button key={genre.id} onClick={() => toggleGenre(genre.id)}
+                    className={['w-fit px-3 py-1 rounded-full text-xs font-medium border-2 transition-all',
+                      isSelected ? 'border-magenta bg-magenta/20 text-white' : 'border-white/20 text-gray-muted hover:border-white/40'].join(' ')}>
+                    {genre.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Release Year */}
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Release Year</p>
           <div className="flex gap-2 items-center">
@@ -199,18 +277,68 @@ function FilterPanel({
           </div>
         </div>
 
+        {/* Actor filter */}
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Actor</p>
-          <input type="text" placeholder="Search actor…" value={filterActor}
-            onChange={(e) => setFilterActor(e.target.value)} className="input-base text-sm" />
-          <p className="text-xs text-gray-muted/60 italic">Actor filtering coming soon</p>
+          {filterActorId ? (
+            <div className="flex items-center justify-between rounded-lg border border-teal/40 bg-teal/10 px-3 py-2">
+              <span className="text-sm text-teal-light">{filterActor}</span>
+              <button onClick={clearActor} className="text-gray-muted hover:text-pink-brand text-lg leading-none ml-2">×</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input type="text" placeholder="Search actor…" value={actorQuery}
+                onChange={(e) => setActorQuery(e.target.value)} className="input-base text-sm" />
+              {actorSuggestions.length > 0 && (
+                <ul className="absolute z-50 mt-1 w-full rounded-lg border border-white/10 bg-navy-card shadow-xl overflow-hidden">
+                  {actorSuggestions.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onMouseDown={() => { setFilterActor(p.name); setFilterActorId(p.id); setActorQuery(p.name) }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-lighter hover:bg-white/5 transition-colors text-left"
+                      >
+                        {p.profile_path && <img src={`https://image.tmdb.org/t/p/w45${p.profile_path}`} className="h-7 w-7 rounded-full object-cover shrink-0" alt="" />}
+                        <span>{p.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
+        {/* Director filter */}
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Director</p>
-          <input type="text" placeholder="Search director…" value={filterDirector}
-            onChange={(e) => setFilterDirector(e.target.value)} className="input-base text-sm" />
-          <p className="text-xs text-gray-muted/60 italic">Director filtering coming soon</p>
+          {filterDirectorId ? (
+            <div className="flex items-center justify-between rounded-lg border border-teal/40 bg-teal/10 px-3 py-2">
+              <span className="text-sm text-teal-light">{filterDirector}</span>
+              <button onClick={clearDirector} className="text-gray-muted hover:text-pink-brand text-lg leading-none ml-2">×</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input type="text" placeholder="Search director…" value={directorQuery}
+                onChange={(e) => setDirectorQuery(e.target.value)} className="input-base text-sm" />
+              {directorSuggestions.length > 0 && (
+                <ul className="absolute z-50 mt-1 w-full rounded-lg border border-white/10 bg-navy-card shadow-xl overflow-hidden">
+                  {directorSuggestions.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onMouseDown={() => { setFilterDirector(p.name); setFilterDirectorId(p.id); setDirectorQuery(p.name) }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-lighter hover:bg-white/5 transition-colors text-left"
+                      >
+                        {p.profile_path && <img src={`https://image.tmdb.org/t/p/w45${p.profile_path}`} className="h-7 w-7 rounded-full object-cover shrink-0" alt="" />}
+                        <span>{p.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -371,12 +499,39 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview, onPerson
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
+  const queryClient = useQueryClient()
+
+  const [showRecommendPanel, setShowRecommendPanel] = useState(false)
+  const [recFriendIds, setRecFriendIds] = useState<string[]>([])
+  const [recGroupIds, setRecGroupIds] = useState<string[]>([])
+
+  const { data: recFriends = [] } = useQuery({ queryKey: ['friends'], queryFn: getMyFriends, staleTime: 1000 * 60 * 5 })
+  const { data: recGroups = [] } = useQuery({ queryKey: ['friend-groups'], queryFn: getMyFriendGroups, staleTime: 1000 * 60 * 5 })
+
+  const recommendMutation = useMutation({
+    mutationFn: () => recommendMovie({
+      movie_id: movie.id, title: movie.title,
+      poster_path: movie.poster_path ?? null,
+      release_date: movie.release_date ?? null,
+      friend_ids: recFriendIds,
+      group_ids: recGroupIds,
+    }),
+    onSuccess: () => {
+      setShowRecommendPanel(false)
+      setRecFriendIds([])
+      setRecGroupIds([])
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+
+  const toggleRecFriend = (id: string) =>
+    setRecFriendIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const toggleRecGroup = (id: string) =>
+    setRecGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      {/* Refactored for mobile: stack poster and details vertically on mobile, row on sm+ */}
       <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
         <div className="w-28 shrink-0 self-center sm:w-40 sm:self-start">
           <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
             <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
@@ -392,12 +547,71 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview, onPerson
           </div>
           <p className="text-sm text-gray-muted italic">You haven't watched this yet.</p>
           <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={onPersonClick} />
+
+          {/* Send to Friends inline panel */}
+          {showRecommendPanel && (
+            <div className="flex flex-col gap-3 rounded-xl border border-teal/30 bg-navy/50 p-3">
+              <p className="text-xs font-semibold text-teal-light uppercase tracking-wide">Send to Friends</p>
+              {recFriends.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-muted mb-1.5">Friends</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recFriends.map(f => (
+                      <button key={f.id} onClick={() => toggleRecFriend(f.id)}
+                        className={['w-fit rounded-full px-2.5 py-1 text-xs font-medium border transition-colors',
+                          recFriendIds.includes(f.id) ? 'border-teal bg-teal/20 text-teal-light' : 'border-white/20 text-gray-muted hover:border-white/40'].join(' ')}>
+                        {f.username}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {recGroups.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-muted mb-1.5">Groups</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recGroups.map(g => (
+                      <button key={g.id} onClick={() => toggleRecGroup(g.id)}
+                        className={['w-fit rounded-full px-2.5 py-1 text-xs font-medium border transition-colors',
+                          recGroupIds.includes(g.id) ? 'border-magenta bg-magenta/20 text-white' : 'border-white/20 text-gray-muted hover:border-white/40'].join(' ')}>
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => recommendMutation.mutate()}
+                  disabled={(recFriendIds.length === 0 && recGroupIds.length === 0) || recommendMutation.isPending}
+                  className="flex-1 rounded-lg bg-teal/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal/90 disabled:opacity-50 transition-colors">
+                  {recommendMutation.isPending ? 'Sending…' : 'Send'}
+                </button>
+                <button onClick={() => { setShowRecommendPanel(false); setRecFriendIds([]); setRecGroupIds([]) }}
+                  className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-gray-muted hover:text-gray-lighter transition-colors">
+                  Cancel
+                </button>
+              </div>
+              {recommendMutation.isSuccess && (
+                <p className="text-xs text-teal-light">Sent!</p>
+              )}
+            </div>
+          )}
+
           <div className="mt-auto flex flex-wrap gap-2">
             <button onClick={onWriteReview} className="flex items-center gap-1.5 rounded-lg bg-magenta px-4 py-2 text-sm font-semibold text-white hover:bg-magenta/90 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Write a Review
+            </button>
+            <button onClick={() => setShowRecommendPanel(v => !v)}
+              className={['flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
+                showRecommendPanel ? 'border-teal bg-teal/20 text-teal-light' : 'border-teal/40 bg-teal/10 text-teal-light hover:bg-teal/20'].join(' ')}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Send to Friends
             </button>
             <button onClick={onRemove} className="flex items-center gap-1.5 rounded-lg border border-pink-brand/40 bg-pink-brand/10 px-4 py-2 text-sm font-medium text-pink-brand hover:bg-pink-brand/20 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -501,9 +715,11 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
   onClose: () => void
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
-  const movie = review.movies
+  const queryClient = useQueryClient()
+  const movie = review.movies as Movie
   const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
   const totalWatched = (review.rewatch_count ?? 0) + 1
+  const [showReviewModal, setShowReviewModal] = useState(false)
 
   const { data: reviewData, isLoading } = useQuery({
     queryKey: ['movie-reviews', movie.id],
@@ -511,7 +727,24 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
     staleTime: 1000 * 60 * 2,
   })
 
+  const myReview = reviewData?.my_review ?? null
   const otherFriendReviews = (reviewData?.friend_reviews ?? []).filter((r) => r.user_id !== review.user_id)
+
+  const { data: watchlist = [] } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: getWatchlist,
+    staleTime: 1000 * 60 * 2,
+  })
+  const inWatchlist = watchlist.some((w) => w.movie_id === movie.id)
+
+  const addWatchlistMutation = useMutation({
+    mutationFn: () => addToWatchlist({ movie_id: movie.id, title: movie.title, poster_path: movie.poster_path ?? null, release_date: movie.release_date ?? null, genre_ids: movie.genre_ids, vote_average: movie.vote_average }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+  })
+  const removeWatchlistMutation = useMutation({
+    mutationFn: () => removeFromWatchlist(movie.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+  })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
@@ -545,7 +778,57 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
             {review.review_text && <p className="text-sm text-gray-light/80 leading-relaxed">{review.review_text}</p>}
           </div>
 
+          {/* My review (if exists) */}
+          {myReview && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Your Rating</p>
+              <div className="flex items-center gap-2">
+                <StarRating value={myReview.rating} readOnly size="sm" />
+                <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
+              </div>
+              {myReview.review_text && <p className="text-sm text-gray-light/80 leading-relaxed line-clamp-3">{myReview.review_text}</p>}
+            </div>
+          )}
+
           <MovieDescriptionPanel movieId={movie.id} onPersonClick={onPersonClick} />
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowReviewModal(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-magenta px-4 py-2 text-sm font-semibold text-white hover:bg-magenta/90 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              {myReview ? 'Edit Review' : 'Write a Review'}
+            </button>
+            {!myReview && (
+              inWatchlist ? (
+                <button
+                  onClick={() => removeWatchlistMutation.mutate()}
+                  disabled={removeWatchlistMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-lg border border-pink-brand/40 bg-pink-brand/10 px-4 py-2 text-sm font-medium text-pink-brand hover:bg-pink-brand/20 transition-colors disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  On Watchlist
+                </button>
+              ) : (
+                <button
+                  onClick={() => addWatchlistMutation.mutate()}
+                  disabled={addWatchlistMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-4 py-2 text-sm font-medium text-teal-light hover:bg-teal/20 transition-colors disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add to Watchlist
+                </button>
+              )
+            )}
+          </div>
 
           {/* Other friend reviews */}
           {isLoading ? (
@@ -571,6 +854,19 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
           )}
         </div>
       </div>
+
+      {showReviewModal && (
+        <ReviewModal
+          movie={movie}
+          mode={myReview ? 'edit' : 'create'}
+          reviewId={myReview?.id}
+          initialRating={myReview?.rating}
+          initialReviewText={myReview?.review_text ?? undefined}
+          initialCategoryIds={myReview?.category_ids ?? []}
+          onClose={() => setShowReviewModal(false)}
+          onSaved={() => { setShowReviewModal(false); queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] }) }}
+        />
+      )}
     </div>
   )
 }
@@ -589,10 +885,15 @@ export default function MyMoviesPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [sortBy, setSortBy] = useState<SortKey | null>(null)
   const [filterCategoryIds, setFilterCategoryIds] = useState<string[]>([])
+  const [filterGenreIds, setFilterGenreIds] = useState<number[]>([])
   const [filterYearFrom, setFilterYearFrom] = useState('')
   const [filterYearTo, setFilterYearTo] = useState('')
   const [filterActor, setFilterActor] = useState('')
+  const [filterActorId, setFilterActorId] = useState<number | null>(null)
   const [filterDirector, setFilterDirector] = useState('')
+  const [filterDirectorId, setFilterDirectorId] = useState<number | null>(null)
+  const [favActorQ, setFavActorQ] = useState('')
+  const [favDirectorQ, setFavDirectorQ] = useState('')
   const [showReviewsModal, setShowReviewsModal] = useState(false)
 
   const [watchedDetail, setWatchedDetail] = useState<{ movie: Movie; review: Review } | null>(null)
@@ -700,6 +1001,24 @@ export default function MyMoviesPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
   })
 
+  const { data: filterActorDetails } = useQuery({
+    queryKey: ['person-details', filterActorId],
+    queryFn: () => getPersonDetails(filterActorId!),
+    enabled: filterActorId !== null,
+    staleTime: 1000 * 60 * 30,
+  })
+  const filterActorMovieIds = new Set(filterActorDetails?.movie_credits?.cast?.map((m: { id: number }) => m.id) ?? [])
+
+  const { data: filterDirectorDetails } = useQuery({
+    queryKey: ['person-details', filterDirectorId],
+    queryFn: () => getPersonDetails(filterDirectorId!),
+    enabled: filterDirectorId !== null,
+    staleTime: 1000 * 60 * 30,
+  })
+  const filterDirectorMovieIds = new Set(
+    filterDirectorDetails?.movie_credits?.crew?.filter((m) => m.job === 'Director').map((m) => m.id) ?? []
+  )
+
   const movieReviewPairs: { movie: Movie; review: Review }[] = []
   const seenIds = new Set<number>()
   for (const review of reviewsData?.reviews ?? []) {
@@ -749,6 +1068,9 @@ export default function MyMoviesPage() {
       const reviewCats = review.category_ids?.length ? review.category_ids : (review.category_id ? [review.category_id] : [])
       if (!filterCategoryIds.some((id) => reviewCats.includes(id))) return false
     }
+    if (filterGenreIds.length > 0 && !(movie.genre_ids ?? []).some(id => filterGenreIds.includes(id))) return false
+    if (filterActorId && filterActorMovieIds.size > 0 && !filterActorMovieIds.has(movie.id)) return false
+    if (filterDirectorId && filterDirectorMovieIds.size > 0 && !filterDirectorMovieIds.has(movie.id)) return false
     const yr = movie.release_date ? parseInt(movie.release_date.slice(0, 4)) : null
     if (filterYearFrom && yr && yr < parseInt(filterYearFrom)) return false
     if (filterYearTo && yr && yr > parseInt(filterYearTo)) return false
@@ -777,6 +1099,10 @@ export default function MyMoviesPage() {
 
   const filteredWatchlist = sortedWatchlist.filter((w) => {
     if (searchQ.trim() && !w.movies.title.toLowerCase().includes(searchQ.toLowerCase())) return false
+    if (filterGenreIds.length > 0 && !(w.movies.genre_ids ?? []).some(id => filterGenreIds.includes(id))) return false
+    const movieId = w.movies.id
+    if (filterActorId && filterActorMovieIds.size > 0 && !filterActorMovieIds.has(movieId)) return false
+    if (filterDirectorId && filterDirectorMovieIds.size > 0 && !filterDirectorMovieIds.has(movieId)) return false
     const yr = w.movies.release_date ? parseInt(w.movies.release_date.slice(0, 4)) : null
     if (filterYearFrom && yr && yr < parseInt(filterYearFrom)) return false
     if (filterYearTo && yr && yr > parseInt(filterYearTo)) return false
@@ -784,7 +1110,7 @@ export default function MyMoviesPage() {
   })
 
   const showSortFilter = activeSection !== 'Recommendations' && activeSection !== 'favourite-actors' && activeSection !== 'favourite-directors' && activeSection !== 'Friends'
-  const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActor, filterDirector].filter(Boolean).length
+  const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterGenreIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActorId ? 'x' : null, filterDirectorId ? 'x' : null].filter(Boolean).length
 
   const hasUnreadRecs = unreadRecCount > 0
   const hasNewFriendActivity = friendActivity.length > 0 && !friendsViewed
@@ -805,8 +1131,11 @@ export default function MyMoviesPage() {
 
   const resetSectionState = () => {
     setWatchedDetail(null); setWatchlistDetail(null)
-    setSortBy(null); setFilterCategoryIds([])
-    setFilterYearFrom(''); setFilterYearTo(''); setFilterActor(''); setFilterDirector(''); setSearchQ('')
+    setSortBy(null); setFilterCategoryIds([]); setFilterGenreIds([])
+    setFilterYearFrom(''); setFilterYearTo('')
+    setFilterActor(''); setFilterActorId(null); setFilterDirector(''); setFilterDirectorId(null)
+    setFavActorQ(''); setFavDirectorQ('')
+    setSearchQ('')
     setShowReviewsModal(false)
   }
 
@@ -825,6 +1154,9 @@ export default function MyMoviesPage() {
                 {link.label}
                 {link.id === 'Recommendations' && unreadRecCount > 0 && (
                   <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
+                )}
+                {link.id === 'Friends' && hasNewFriendActivity && (
+                  <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{friendActivity.length}</span>
                 )}
               </button>
             </li>
@@ -862,7 +1194,7 @@ export default function MyMoviesPage() {
                 <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
               )}
               {link.id === 'Friends' && hasNewFriendActivity && (
-                <span className="h-2 w-2 rounded-full bg-magenta shrink-0" />
+                <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{friendActivity.length}</span>
               )}
             </button>
           )
@@ -961,14 +1293,29 @@ export default function MyMoviesPage() {
 
         {activeSection === 'favourite-actors' && (
           <div className="flex flex-col gap-4">
-            {favActors.length === 0 ? (
+            {favActors.length > 0 && (
+              <input
+                type="text"
+                placeholder="Search actors…"
+                value={favActorQ}
+                onChange={(e) => setFavActorQ(e.target.value)}
+                className="input-base text-sm"
+              />
+            )}
+            {favActors.filter(a => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase())).length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                <p className="text-gray-300">No favourite actors saved yet.</p>
-                <p className="text-xs text-gray-400">Find an actor in the Search tab and add them to your favourites.</p>
+                {favActors.length === 0 ? (
+                  <>
+                    <p className="text-gray-300">No favourite actors saved yet.</p>
+                    <p className="text-xs text-gray-400">Find an actor in the Search tab and add them to your favourites.</p>
+                  </>
+                ) : (
+                  <p className="text-gray-300">No actors match your search.</p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {favActors.map((actor) => {
+                {favActors.filter(a => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase())).map((actor) => {
                   const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
                   return (
                     <div key={actor.actor_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
@@ -1006,14 +1353,29 @@ export default function MyMoviesPage() {
 
         {activeSection === 'favourite-directors' && (
           <div className="flex flex-col gap-4">
-            {favDirectors.length === 0 ? (
+            {favDirectors.length > 0 && (
+              <input
+                type="text"
+                placeholder="Search directors…"
+                value={favDirectorQ}
+                onChange={(e) => setFavDirectorQ(e.target.value)}
+                className="input-base text-sm"
+              />
+            )}
+            {favDirectors.filter(d => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase())).length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                <p className="text-gray-300">No favourite directors saved yet.</p>
-                <p className="text-xs text-gray-400">Find a director in the Search tab and add them to your favourites.</p>
+                {favDirectors.length === 0 ? (
+                  <>
+                    <p className="text-gray-300">No favourite directors saved yet.</p>
+                    <p className="text-xs text-gray-400">Find a director in the Search tab and add them to your favourites.</p>
+                  </>
+                ) : (
+                  <p className="text-gray-300">No directors match your search.</p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {favDirectors.map((director) => {
+                {favDirectors.filter(d => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase())).map((director) => {
                   const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
                   return (
                     <div key={director.director_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
@@ -1070,7 +1432,10 @@ export default function MyMoviesPage() {
         filterYearFrom={filterYearFrom} setFilterYearFrom={setFilterYearFrom}
         filterYearTo={filterYearTo} setFilterYearTo={setFilterYearTo}
         filterActor={filterActor} setFilterActor={setFilterActor}
+        filterActorId={filterActorId} setFilterActorId={setFilterActorId}
         filterDirector={filterDirector} setFilterDirector={setFilterDirector}
+        filterDirectorId={filterDirectorId} setFilterDirectorId={setFilterDirectorId}
+        filterGenreIds={filterGenreIds} setFilterGenreIds={setFilterGenreIds}
       />
 
       {watchedDetail && !reviewModal && !showReviewsModal && (

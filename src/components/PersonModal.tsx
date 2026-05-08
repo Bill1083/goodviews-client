@@ -63,6 +63,8 @@ function FilmographyMovieView({
         title: entry.title,
         poster_path: entry.poster_path ?? null,
         release_date: entry.release_date ?? null,
+        genre_ids: entry.genre_ids,
+        vote_average: entry.vote_average,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
   })

@@ -72,6 +72,8 @@ export default function ReviewModal({
         title: movie.title,
         poster_path: movie.poster_path ?? null,
         release_date: movie.release_date ?? null,
+        genre_ids: movie.genre_ids,
+        vote_average: movie.vote_average,
         rating,
         review_text: reviewText,
         category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
@@ -253,7 +255,7 @@ export default function ReviewModal({
                       key={grp.id}
                       type="button"
                       onClick={() => toggleGroup(grp.id)}
-                      className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                      className="w-fit px-3 py-1 rounded-full text-xs font-medium transition-all"
                       style={{
                         border: `2px solid ${border}`,
                         backgroundColor: bg,

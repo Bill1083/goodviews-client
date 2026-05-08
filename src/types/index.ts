@@ -60,7 +60,7 @@ export interface Review {
   review_text: string
   rewatch_count: number
   created_at: string
-  movies?: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date' | 'vote_average'>
+  movies?: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date' | 'vote_average' | 'genre_ids'>
 }
 
 export interface Category {
@@ -107,6 +107,8 @@ export interface CreateReviewPayload {
   title: string
   poster_path: string | null
   release_date: string | null
+  genre_ids?: number[]
+  vote_average?: number
   rating: number
   review_text: string
   category_ids?: string[]
@@ -123,7 +125,7 @@ export interface PaginatedReviews {
 export interface WatchlistItem {
   movie_id: number
   added_at: string
-  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date' | 'vote_average' | 'genre_ids'>
 }
 
 export interface FriendReview {
@@ -159,7 +161,7 @@ export interface Recommendation {
     review_text: string
     created_at: string
   } | null
-  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date'>
+  movies: Pick<Movie, 'id' | 'title' | 'poster_path' | 'release_date' | 'vote_average' | 'genre_ids'>
 }
 
 export interface FriendActivityReview {
@@ -197,6 +199,7 @@ export interface FilmographyEntry {
   character?: string
   job?: string
   vote_average?: number
+  genre_ids?: number[]
   popularity?: number
 }
 

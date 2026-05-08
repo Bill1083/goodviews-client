@@ -154,6 +154,8 @@ export async function addToWatchlist(payload: {
   title: string
   poster_path: string | null
   release_date: string | null
+  genre_ids?: number[]
+  vote_average?: number
 }): Promise<void> {
   await apiClient.post('/api/watchlist/', payload)
 }

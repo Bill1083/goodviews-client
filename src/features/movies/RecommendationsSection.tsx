@@ -468,6 +468,8 @@ export default function RecommendationsSection() {
         title: rec.movies.title,
         poster_path: rec.movies.poster_path,
         release_date: rec.movies.release_date,
+        genre_ids: rec.movies.genre_ids,
+        vote_average: rec.movies.vote_average,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
   })
