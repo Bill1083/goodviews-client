@@ -521,13 +521,11 @@ function InnerPersonView({
   personId,
   personName,
   onFilmClick,
-  onPersonClick,
 }: {
   personId: number
   personName: string
   onFilmClick: (entry: FilmographyEntry) => void
-  onPersonClick: (id: number, name: string, type: 'actor' | 'director') => void
-}) {
+  onPersonClick: (id: number, name: string, type: 'actor' | 'director') => void}) {
   const qc = useQueryClient()
 
   const { data: person, isLoading } = useQuery({

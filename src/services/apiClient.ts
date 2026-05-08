@@ -3,7 +3,6 @@ import { supabase } from './supabaseClient'
 import type {
   CreateReviewPayload,
   MovieSearchResult,
-  Movie,
   MovieDetails,
   PaginatedReviews,
   Category,
