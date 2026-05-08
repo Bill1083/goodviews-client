@@ -263,6 +263,10 @@ export async function updateProfile(payload: Partial<{
   return data
 }
 
+export async function deleteAccount(confirmUsername: string): Promise<void> {
+  await apiClient.delete('/api/profile/', { data: { confirm_username: confirmUsername } })
+}
+
 // ─── Notifications / Recommendations ─────────────────────────────────────────
 
 export async function getRecommendations(): Promise<Recommendation[]> {

@@ -878,7 +878,9 @@ export default function MyMoviesPage() {
 
   const [activeSection, setActiveSection] = useState<SidebarSection>('watched')
   const [searchQ, setSearchQ] = useState('')
-  const [friendsViewed, setFriendsViewed] = useState(false)
+  const [lastFriendsViewedAt, setLastFriendsViewedAt] = useState<number>(
+    () => parseInt(localStorage.getItem('lastFriendsViewedAt') ?? '0', 10)
+  )
   const [personModalId, setPersonModalId] = useState<number | null>(null)
 
   const [showSortPanel, setShowSortPanel] = useState(false)
@@ -1113,7 +1115,10 @@ export default function MyMoviesPage() {
   const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterGenreIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActorId ? 'x' : null, filterDirectorId ? 'x' : null].filter(Boolean).length
 
   const hasUnreadRecs = unreadRecCount > 0
-  const hasNewFriendActivity = friendActivity.length > 0 && !friendsViewed
+  const newFriendActivityCount = friendActivity.filter((f) =>
+    f.reviews.some((r) => new Date(r.created_at).getTime() > lastFriendsViewedAt)
+  ).length
+  const hasNewFriendActivity = newFriendActivityCount > 0
 
   // Reorder mobile tabs so priority tabs sit directly after the active tab
   function getMobileTabOrder() {
@@ -1148,7 +1153,7 @@ export default function MyMoviesPage() {
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.id}>
               <button
-                onClick={() => { setActiveSection(link.id); resetSectionState(); if (link.id === 'Friends') setFriendsViewed(true) }}
+                onClick={() => { setActiveSection(link.id); resetSectionState(); if (link.id === 'Friends') { const now = Date.now(); setLastFriendsViewedAt(now); localStorage.setItem('lastFriendsViewedAt', String(now)) } }}
                 className={`sidebar-link w-full text-left flex items-center gap-2${activeSection === link.id ? ' active' : ''}`}
               >
                 {link.label}
@@ -1156,7 +1161,7 @@ export default function MyMoviesPage() {
                   <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
                 )}
                 {link.id === 'Friends' && hasNewFriendActivity && (
-                  <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{friendActivity.length}</span>
+                  <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{newFriendActivityCount}</span>
                 )}
               </button>
             </li>
@@ -1178,7 +1183,7 @@ export default function MyMoviesPage() {
               onClick={() => {
                 setActiveSection(link.id)
                 resetSectionState()
-                if (link.id === 'Friends') setFriendsViewed(true)
+                if (link.id === 'Friends') { const now = Date.now(); setLastFriendsViewedAt(now); localStorage.setItem('lastFriendsViewedAt', String(now)) }
               }}
               className={[
                 'flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap',
@@ -1194,7 +1199,7 @@ export default function MyMoviesPage() {
                 <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{unreadRecCount}</span>
               )}
               {link.id === 'Friends' && hasNewFriendActivity && (
-                <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{friendActivity.length}</span>
+                <span className="rounded-full bg-magenta px-1.5 py-0.5 text-xs font-bold text-white leading-none">{newFriendActivityCount}</span>
               )}
             </button>
           )

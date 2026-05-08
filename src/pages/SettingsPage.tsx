@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import '../index.css'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
-import { getProfile, updateProfile } from '../services/apiClient'
+import { getProfile, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -31,6 +33,14 @@ export default function SettingsPage() {
     await supabase.auth.signOut()
     navigate('/auth')
   }
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => deleteAccount(deleteConfirmInput),
+    onSuccess: async () => {
+      await supabase.auth.signOut()
+      navigate('/auth')
+    },
+  })
 
   const currentVisibility = profile?.profile_visibility ?? 'friends_only'
 
@@ -136,6 +146,16 @@ export default function SettingsPage() {
             Logout
           </button>
         </div>
+
+        {/* Delete Account */}
+        <div className="flex items-center py-5">
+          <button
+            onClick={() => { setDeleteConfirmInput(''); setShowDeleteConfirm(true) }}
+            className="text-base text-red-400 hover:text-red-300 transition-colors"
+          >
+            Delete Account
+          </button>
+        </div>
       </div>
 
       {/* Sign-out confirmation dialog */}
@@ -161,6 +181,61 @@ export default function SettingsPage() {
                 className="px-5 py-2 rounded-full bg-pink-brand hover:bg-pink-brand/80 text-sm text-white font-semibold transition-colors"
               >
                 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete account confirmation dialog */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
+          onClick={() => { if (!deleteAccountMutation.isPending) setShowDeleteConfirm(false) }}
+        >
+          <div
+            className="panel-card dialog-scale-in flex max-w-sm w-full flex-col gap-5 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1.5">
+              <p className="text-base font-semibold text-red-400">Delete Account</p>
+              <p className="text-sm text-gray-muted">
+                This will permanently delete your account, all your reviews, watchlist, friends, and every other piece of data. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-gray-muted uppercase tracking-wide">
+                Type your username <span className="normal-case text-gray-lighter font-semibold">({profile?.username})</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder={profile?.username ?? ''}
+                autoComplete="off"
+                className="input-base"
+                disabled={deleteAccountMutation.isPending}
+              />
+            </div>
+            {deleteAccountMutation.isError && (
+              <p className="text-xs text-red-400">
+                {(deleteAccountMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Something went wrong. Please try again.'}
+              </p>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteAccountMutation.isPending}
+                className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteAccountMutation.mutate()}
+                disabled={deleteConfirmInput !== profile?.username || deleteAccountMutation.isPending}
+                className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-500 text-sm text-white font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Forever'}
               </button>
             </div>
           </div>

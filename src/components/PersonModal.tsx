@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getPersonDetails,
@@ -46,6 +47,7 @@ function FilmographyMovieView({
     poster_path: entry.poster_path ?? null,
     release_date: entry.release_date ?? null,
     vote_average: entry.vote_average,
+    genre_ids: entry.genre_ids,
   }
 
   const { data: watchlist = [] } = useQuery({
@@ -149,7 +151,7 @@ function FilmographyMovieView({
         />
       </div>
 
-      {showReviewModal && (
+      {showReviewModal && createPortal(
         <ReviewModal
           mode="create"
           movie={movie}
@@ -159,7 +161,8 @@ function FilmographyMovieView({
             qc.invalidateQueries({ queryKey: ['my-reviews'] })
             qc.invalidateQueries({ queryKey: ['watchlist'] })
           }}
-        />
+        />,
+        document.body
       )}
     </>
   )
