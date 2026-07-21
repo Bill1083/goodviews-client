@@ -40,9 +40,11 @@ apiClient.interceptors.request.use(async (config) => {
 export async function searchMovies(
   query: string,
   page = 1,
+  signal?: AbortSignal,
 ): Promise<MovieSearchResult> {
   const { data } = await apiClient.get<MovieSearchResult>('/api/movies/search', {
     params: { q: query, page },
+    signal,
   })
   return data
 }
@@ -292,8 +294,9 @@ export async function getFriendActivity(): Promise<FriendActivityItem[]> {
 export async function searchPeople(
   query: string,
   page: number = 1,
+  signal?: AbortSignal,
 ): Promise<{ results: PersonSearchResult[]; total_pages: number; page: number }> {
-  const { data } = await apiClient.get('/api/people/search', { params: { q: query, page } })
+  const { data } = await apiClient.get('/api/people/search', { params: { q: query, page }, signal })
   return data
 }
 

@@ -216,14 +216,14 @@ export default function SearchPage() {
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data, isFetching, isError } = useQuery({
     queryKey: ['movies', 'search', query, page],
-    queryFn: () => searchMovies(query, page),
+    queryFn: ({ signal }) => searchMovies(query, page, signal),
     enabled: query.length >= 2 && searchTab === 'movies',
     staleTime: 1000 * 60 * 5,
   })
 
   const { data: peopleData, isFetching: peopleFetching, isError: peopleError } = useQuery({
     queryKey: ['people', 'search', personQuery, personPage],
-    queryFn: () => searchPeople(personQuery, personPage),
+    queryFn: ({ signal }) => searchPeople(personQuery, personPage, signal),
     enabled: personQuery.length >= 2 && searchTab === 'people',
     staleTime: 1000 * 60 * 5,
   })
