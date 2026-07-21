@@ -16,7 +16,7 @@ export default function MovieSearchBar({ onSearch, isLoading = false, placeholde
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       if (q.trim().length >= 2) onSearch(q.trim())
-    }, 400)
+    }, 800)
   }
 
   const handleSubmit = (e: React.FormEvent) => {

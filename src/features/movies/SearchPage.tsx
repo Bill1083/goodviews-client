@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   searchMovies,
@@ -312,7 +312,22 @@ export default function SearchPage() {
   })
 
   // ── Navigation helpers ────────────────────────────────────────────────────
-  const handleSearch = (q: string) => { setQuery(q); setPage(1) }
+  const pendingQueryRef = useRef<string | null>(null)
+
+  const handleSearch = (q: string) => {
+    if (isFetching) { pendingQueryRef.current = q; return }
+    pendingQueryRef.current = null
+    setQuery(q); setPage(1)
+  }
+
+  // Fire the pending search once the current fetch finishes
+  useEffect(() => {
+    if (!isFetching && pendingQueryRef.current) {
+      const q = pendingQueryRef.current
+      pendingQueryRef.current = null
+      setQuery(q); setPage(1)
+    }
+  }, [isFetching])
 
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie)
