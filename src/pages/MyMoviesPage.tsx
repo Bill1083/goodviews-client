@@ -29,7 +29,7 @@ import PersonModal from '../components/PersonModal'
 import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
-import type { Movie, Review, FriendReview, FriendActivityItem } from '../types'
+import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
 type SortKey = 'date-desc' | 'date-asc' | 'release-asc' | 'release-desc' | 'rating-high' | 'rating-low' | 'rating-friends-high' | 'rating-friends-low' | 'rating-public-high' | 'rating-public-low' | 'alpha-az' | 'alpha-za'
@@ -902,11 +902,24 @@ export default function MyMoviesPage() {
   const [watchlistDetail, setWatchlistDetail] = useState<Movie | null>(null)
   const [reviewModal, setReviewModal] = useState<ReviewModalConfig | null>(null)
 
-  const { data: reviewsData, isLoading } = useQuery({
-    queryKey: ['my-reviews'],
-    queryFn: () => getMyReviews(1, 500),
+  const { data: initialReviewsData, isLoading } = useQuery({
+    queryKey: ['my-reviews', 'initial'],
+    queryFn: () => getMyReviews(1, 30),
     enabled: activeSection === 'watched',
+    staleTime: 1000 * 60 * 5,
   })
+
+  // If the first page is full, there may be more — load all in the background
+  const mayHaveMoreReviews = initialReviewsData !== undefined && initialReviewsData.reviews.length >= 30
+
+  const { data: fullReviewsData, isFetching: isLoadingMoreReviews } = useQuery({
+    queryKey: ['my-reviews', 'full'],
+    queryFn: () => getMyReviews(1, 500),
+    enabled: activeSection === 'watched' && mayHaveMoreReviews,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const reviewsData = fullReviewsData ?? initialReviewsData
 
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery({
     queryKey: ['watchlist'],
@@ -937,10 +950,10 @@ export default function MyMoviesPage() {
   const incrementRewatchMutation = useMutation({
     mutationFn: (reviewId: string) => incrementRewatch(reviewId),
     onSuccess: (data, reviewId) => {
-      qc.setQueryData<typeof reviewsData>(['my-reviews'], (old) => {
-        if (!old) return old
-        return { ...old, reviews: old.reviews.map((r) => r.id === reviewId ? { ...r, rewatch_count: data.rewatch_count } : r) }
-      })
+      const updater = (old: PaginatedReviews | undefined) =>
+        old ? { ...old, reviews: old.reviews.map((r) => r.id === reviewId ? { ...r, rewatch_count: data.rewatch_count } : r) } : old
+      qc.setQueryData<PaginatedReviews>(['my-reviews', 'initial'], updater)
+      qc.setQueryData<PaginatedReviews>(['my-reviews', 'full'], updater)
       setWatchedDetail((prev) => {
         if (!prev || prev.review.id !== reviewId) return prev
         return { ...prev, review: { ...prev.review, rewatch_count: data.rewatch_count } }
@@ -951,10 +964,10 @@ export default function MyMoviesPage() {
   const decrementRewatchMutation = useMutation({
     mutationFn: (reviewId: string) => decrementRewatch(reviewId),
     onSuccess: (data, reviewId) => {
-      qc.setQueryData<typeof reviewsData>(['my-reviews'], (old) => {
-        if (!old) return old
-        return { ...old, reviews: old.reviews.map((r) => r.id === reviewId ? { ...r, rewatch_count: data.rewatch_count } : r) }
-      })
+      const updater = (old: PaginatedReviews | undefined) =>
+        old ? { ...old, reviews: old.reviews.map((r) => r.id === reviewId ? { ...r, rewatch_count: data.rewatch_count } : r) } : old
+      qc.setQueryData<PaginatedReviews>(['my-reviews', 'initial'], updater)
+      qc.setQueryData<PaginatedReviews>(['my-reviews', 'full'], updater)
       setWatchedDetail((prev) => {
         if (!prev || prev.review.id !== reviewId) return prev
         return { ...prev, review: { ...prev.review, rewatch_count: data.rewatch_count } }
@@ -1262,13 +1275,19 @@ export default function MyMoviesPage() {
                 {filteredWatched.map(({ movie, review }) => (
                   <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
                 ))}
-                {!searchQ.trim() && filterCategoryIds.length === 0 && !filterYearFrom && !filterYearTo && (
+                {!searchQ.trim() && filterCategoryIds.length === 0 && !filterYearFrom && !filterYearTo && !isLoadingMoreReviews && (
                   <button onClick={() => navigate('/search')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                   </button>
                 )}
               </div>
-            )}
+              )}
+              {isLoadingMoreReviews && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-muted">
+                  <span className="h-3 w-3 animate-spin rounded-full border border-gray-muted border-t-transparent" />
+                  Loading more movies…
+                </div>
+              )}
           </>
         )}
 
