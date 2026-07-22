@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 
 /** Film strip SVG — large (91 × 73), used for the top-left GV logo */
@@ -174,7 +174,12 @@ export default function AuthPage() {
             />
           </div>
           <div className="flex flex-col gap-[5px]">
-            <label className={labelClass}>Password</label>
+            <div className="flex items-center justify-between">
+              <label className={labelClass}>Password</label>
+              <Link to="/forgot-password" className="text-[13px] text-white/50 hover:text-white/80 transition-colors">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               autoComplete="current-password"
