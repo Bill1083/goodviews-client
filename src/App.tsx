@@ -9,6 +9,8 @@ import MyMoviesPage from './pages/MyMoviesPage'
 import SearchPage from './features/movies/SearchPage'
 import ProfilePage from './features/profile/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
+import ResetPasswordPage from './features/auth/ResetPasswordPage'
 
 const ROUTE_ORDER = ['/', '/search', '/profile', '/settings']
 function getRouteIndex(path: string) {
@@ -39,6 +41,8 @@ function AppRoutes() {
     >
       <Routes location={location}>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/"
           element={
