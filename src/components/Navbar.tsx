@@ -49,7 +49,7 @@ export default function Navbar() {
   if (!user) return null
 
   return (
-    <header className="w-full border-b border-white/10 bg-transparent">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-end px-3 pt-3 gap-3 md:justify-between md:px-6 md:pt-4 md:gap-0">
         {/* Logo */}
         <div className="pb-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>

@@ -7,6 +7,11 @@
     min-height: 100vh;
   }
 
+  html {
+    /* Prevent white overscroll flash on iOS/mobile when bouncing past the top */
+    background-color: #040c24;
+  }
+
   body {
     @apply text-gray-light font-sans antialiased;
     background: radial-gradient(ellipse at 50% 50%, #162b6b 0%, #040c24 45%, #150a2a 100%);
@@ -99,15 +104,15 @@ option.custom-option {
 
 /* ─── Page transition animations ─────────────────────────────────────────── */
 @keyframes slideFromRight {
-  from { transform: translateX(560px); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
 }
 @keyframes slideFromLeft {
-  from { transform: translateX(-560px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
-.page-slide-right { animation: slideFromRight 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;}
-.page-slide-left  { animation: slideFromLeft  0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;}
+.page-slide-right { animation: slideFromRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; overflow: hidden; }
+.page-slide-left  { animation: slideFromLeft  0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; overflow: hidden; }
 
 /* ─── Confirm dialog fade/scale ──────────────────────────────────────────── */
 @keyframes scaleIn {

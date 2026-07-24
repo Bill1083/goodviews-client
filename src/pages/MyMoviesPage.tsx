@@ -1161,7 +1161,7 @@ export default function MyMoviesPage() {
     // Refactored for mobile: flex-col on mobile stacks sidebar below content; switches to row on md+
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8">
       {/* Refactored for mobile: sidebar hidden on small screens, shown md+ */}
-      <aside className="hidden w-60 shrink-0 md:block">
+      <aside className="hidden md:block w-60 shrink-0 self-start sticky top-20">
         <ul className="flex flex-col gap-8">
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.id}>
@@ -1183,7 +1183,7 @@ export default function MyMoviesPage() {
       </aside>
 
       {/* Refactored for mobile: horizontal scroll nav replaces sidebar on small screens */}
-      <nav className="md:hidden flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <nav data-no-swipe="true" className="md:hidden flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {mobileTabs.map((link) => {
           const isActive = activeSection === link.id
           const isPriority = !isActive && (
