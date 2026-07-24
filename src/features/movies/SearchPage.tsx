@@ -283,6 +283,8 @@ export default function SearchPage() {
         title: selectedMovie!.title,
         poster_path: selectedMovie!.poster_path,
         release_date: selectedMovie!.release_date,
+        genre_ids: selectedMovie!.genre_ids,
+        vote_average: selectedMovie!.vote_average,
         rating,
         review_text: reviewText,
         category_ids: selectedCategoryId ? [selectedCategoryId] : undefined,
