@@ -1,11 +1,12 @@
 import { useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getMovieReviews } from '../services/apiClient'
+import { getMovieDetails, getMovieReviews } from '../services/apiClient'
 import StarRating from './StarRating'
 import MovieDescriptionPanel from './MovieDescriptionPanel'
-import type { Movie, MovieReviewsData, Review, MovieRecommendationInfo } from '../types'
+import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 export interface MovieDetailAction {
@@ -109,6 +110,14 @@ export default function MovieDetailModal({
     staleTime: 1000 * 60 * 2,
   })
 
+  // Shares its cache with MovieDescriptionPanel's identical query, so this rarely costs an extra request.
+  const { data: details } = useQuery<MovieDetails>({
+    queryKey: ['movie-details', movie.id],
+    queryFn: () => getMovieDetails(movie.id),
+    staleTime: 1000 * 60 * 60,
+  })
+  const backdropUrl = details?.backdrop_path ? `${TMDB_BACKDROP}${details.backdrop_path}` : null
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -130,7 +139,7 @@ export default function MovieDetailModal({
       onClick={onClose}
     >
       <div
-        className="dialog-scale-in relative mx-auto flex w-full max-w-4xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:rounded-2xl sm:border sm:border-white/10 md:flex-row"
+        className="dialog-scale-in relative mx-auto flex max-h-screen w-full max-w-4xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — floats over whichever corner is on top */}
@@ -142,29 +151,38 @@ export default function MovieDetailModal({
           ×
         </button>
 
-        {/* Poster panel — full, uncropped poster (aspect-correct, never stretched or clipped).
-            Height-capped on phones so the poster doesn't push details below the fold; on
-            md+ the fixed column width drives its size instead. */}
-        <div className="flex w-full shrink-0 justify-center bg-navy-card py-3 md:w-64 md:self-start md:py-0 lg:w-72">
-          <div className="aspect-[2/3] h-auto max-h-[46vh] w-auto max-w-full overflow-hidden sm:max-h-[52vh] md:h-auto md:max-h-none md:w-full">
-            <img
-              src={posterUrl}
-              alt={`${movie.title} poster`}
-              className="h-full w-full object-contain"
-            />
+        {/* Hero banner — a wide scene still from the film (TMDB backdrop), cropped to fill
+            since it's context/atmosphere rather than something that needs to stay uncropped. */}
+        {backdropUrl && (
+          <div className="relative h-36 w-full shrink-0 bg-navy-card sm:h-48 md:h-56 lg:h-64">
+            <img src={backdropUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/5 to-transparent" />
           </div>
-        </div>
+        )}
 
-        {/* Details — scrollable */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:gap-5 sm:p-6 md:max-h-[90vh] md:p-7">
-          {/* Title + year — shown as a proper heading instead of overlaid on the poster */}
-          <div>
-            <h2 className="text-xl font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
+        {/* Poster thumbnail + title — sits beside the title rather than above it, and overlaps
+            the bottom of the banner (when present) the way a lot of streaming apps do it. */}
+        <div
+          className={[
+            'flex shrink-0 items-end gap-3 px-5 sm:gap-4 sm:px-6',
+            backdropUrl ? '-mt-10 sm:-mt-14' : 'pt-5 sm:pt-6',
+          ].join(' ')}
+        >
+          <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
+            <div className="aspect-[2/3] w-full">
+              <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 pb-1">
+            <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
             {movie.release_date && (
               <p className="mt-0.5 text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>
             )}
           </div>
+        </div>
 
+        {/* Details — scrollable */}
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 pt-4 sm:gap-5 sm:p-6 sm:pt-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <span className="text-sm text-gray-muted">Loading…</span>

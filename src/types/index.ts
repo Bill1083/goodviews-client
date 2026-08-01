@@ -40,6 +40,8 @@ export interface MovieDetails extends Movie {
   genres?: Array<{ id: number; name: string }>
   runtime?: number
   tagline?: string
+  /** A wide scene still TMDB features for the film — used as a hero banner, distinct from the poster. */
+  backdrop_path?: string | null
 }
 
 /** TMDB search results page */
