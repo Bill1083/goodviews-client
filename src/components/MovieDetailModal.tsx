@@ -142,19 +142,29 @@ export default function MovieDetailModal({
           ×
         </button>
 
-        {/* Poster panel */}
-        <div className="relative h-56 w-full shrink-0 bg-navy-card sm:h-72 md:h-auto md:w-64 lg:w-72">
-          <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-4 py-4">
-            <p className="text-base font-bold leading-tight text-white">{movie.title}</p>
-            {movie.release_date && (
-              <p className="text-xs text-white/70">{movie.release_date.slice(0, 4)}</p>
-            )}
+        {/* Poster panel — full, uncropped poster (aspect-correct, never stretched or clipped).
+            Height-capped on phones so the poster doesn't push details below the fold; on
+            md+ the fixed column width drives its size instead. */}
+        <div className="flex w-full shrink-0 justify-center bg-navy-card py-3 md:w-64 md:self-start md:py-0 lg:w-72">
+          <div className="aspect-[2/3] h-auto max-h-[46vh] w-auto max-w-full overflow-hidden sm:max-h-[52vh] md:h-auto md:max-h-none md:w-full">
+            <img
+              src={posterUrl}
+              alt={`${movie.title} poster`}
+              className="h-full w-full object-contain"
+            />
           </div>
         </div>
 
         {/* Details — scrollable */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:gap-5 sm:p-6 md:max-h-[90vh] md:p-7">
+          {/* Title + year — shown as a proper heading instead of overlaid on the poster */}
+          <div>
+            <h2 className="text-xl font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
+            {movie.release_date && (
+              <p className="mt-0.5 text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <span className="text-sm text-gray-muted">Loading…</span>
