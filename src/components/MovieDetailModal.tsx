@@ -2,12 +2,17 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMovieDetails, getMovieReviews } from '../services/apiClient'
 import StarRating from './StarRating'
+import WatchProvidersModal from './WatchProvidersModal'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185'
+const TMDB_PROVIDER_LOGO = 'https://image.tmdb.org/t/p/w92'
 const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
+// Only Australia for now — TMDB's watch/providers response includes every country in one
+// payload, so supporting more regions later is just reading a different key here.
+const REGION = 'AU'
 
 export interface MovieDetailAction {
   key: string
@@ -138,6 +143,7 @@ export default function MovieDetailModal({
 }: Props) {
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
   const [showAllCast, setShowAllCast] = useState(false)
+  const [showProviders, setShowProviders] = useState(false)
 
   const { data, isLoading } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
@@ -159,6 +165,8 @@ export default function MovieDetailModal({
   const genres = details?.genres ?? []
   const runtime = details?.runtime
   const displayOverview = details?.overview ?? movie.overview
+  const auProviders = details?.['watch/providers']?.results?.[REGION]
+  const flatrateProviders = auProviders?.flatrate ?? []
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -176,6 +184,7 @@ export default function MovieDetailModal({
   const rewatchCount = myReview?.rewatch_count ?? 0
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/80 backdrop-blur-sm p-0 sm:items-center sm:p-4"
       onClick={onClose}
@@ -278,6 +287,24 @@ export default function MovieDetailModal({
                         </span>
                       ))}
                     </div>
+                  )}
+                  {flatrateProviders.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowProviders(true)}
+                      aria-label="See where to stream this movie in Australia"
+                      className="flex items-center gap-1.5 self-start"
+                    >
+                      {flatrateProviders.slice(0, 5).map((provider) => (
+                        <img
+                          key={provider.provider_id}
+                          src={`${TMDB_PROVIDER_LOGO}${provider.logo_path}`}
+                          alt={provider.provider_name}
+                          title={provider.provider_name}
+                          className="h-6 w-6 rounded-md object-cover ring-1 ring-white/10"
+                        />
+                      ))}
+                    </button>
                   )}
                 </div>
                 {displayOverview && (
@@ -455,5 +482,15 @@ export default function MovieDetailModal({
         </div>
       </div>
     </div>
+
+    {showProviders && (
+      <WatchProvidersModal
+        movieTitle={movie.title}
+        providers={flatrateProviders}
+        justWatchLink={auProviders?.link}
+        onClose={() => setShowProviders(false)}
+      />
+    )}
+    </>
   )
 }

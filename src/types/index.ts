@@ -33,6 +33,21 @@ export interface CrewMember {
   department: string
 }
 
+export interface WatchProvider {
+  provider_id: number
+  provider_name: string
+  logo_path: string
+}
+
+/** One country's worth of TMDB/JustWatch availability data. */
+export interface WatchProviderRegion {
+  /** JustWatch page for this movie/region — required attribution link when showing this data. */
+  link: string
+  flatrate?: WatchProvider[]
+  rent?: WatchProvider[]
+  buy?: WatchProvider[]
+}
+
 export interface MovieDetails extends Movie {
   credits?: {
     cast: CastMember[]
@@ -43,6 +58,8 @@ export interface MovieDetails extends Movie {
   tagline?: string
   /** A wide scene still TMDB features for the film — used as a hero banner, distinct from the poster. */
   backdrop_path?: string | null
+  /** Keyed by ISO country code (e.g. "AU"). TMDB names this key literally with a slash. */
+  'watch/providers'?: { results: Record<string, WatchProviderRegion> }
 }
 
 /** TMDB search results page */
