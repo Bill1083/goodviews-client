@@ -156,18 +156,13 @@ export default function MovieDetailModal({
         {backdropUrl && (
           <div className="relative h-36 w-full shrink-0 bg-navy-card sm:h-48 md:h-56 lg:h-64">
             <img src={backdropUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/5 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-navy-wine/60 to-transparent" />
           </div>
         )}
 
-        {/* Poster thumbnail + title — sits beside the title rather than above it, and overlaps
-            the bottom of the banner (when present) the way a lot of streaming apps do it. */}
-        <div
-          className={[
-            'flex shrink-0 items-end gap-3 px-5 sm:gap-4 sm:px-6',
-            backdropUrl ? '-mt-10 sm:-mt-14' : 'pt-5 sm:pt-6',
-          ].join(' ')}
-        >
+        {/* Poster thumbnail + title — sits beside the title rather than above it. Given its
+            own row below the banner (not overlapping it) so both stay fully visible. */}
+        <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
           <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
             <div className="aspect-[2/3] w-full">
               <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
