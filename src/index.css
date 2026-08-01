@@ -137,6 +137,12 @@ option.custom-option {
   transform-origin: top center;
 }
 
+/* ─── Discover grid item entrance ────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* ─── Recommendation card pink pulse ─────────────────────────────────────── */
 @keyframes pinkPulse {
   0%, 100% { box-shadow: 0 0 0 2px #dd3ee3, 0 0 10px 1px rgba(221,62,227,0.35); }

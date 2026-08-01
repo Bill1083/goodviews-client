@@ -1120,7 +1120,7 @@ export default function MyMoviesPage() {
                   <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
                 ))}
                 {!searchQ.trim() && filterCategoryIds.length === 0 && !filterYearFrom && !filterYearTo && !isLoadingMoreReviews && (
-                  <button onClick={() => navigate('/search')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
+                  <button onClick={() => navigate('/discover')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                   </button>
                 )}
@@ -1150,7 +1150,7 @@ export default function MyMoviesPage() {
                   <MovieCard key={w.movie_id} movie={w.movies as Movie} onSelect={(m) => setWatchlistDetail(m)} />
                 ))}
                 {!searchQ.trim() && !filterYearFrom && !filterYearTo && (
-                  <button onClick={() => navigate('/search')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
+                  <button onClick={() => navigate('/discover')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                   </button>
                 )}

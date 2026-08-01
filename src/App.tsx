@@ -6,14 +6,15 @@ import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
 import MyMoviesPage from './pages/MyMoviesPage'
-import SearchPage from './features/movies/SearchPage'
+import DiscoverPage from './features/discover/DiscoverPage'
+import DiscoverListPage from './features/discover/DiscoverListPage'
 import ProfilePage from './features/profile/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 
-const ROUTE_ORDER = ['/', '/search', '/profile', '/settings']
-const SWIPE_ROUTES = ['/', '/search', '/profile']
+const ROUTE_ORDER = ['/', '/discover', '/discover/popular', '/discover/for-you', '/profile', '/settings']
+const SWIPE_ROUTES = ['/', '/discover', '/profile']
 function getRouteIndex(path: string) {
   const idx = ROUTE_ORDER.indexOf(path)
   return idx === -1 ? 0 : idx
@@ -81,13 +82,30 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/search"
+          path="/discover"
           element={
             <ProtectedRoute>
-              <SearchPage />
+              <DiscoverPage />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/discover/popular"
+          element={
+            <ProtectedRoute>
+              <DiscoverListPage kind="popular" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover/for-you"
+          element={
+            <ProtectedRoute>
+              <DiscoverListPage kind="for-you" />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/search" element={<Navigate to="/discover" replace />} />
         <Route
           path="/profile"
           element={

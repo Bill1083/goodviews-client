@@ -49,6 +49,22 @@ export async function searchMovies(
   return data
 }
 
+export async function getTrendingMovies(page = 1, signal?: AbortSignal): Promise<MovieSearchResult> {
+  const { data } = await apiClient.get<MovieSearchResult>('/api/movies/trending', {
+    params: { page },
+    signal,
+  })
+  return data
+}
+
+export async function getTopRatedMovies(page = 1, signal?: AbortSignal): Promise<MovieSearchResult> {
+  const { data } = await apiClient.get<MovieSearchResult>('/api/movies/top-rated', {
+    params: { page },
+    signal,
+  })
+  return data
+}
+
 export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
   const { data } = await apiClient.get<MovieDetails>(`/api/movies/${movieId}`)
   return data

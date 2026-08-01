@@ -4,15 +4,18 @@ interface Props {
   onSearch: (query: string) => void
   isLoading?: boolean
   placeholder?: string
+  /** Fires synchronously on every keystroke (unlike onSearch, which is debounced). */
+  onTyping?: (raw: string) => void
 }
 
-export default function MovieSearchBar({ onSearch, isLoading = false, placeholder = 'Search...' }: Props) {
+export default function MovieSearchBar({ onSearch, isLoading = false, placeholder = 'Search...', onTyping }: Props) {
   const [value, setValue] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value
     setValue(q)
+    onTyping?.(q)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       if (q.trim().length >= 2) onSearch(q.trim())
