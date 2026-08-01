@@ -13,8 +13,8 @@ import SettingsPage from './pages/SettingsPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 
-const ROUTE_ORDER = ['/', '/discover', '/discover/popular', '/discover/for-you', '/profile', '/settings']
-const SWIPE_ROUTES = ['/', '/discover', '/profile']
+const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
+const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
 function getRouteIndex(path: string) {
   const idx = ROUTE_ORDER.indexOf(path)
   return idx === -1 ? 0 : idx
@@ -77,14 +77,6 @@ function AppRoutes() {
           path="/"
           element={
             <ProtectedRoute>
-              <MyMoviesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/discover"
-          element={
-            <ProtectedRoute>
               <DiscoverPage />
             </ProtectedRoute>
           }
@@ -105,7 +97,16 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="/search" element={<Navigate to="/discover" replace />} />
+        <Route path="/discover" element={<Navigate to="/" replace />} />
+        <Route
+          path="/my-movies"
+          element={
+            <ProtectedRoute>
+              <MyMoviesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/search" element={<Navigate to="/" replace />} />
         <Route
           path="/profile"
           element={

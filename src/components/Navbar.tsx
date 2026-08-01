@@ -4,8 +4,8 @@ import { useAuthStore } from '../store/authStore'
 import { getFriendRequests } from '../services/apiClient'
 
 const NAV_TABS = [
-  { label: 'My Movies', path: '/' },
-  { label: 'Discover', path: '/discover' },
+  { label: 'Discover', path: '/' },
+  { label: 'My Movies', path: '/my-movies' },
   { label: 'Profile', path: '/profile' },
 ]
 
@@ -59,7 +59,10 @@ export default function Navbar() {
         {/* Nav Tabs — fills remaining space on mobile (evenly spaced), auto width on desktop */}
         <nav className="flex flex-1 items-end justify-evenly md:flex-initial md:items-end md:gap-10">
           {NAV_TABS.map((tab) => {
-            const isActive = location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)
+            const isActive =
+              tab.path === '/'
+                ? location.pathname === '/' || location.pathname.startsWith('/discover')
+                : location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)
             return (
               <button
                 key={tab.path}

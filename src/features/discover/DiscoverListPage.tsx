@@ -94,7 +94,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/55 to-transparent" />
 
           <button
-            onClick={(e) => { e.stopPropagation(); navigate('/discover') }}
+            onClick={(e) => { e.stopPropagation(); navigate('/') }}
             className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white sm:left-6 sm:top-6"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
