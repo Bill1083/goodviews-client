@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMovieDetails, getMovieReviews } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss'
 import StarRating from './StarRating'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
-
-const DISMISS_DISTANCE = 120 // px of downward drag before releasing counts as a dismiss
-const DISMISS_VELOCITY = 0.6 // px/ms — a fast downward flick dismisses even under the distance threshold
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
@@ -144,66 +142,7 @@ export default function MovieDetailModal({
   const [showAllCast, setShowAllCast] = useState(false)
 
   useBodyScrollLock(true)
-
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const dismissDraggingRef = useRef(false)
-  const dismissStartYRef = useRef(0)
-  const dismissStartXRef = useRef(0)
-  const dismissLastDyRef = useRef(0)
-  const dismissLastTsRef = useRef(0)
-  const dismissVelocityRef = useRef(0)
-
-  const applyDismissTransform = (dy: number, animate: boolean) => {
-    const panel = panelRef.current
-    const overlay = overlayRef.current
-    if (panel) {
-      panel.style.transition = animate ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none'
-      panel.style.transform = dy > 0 ? `translateY(${dy}px)` : ''
-    }
-    if (overlay) {
-      overlay.style.transition = animate ? 'opacity 220ms ease' : 'none'
-      overlay.style.opacity = String(Math.max(0, 1 - dy / (DISMISS_DISTANCE * 2.5)))
-    }
-  }
-
-  const handleDragPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType !== 'touch') return
-    dismissDraggingRef.current = true
-    dismissStartYRef.current = e.clientY
-    dismissStartXRef.current = e.clientX
-    dismissLastDyRef.current = 0
-    dismissLastTsRef.current = performance.now()
-    dismissVelocityRef.current = 0
-    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
-  }
-
-  const handleDragPointerMove = (e: React.PointerEvent) => {
-    if (!dismissDraggingRef.current) return
-    const dy = e.clientY - dismissStartYRef.current
-    const dx = e.clientX - dismissStartXRef.current
-    // Only a clearly-downward pull counts — ignore sideways or upward motion entirely
-    // so this can't fight with anything else on the header.
-    if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) return
-    const now = performance.now()
-    const dt = now - dismissLastTsRef.current
-    if (dt > 0) dismissVelocityRef.current = (dy - dismissLastDyRef.current) / dt
-    dismissLastDyRef.current = dy
-    dismissLastTsRef.current = now
-    applyDismissTransform(dy, false)
-  }
-
-  const endDismissDrag = () => {
-    if (!dismissDraggingRef.current) return
-    dismissDraggingRef.current = false
-    const dy = dismissLastDyRef.current
-    const velocity = dismissVelocityRef.current
-    if (dy > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY) {
-      onClose()
-      return
-    }
-    applyDismissTransform(0, true)
-  }
+  const { overlayRef, panelRef, handlers: dismissHandlers } = useSwipeToDismiss(onClose)
 
   const { data, isLoading } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
@@ -263,12 +202,7 @@ export default function MovieDetailModal({
 
         {/* Draggable header — on touch devices, pulling this down dismisses the modal
             (mirrors the native bottom-sheet "swipe down to close" pattern). */}
-        <div
-          onPointerDown={handleDragPointerDown}
-          onPointerMove={handleDragPointerMove}
-          onPointerUp={endDismissDrag}
-          onPointerCancel={endDismissDrag}
-        >
+        <div {...dismissHandlers}>
           {/* Drag handle — mobile only, hints the swipe-to-close gesture below */}
           <div className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden">
             <div className="h-1 w-10 rounded-full bg-white/25" />

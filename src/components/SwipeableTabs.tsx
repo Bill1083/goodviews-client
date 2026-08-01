@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { triggerHaptic } from '../utils/haptics'
 
 const SETTLE_MS = 320
 const SETTLE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
@@ -36,6 +37,7 @@ export default function SwipeableTabs({ paths, panels }: Props) {
   const lastTsRef = useRef(0)
   const velocityRef = useRef(0)
   const widthRef = useRef(0)
+  const hapticFiredRef = useRef(false)
 
   const currentIndex = Math.max(0, paths.indexOf(location.pathname))
 
@@ -81,6 +83,7 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     lastDxRef.current = 0
     lastTsRef.current = performance.now()
     velocityRef.current = 0
+    hapticFiredRef.current = false
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -113,6 +116,17 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     if (dt > 0) velocityRef.current = (dx - lastDxRef.current) / dt
     lastDxRef.current = dx
     lastTsRef.current = now
+
+    // A short buzz the moment the drag crosses into "will commit to the next/prev tab"
+    // territory — only when there's actually a tab in that direction to land on.
+    const width = widthRef.current || 1
+    const willCommit = !atStart && !atEnd && Math.abs(dx) >= width * COMMIT_FRACTION
+    if (willCommit && !hapticFiredRef.current) {
+      hapticFiredRef.current = true
+      triggerHaptic()
+    } else if (!willCommit) {
+      hapticFiredRef.current = false
+    }
 
     applyTransform(index, clamped, false)
   }
