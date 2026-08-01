@@ -151,30 +151,43 @@ export default function MovieDetailModal({
           ×
         </button>
 
-        {/* Hero banner — a wide scene still from the film (TMDB backdrop), cropped to fill
-            since it's context/atmosphere rather than something that needs to stay uncropped. */}
-        {backdropUrl && (
-          <div className="relative h-36 w-full shrink-0 bg-navy-card sm:h-48 md:h-56 lg:h-64">
-            <img src={backdropUrl} alt="" aria-hidden="true" className="h-full w-full object-cover" />
-            <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-navy-wine/60 to-transparent" />
-          </div>
-        )}
-
-        {/* Poster thumbnail + title — sits beside the title rather than above it. Given its
-            own row below the banner (not overlapping it) so both stay fully visible. */}
-        <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
-          <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
-            <div className="aspect-[2/3] w-full">
-              <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+        {/* Hero banner — a wide scene still from the film (TMDB backdrop). It sits behind
+            everything as a fading backdrop; the poster + title float in front of it, fully
+            visible, in their own layer rather than being cropped by it. */}
+        {backdropUrl ? (
+          <div className="relative h-52 w-full shrink-0 overflow-hidden bg-navy-card sm:h-64 md:h-72 lg:h-80">
+            <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
+              <div className="w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:w-24 md:w-28">
+                <div className="aspect-[2/3] w-full">
+                  <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 pb-1">
+                <h2 className="text-lg font-bold leading-tight text-white drop-shadow-md sm:text-2xl">{movie.title}</h2>
+                {movie.release_date && (
+                  <p className="mt-0.5 text-sm text-white/75 drop-shadow-md">{movie.release_date.slice(0, 4)}</p>
+                )}
+              </div>
             </div>
           </div>
-          <div className="min-w-0 flex-1 pb-1">
-            <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
-            {movie.release_date && (
-              <p className="mt-0.5 text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>
-            )}
+        ) : (
+          /* No backdrop available — same poster + title pairing, just without the banner space. */
+          <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
+            <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
+              <div className="aspect-[2/3] w-full">
+                <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 pb-1">
+              <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
+              {movie.release_date && (
+                <p className="mt-0.5 text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 pt-4 sm:gap-5 sm:p-6 sm:pt-5">
