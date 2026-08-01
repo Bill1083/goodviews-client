@@ -141,10 +141,22 @@ export interface FriendReview {
   }
 }
 
+export interface MovieRecommendationInfo {
+  sender: { id: string; username: string } | null
+  sender_review: {
+    id: string
+    rating: number
+    review_text: string
+    created_at: string
+  } | null
+  recommended_at: string
+}
+
 export interface MovieReviewsData {
   my_review: Review | null
   friend_reviews: FriendReview[]
   avg_friend_rating: number | null
+  recommendation: MovieRecommendationInfo | null
 }
 
 export interface Recommendation {

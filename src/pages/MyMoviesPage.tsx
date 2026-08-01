@@ -14,8 +14,6 @@ import {
   getFriendActivity,
   getMovieReviews,
   getMyFriends,
-  getMyFriendGroups,
-  recommendMovie,
   getPersonDetails,
   searchPeople,
   getFavouriteActors,
@@ -24,7 +22,8 @@ import {
   removeFavouriteDirector,
 } from '../services/apiClient'
 import MovieCard from '../components/MovieCard'
-import MovieDescriptionPanel from '../components/MovieDescriptionPanel'
+import MovieDetailModal from '../components/MovieDetailModal'
+import SendToFriendsPanel from '../components/SendToFriendsPanel'
 import PersonModal from '../components/PersonModal'
 import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
@@ -416,80 +415,49 @@ function WatchedMovieModal({ movie, review, onClose, onEdit, onShare, onRewatch,
   onRewatch: () => void; onDecrementRewatch: () => void; onGoToReviews: () => void
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
-  const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
-  const rewatchCount = review.rewatch_count ?? 0
-
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      {/* Refactored for mobile: stack poster and details vertically on mobile, row on sm+ */}
-      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
-        <div className="w-28 shrink-0 self-center sm:w-40 sm:self-start">
-          <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
-            <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col gap-4 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold text-gray-lighter">{movie.title}</h2>
-              {movie.release_date && <p className="text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>}
-            </div>
-            <button onClick={onClose} className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0">×</button>
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Your Rating</p>
-            <div className="flex items-center gap-2">
-              <StarRating value={review.rating} readOnly size="md" />
-              <span className="text-sm text-gray-muted">{review.rating}/5</span>
-            </div>
-          </div>
-          {review.review_text && (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Your Review</p>
-              <p className="text-sm text-gray-light/80 leading-relaxed line-clamp-4">{review.review_text}</p>
-            </div>
-          )}
-          <div className="flex items-center gap-3 flex-wrap">
-            <p className="text-sm text-gray-muted">
-              Watched <span className="text-gray-lighter font-semibold">{rewatchCount + 1}</span> time{rewatchCount + 1 !== 1 ? 's' : ''}
-            </p>
-            {rewatchCount > 0 && (
-              <button onClick={onDecrementRewatch} className="flex items-center gap-1 rounded-lg border border-white/15 bg-navy-card/40 px-2 py-1.5 text-xs font-medium text-gray-muted hover:border-white/30 hover:text-gray-lighter transition-colors" title="Remove a rewatch">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" /></svg>
-              </button>
-            )}
-            <button onClick={onRewatch} className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-navy-card/40 px-3 py-1.5 text-xs font-medium text-gray-lighter hover:border-white/30 hover:bg-white/5 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Re-watched
-            </button>
-          </div>
-          <MovieDescriptionPanel movieId={movie.id} onPersonClick={onPersonClick} />
-          <div className="mt-auto flex flex-wrap gap-2">
-            <button onClick={onEdit} className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-4 py-2 text-sm font-medium text-teal-light hover:bg-teal/20 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit Rating &amp; Review
-            </button>
-            <button onClick={onShare} className="flex items-center gap-1.5 rounded-lg border border-magenta/40 bg-magenta/10 px-4 py-2 text-sm font-medium text-magenta hover:bg-magenta/20 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              Share / Add to Category
-            </button>
-            <button onClick={onGoToReviews} className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-navy-card/40 px-4 py-2 text-sm font-medium text-gray-lighter hover:border-white/30 hover:bg-white/5 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-              </svg>
-              Go to Reviews
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <MovieDetailModal
+      movie={movie}
+      onClose={onClose}
+      onPersonClick={onPersonClick}
+      myReviewOverride={review}
+      rewatch={{ onIncrement: onRewatch, onDecrement: onDecrementRewatch }}
+      actions={[
+        {
+          key: 'edit',
+          label: 'Edit Rating & Review',
+          variant: 'teal',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          ),
+          onClick: onEdit,
+        },
+        {
+          key: 'share',
+          label: 'Share / Add to Category',
+          variant: 'magenta',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          ),
+          onClick: onShare,
+        },
+        {
+          key: 'reviews',
+          label: 'Go to Reviews',
+          variant: 'outline',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+            </svg>
+          ),
+          onClick: onGoToReviews,
+        },
+      ]}
+    />
   )
 }
 
@@ -498,131 +466,59 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview, onPerson
   movie: Movie; onClose: () => void; onRemove: () => void; onWriteReview: () => void
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
-  const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
-  const queryClient = useQueryClient()
-
   const [showRecommendPanel, setShowRecommendPanel] = useState(false)
-  const [recFriendIds, setRecFriendIds] = useState<string[]>([])
-  const [recGroupIds, setRecGroupIds] = useState<string[]>([])
-
-  const { data: recFriends = [] } = useQuery({ queryKey: ['friends'], queryFn: getMyFriends, staleTime: 1000 * 60 * 5 })
-  const { data: recGroups = [] } = useQuery({ queryKey: ['friend-groups'], queryFn: getMyFriendGroups, staleTime: 1000 * 60 * 5 })
-
-  const recommendMutation = useMutation({
-    mutationFn: () => recommendMovie({
-      movie_id: movie.id, title: movie.title,
-      poster_path: movie.poster_path ?? null,
-      release_date: movie.release_date ?? null,
-      friend_ids: recFriendIds,
-      group_ids: recGroupIds,
-    }),
-    onSuccess: () => {
-      setShowRecommendPanel(false)
-      setRecFriendIds([])
-      setRecGroupIds([])
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
-    },
-  })
-
-  const toggleRecFriend = (id: string) =>
-    setRecFriendIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-  const toggleRecGroup = (id: string) =>
-    setRecGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="w-28 shrink-0 self-center sm:w-40 sm:self-start">
-          <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
-            <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-cover" />
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col gap-4 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold text-gray-lighter">{movie.title}</h2>
-              {movie.release_date && <p className="text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>}
-            </div>
-            <button onClick={onClose} className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0">×</button>
-          </div>
-          <p className="text-sm text-gray-muted italic">You haven't watched this yet.</p>
-          <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={onPersonClick} />
-
-          {/* Send to Friends inline panel */}
-          {showRecommendPanel && (
-            <div className="flex flex-col gap-3 rounded-xl border border-teal/30 bg-navy/50 p-3">
-              <p className="text-xs font-semibold text-teal-light uppercase tracking-wide">Send to Friends</p>
-              {recFriends.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-muted mb-1.5">Friends</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {recFriends.map(f => (
-                      <button key={f.id} onClick={() => toggleRecFriend(f.id)}
-                        className={['w-fit rounded-full px-2.5 py-1 text-xs font-medium border transition-colors',
-                          recFriendIds.includes(f.id) ? 'border-teal bg-teal/20 text-teal-light' : 'border-white/20 text-gray-muted hover:border-white/40'].join(' ')}>
-                        {f.username}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {recGroups.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-muted mb-1.5">Groups</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {recGroups.map(g => (
-                      <button key={g.id} onClick={() => toggleRecGroup(g.id)}
-                        className={['w-fit rounded-full px-2.5 py-1 text-xs font-medium border transition-colors',
-                          recGroupIds.includes(g.id) ? 'border-magenta bg-magenta/20 text-white' : 'border-white/20 text-gray-muted hover:border-white/40'].join(' ')}>
-                        {g.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => recommendMutation.mutate()}
-                  disabled={(recFriendIds.length === 0 && recGroupIds.length === 0) || recommendMutation.isPending}
-                  className="flex-1 rounded-lg bg-teal/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal/90 disabled:opacity-50 transition-colors">
-                  {recommendMutation.isPending ? 'Sending…' : 'Send'}
-                </button>
-                <button onClick={() => { setShowRecommendPanel(false); setRecFriendIds([]); setRecGroupIds([]) }}
-                  className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-gray-muted hover:text-gray-lighter transition-colors">
-                  Cancel
-                </button>
-              </div>
-              {recommendMutation.isSuccess && (
-                <p className="text-xs text-teal-light">Sent!</p>
-              )}
-            </div>
-          )}
-
-          <div className="mt-auto flex flex-wrap gap-2">
-            <button onClick={onWriteReview} className="flex items-center gap-1.5 rounded-lg bg-magenta px-4 py-2 text-sm font-semibold text-white hover:bg-magenta/90 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Write a Review
-            </button>
-            <button onClick={() => setShowRecommendPanel(v => !v)}
-              className={['flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
-                showRecommendPanel ? 'border-teal bg-teal/20 text-teal-light' : 'border-teal/40 bg-teal/10 text-teal-light hover:bg-teal/20'].join(' ')}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              Send to Friends
-            </button>
-            <button onClick={onRemove} className="flex items-center gap-1.5 rounded-lg border border-pink-brand/40 bg-pink-brand/10 px-4 py-2 text-sm font-medium text-pink-brand hover:bg-pink-brand/20 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Remove from Watchlist
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <MovieDetailModal
+      movie={movie}
+      onClose={onClose}
+      onPersonClick={onPersonClick}
+      extraContent={
+        showRecommendPanel ? (
+          <SendToFriendsPanel
+            movie={movie}
+            onCancel={() => setShowRecommendPanel(false)}
+            onSent={() => setShowRecommendPanel(false)}
+          />
+        ) : undefined
+      }
+      actions={[
+        {
+          key: 'write-review',
+          label: 'Write a Review',
+          variant: 'primary',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          ),
+          onClick: onWriteReview,
+        },
+        {
+          key: 'send',
+          label: 'Send to Friends',
+          variant: 'teal',
+          active: showRecommendPanel,
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          ),
+          onClick: () => setShowRecommendPanel((v) => !v),
+        },
+        {
+          key: 'remove',
+          label: 'Remove from Watchlist',
+          variant: 'danger',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          ),
+          onClick: onRemove,
+        },
+      ]}
+    />
   )
 }
 
@@ -717,18 +613,15 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
 }) {
   const queryClient = useQueryClient()
   const movie = review.movies as Movie
-  const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
   const totalWatched = (review.rewatch_count ?? 0) + 1
   const [showReviewModal, setShowReviewModal] = useState(false)
 
-  const { data: reviewData, isLoading } = useQuery({
+  const { data: reviewData } = useQuery({
     queryKey: ['movie-reviews', movie.id],
     queryFn: () => getMovieReviews(movie.id),
     staleTime: 1000 * 60 * 2,
   })
-
   const myReview = reviewData?.my_review ?? null
-  const otherFriendReviews = (reviewData?.friend_reviews ?? []).filter((r) => r.user_id !== review.user_id)
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -746,114 +639,65 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   })
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-      {/* Refactored for mobile: stack poster and friend review vertically on mobile, row on sm+ */}
-      <div className="panel-card flex max-w-2xl w-full flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Refactored for mobile: center poster on mobile, align start on sm+ */}
-        <div className="w-28 shrink-0 self-center sm:w-36 sm:self-start">
-          <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
-            <img src={posterUrl} alt={movie.title} className="h-full w-full object-cover" />
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col gap-4 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold text-gray-lighter">{movie.title}</h2>
-              {movie.release_date && <p className="text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>}
-            </div>
-            <button onClick={onClose} className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0">×</button>
-          </div>
-
-          {/* Featured friend's review */}
-          <div className="flex flex-col gap-2 rounded-lg border border-teal/30 bg-teal/5 p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-teal-light">{friendName}</p>
-              <span className="text-xs text-gray-muted">Watched {totalWatched} time{totalWatched !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <StarRating value={review.rating} readOnly size="sm" />
-              <span className="text-xs text-gray-muted">{review.rating}/5</span>
-            </div>
-            {review.review_text && <p className="text-sm text-gray-light/80 leading-relaxed">{review.review_text}</p>}
-          </div>
-
-          {/* My review (if exists) */}
-          {myReview && (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Your Rating</p>
-              <div className="flex items-center gap-2">
-                <StarRating value={myReview.rating} readOnly size="sm" />
-                <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
-              </div>
-              {myReview.review_text && <p className="text-sm text-gray-light/80 leading-relaxed line-clamp-3">{myReview.review_text}</p>}
-            </div>
-          )}
-
-          <MovieDescriptionPanel movieId={movie.id} onPersonClick={onPersonClick} />
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowReviewModal(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-magenta px-4 py-2 text-sm font-semibold text-white hover:bg-magenta/90 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              {myReview ? 'Edit Review' : 'Write a Review'}
-            </button>
-            {!myReview && (
-              inWatchlist ? (
-                <button
-                  onClick={() => removeWatchlistMutation.mutate()}
-                  disabled={removeWatchlistMutation.isPending}
-                  className="flex items-center gap-1.5 rounded-lg border border-pink-brand/40 bg-pink-brand/10 px-4 py-2 text-sm font-medium text-pink-brand hover:bg-pink-brand/20 transition-colors disabled:opacity-50"
-                >
+  const actions = [
+    {
+      key: 'review',
+      label: myReview ? 'Edit Review' : 'Write a Review',
+      variant: 'primary' as const,
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      onClick: () => setShowReviewModal(true),
+    },
+    ...(!myReview
+      ? [
+          inWatchlist
+            ? {
+                key: 'watchlist',
+                label: 'On Watchlist',
+                variant: 'danger' as const,
+                disabled: removeWatchlistMutation.isPending,
+                icon: (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  On Watchlist
-                </button>
-              ) : (
-                <button
-                  onClick={() => addWatchlistMutation.mutate()}
-                  disabled={addWatchlistMutation.isPending}
-                  className="flex items-center gap-1.5 rounded-lg border border-teal/40 bg-teal/10 px-4 py-2 text-sm font-medium text-teal-light hover:bg-teal/20 transition-colors disabled:opacity-50"
-                >
+                ),
+                onClick: () => removeWatchlistMutation.mutate(),
+              }
+            : {
+                key: 'watchlist',
+                label: 'Add to Watchlist',
+                variant: 'teal' as const,
+                disabled: addWatchlistMutation.isPending,
+                icon: (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
-                  Add to Watchlist
-                </button>
-              )
-            )}
-          </div>
+                ),
+                onClick: () => addWatchlistMutation.mutate(),
+              },
+        ]
+      : []),
+  ]
 
-          {/* Other friend reviews */}
-          {isLoading ? (
-            <p className="text-xs text-gray-muted">Loading other reviews…</p>
-          ) : otherFriendReviews.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide">Other Friends</p>              <ul className="flex flex-col gap-2">
-                {otherFriendReviews.map((fr) => (
-                  <li key={fr.id} className="flex flex-col gap-1 rounded-lg border border-white/10 bg-navy-card/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-lighter">{fr.profiles?.username ?? 'Unknown'}</p>
-                      <span className="text-xs text-gray-muted">Watched {(fr.rewatch_count ?? 0) + 1}×</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StarRating value={fr.rating} readOnly size="sm" />
-                      <span className="text-xs text-gray-muted">{fr.rating}/5</span>
-                    </div>
-                    {fr.review_text && <p className="text-sm text-gray-light/80 leading-relaxed line-clamp-3">{fr.review_text}</p>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
+  return (
+    <>
+      <MovieDetailModal
+        movie={movie}
+        onClose={onClose}
+        onPersonClick={onPersonClick}
+        recommendationOverride={{
+          sender: { id: review.user_id, username: friendName },
+          sender_review: { id: review.id, rating: review.rating, review_text: review.review_text, created_at: review.created_at },
+          recommended_at: review.created_at,
+        }}
+        pinnedTagLabel={null}
+        pinnedAccent="teal"
+        pinnedMetaText={`Watched ${totalWatched} time${totalWatched !== 1 ? 's' : ''}`}
+        actions={actions}
+      />
 
       {showReviewModal && (
         <ReviewModal
@@ -867,7 +711,7 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
           onSaved={() => { setShowReviewModal(false); queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] }) }}
         />
       )}
-    </div>
+    </>
   )
 }
 

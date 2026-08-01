@@ -10,8 +10,7 @@ import {
   removeFromWatchlist,
   getWatchlist,
 } from '../../services/apiClient'
-import StarRating from '../../components/StarRating'
-import MovieDescriptionPanel from '../../components/MovieDescriptionPanel'
+import MovieDetailModal from '../../components/MovieDetailModal'
 import PersonModal from '../../components/PersonModal'
 import type { Recommendation, Movie, MovieReviewsData } from '../../types'
 
@@ -42,7 +41,7 @@ function BellIcon({ hasUnread }: { hasUnread: boolean }) {
   )
 }
 
-// ─── Movie overview modal (mirrors SearchPage overview step) ──────────────────
+// ─── Movie overview modal (shared MovieDetailModal, fed with this notification's sender) ──
 function MovieOverviewModal({
   recommendation,
   onClose,
@@ -57,215 +56,58 @@ function MovieOverviewModal({
   onRemoveWatchlist: (movie: Movie) => void
 }) {
   const movie = recommendation.movies as Movie
-  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
   const inWatchlist = watchlistIds.has(movie.id)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [personModalId, setPersonModalId] = useState<number | null>(null)
 
-  const { data: reviewData, isLoading: reviewsLoading } = useQuery<MovieReviewsData>({
+  const { data: reviewData } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
     queryFn: () => getMovieReviews(movie.id),
     staleTime: 1000 * 60 * 2,
   })
-
   const myReview = reviewData?.my_review ?? null
-  const friendReviews = reviewData?.friend_reviews ?? []
-  const avgRating = reviewData?.avg_friend_rating ?? null
-  const [showReviewModal, setShowReviewModal] = useState(false)
-  const [personModalId, setPersonModalId] = useState<number | null>(null)
-
-  // Separate sender review from others so we can pin it at top
-  const senderReview = recommendation.sender_review
-  const senderUserId = recommendation.sender_id
-  const otherReviews = friendReviews.filter((r) => r.user_id !== senderUserId)
-  const senderFromFriends = friendReviews.find((r) => r.user_id === senderUserId)
 
   return (
     <>
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-0 sm:items-center sm:p-4"
-      onClick={onClose}
-    >
-      {/* Responsive: stacks vertically on mobile, side-by-side on md+ */}
-      <div
-        className="mx-auto flex flex-col w-full max-w-4xl rounded-none rounded-b-2xl overflow-hidden shadow-2xl sm:rounded-2xl md:flex-row md:items-stretch"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: '95vh' }}
-      >
-        {/* Poster — full-width fixed height on mobile, fixed-width on md+ */}
-        <div className="relative w-full h-52 shrink-0 bg-navy-card sm:h-64 md:h-auto md:w-56">
-          <img
-            src={posterUrl}
-            alt={`${movie.title} poster`}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-3">
-            <p className="text-sm font-bold text-white leading-tight">{movie.title}</p>
-          </div>
-        </div>
-
-        {/* Details — scrollable */}
-        <div className="flex flex-1 flex-col gap-4 bg-navy-wine/95 p-4 overflow-y-auto sm:gap-5 sm:p-6 md:p-7">
-          <button
-            onClick={onClose}
-            className="self-start text-xs text-gray-muted hover:text-gray-lighter transition-colors"
-          >
-            ← Back
-          </button>
-
-          <h2 className="text-xl font-bold text-gray-lighter text-center sm:text-2xl">{movie.title}</h2>
-
-          {reviewsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <span className="text-sm text-gray-muted">Loading…</span>
-            </div>
-          ) : (
-            <>
-              {/* Your rating */}
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium text-gray-lighter">Your Rating:</p>
-                {myReview ? (
-                  <div className="flex items-center gap-2">
-                    <StarRating value={myReview.rating} readOnly size="sm" />
-                    <span className="text-xs text-gray-muted">{myReview.rating}/5 Stars</span>
-                  </div>
+      <MovieDetailModal
+        movie={movie}
+        onClose={onClose}
+        onPersonClick={(pid) => setPersonModalId(pid)}
+        recommendationOverride={{
+          sender: recommendation.sender,
+          sender_review: recommendation.sender_review,
+          recommended_at: recommendation.created_at,
+        }}
+        actions={[
+          {
+            key: 'watchlist',
+            label: inWatchlist ? 'In Watchlist' : 'Add to Watchlist',
+            variant: inWatchlist ? 'outline' : 'primary',
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                {inWatchlist ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 ) : (
-                  <span className="text-sm text-gray-muted italic">No Review yet</span>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 )}
-              </div>
+              </svg>
+            ),
+            onClick: () => (inWatchlist ? onRemoveWatchlist(movie) : onAddWatchlist(movie)),
+          },
+          {
+            key: 'review',
+            label: myReview ? 'Edit Review' : 'Write a Review',
+            variant: 'teal',
+            icon: (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            ),
+            onClick: () => setShowReviewModal(true),
+          },
+        ]}
+      />
 
-              {/* Avg rating */}
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium text-gray-lighter">Avg Rating (You &amp; Friends):</p>
-                {avgRating !== null ? (
-                  <div className="flex items-center gap-2">
-                    <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
-                    <span className="text-xs text-gray-muted">{avgRating}/5 Stars</span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-muted italic">No reviews yet</span>
-                )}
-              </div>
-
-              {/* Watchlist + Review buttons */}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() =>
-                    inWatchlist ? onRemoveWatchlist(movie) : onAddWatchlist(movie)
-                  }
-                  className={[
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
-                    inWatchlist
-                      ? 'bg-navy-card/80 border border-white/15 text-gray-lighter hover:bg-white/10'
-                      : 'bg-magenta text-white hover:bg-magenta/90 active:scale-95',
-                  ].join(' ')}
-                >
-                  {inWatchlist ? (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      In Watchlist
-                    </>
-                  ) : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add to Watchlist
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowReviewModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-teal/10 border border-teal/40 text-teal-light hover:bg-teal/20"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {myReview ? 'Edit Review' : 'Write a Review'}
-                </button>
-              </div>
-
-              <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={(pid) => setPersonModalId(pid)} />
-
-              {/* Reviews */}
-              <div className="flex flex-col gap-3">
-                <p className="text-sm font-medium text-gray-lighter">Reviews:</p>
-
-                <ul className="flex flex-col gap-4">
-                  {/* Sender's review pinned at top with pink outline */}
-                  {(senderFromFriends ?? senderReview) && (
-                    <li
-                      className="flex flex-col gap-1.5 rounded-lg p-3"
-                      style={{
-                        border: '2px solid #dd3ee3',
-                        background: 'rgba(221,62,227,0.06)',
-                      }}
-                    >
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="h-8 w-8 rounded-full bg-magenta/20 border border-magenta/50 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-semibold text-magenta">
-                            {recommendation.sender?.username?.slice(0, 2).toUpperCase() ?? '??'}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-lighter">
-                          {recommendation.sender?.username ?? 'Unknown'}
-                        </span>
-                        <span className="text-xs text-magenta font-medium">recommended this</span>
-                        <StarRating
-                          value={(senderFromFriends ?? senderReview)!.rating}
-                          readOnly
-                          size="sm"
-                          accentColor="text-yellow-400"
-                        />
-                        <span className="ml-auto text-xs text-gray-muted">
-                          {new Date((senderFromFriends ?? senderReview)!.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {(senderFromFriends ?? senderReview)!.review_text && (
-                        <p className="text-sm text-gray-light/70 leading-relaxed ml-10">
-                          {(senderFromFriends ?? senderReview)!.review_text}
-                        </p>
-                      )}
-                    </li>
-                  )}
-
-                  {/* Other friend reviews */}
-                  {otherReviews.map((rev) => (
-                    <li
-                      key={rev.id}
-                      className="flex flex-col gap-1.5 border-b border-white/8 pb-4 last:border-0 last:pb-0"
-                    >
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="h-8 w-8 rounded-full bg-navy-card/60 border border-white/10 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-semibold text-gray-lighter">
-                            {rev.profiles?.username?.slice(0, 2).toUpperCase() ?? '??'}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-lighter">
-                          {rev.profiles?.username ?? 'Unknown'}
-                        </span>
-                        <StarRating value={rev.rating} readOnly size="sm" accentColor="text-yellow-400" />
-                        <span className="ml-auto text-xs text-gray-muted">
-                          {new Date(rev.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {rev.review_text && (
-                        <p className="text-sm text-gray-light/70 leading-relaxed ml-10">
-                          {rev.review_text}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-
-                  {!senderFromFriends && !senderReview && otherReviews.length === 0 && (
-                    <p className="text-sm text-gray-muted italic">No reviews yet for this movie.</p>
-                  )}
-                </ul>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
       {showReviewModal && (
         <ReviewModal
           movie={movie}
@@ -277,15 +119,11 @@ function MovieOverviewModal({
           onClose={() => setShowReviewModal(false)}
         />
       )}
-    </div>
 
-    {personModalId !== null && (
-      <PersonModal
-        personId={personModalId}
-        onClose={() => setPersonModalId(null)}
-      />
-    )}
-  </>
+      {personModalId !== null && (
+        <PersonModal personId={personModalId} onClose={() => setPersonModalId(null)} />
+      )}
+    </>
   )
 }
 
