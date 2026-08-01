@@ -77,7 +77,7 @@ function SortPanel({
   return (
     <>
       {open && <div className="fixed inset-0 z-30 bg-black/40" onClick={onClose} />}
-      <div className={['fixed top-0 right-0 z-40 h-full w-72 bg-navy-card border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto transition-transform duration-300',
+      <div className={['fixed top-0 right-0 z-40 h-full w-full max-w-xs bg-navy-card border-l border-white/10 p-5 flex flex-col gap-6 overflow-y-auto transition-transform duration-300 sm:w-72 sm:max-w-none sm:p-6',
         open ? 'translate-x-0' : 'translate-x-full'].join(' ')}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-lighter">Sort By:</h3>
@@ -198,7 +198,7 @@ function FilterPanel({
   return (
     <>
       {open && <div className="fixed inset-0 z-30 bg-black/40" onClick={onClose} />}
-      <div className={['fixed top-0 right-0 z-40 h-full w-80 bg-navy-card border-l border-white/10 p-6 flex flex-col gap-5 overflow-y-auto transition-transform duration-300',
+      <div className={['fixed top-0 right-0 z-40 h-full w-full max-w-xs bg-navy-card border-l border-white/10 p-5 flex flex-col gap-5 overflow-y-auto transition-transform duration-300 sm:w-80 sm:max-w-none sm:p-6',
         open ? 'translate-x-0' : 'translate-x-full'].join(' ')}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-lighter">Filter By:</h3>

@@ -45,12 +45,12 @@ export default function SettingsPage() {
   const currentVisibility = profile?.profile_visibility ?? 'friends_only'
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col px-6 py-10 gap-8">
+    <main className="mx-auto flex max-w-4xl flex-col px-4 py-8 gap-6 sm:px-6 sm:py-10 sm:gap-8">
       {/* Header */}
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center gap-4 sm:gap-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-20 w-20 text-gray-lighter shrink-0"
+          className="h-12 w-12 text-gray-lighter shrink-0 sm:h-20 sm:w-20"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -63,10 +63,10 @@ export default function SettingsPage() {
           />
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <h1 className="text-4xl font-bold text-gray-lighter flex-1">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-lighter flex-1 min-w-[140px] sm:text-4xl">Settings</h1>
         <button
           onClick={() => navigate('/profile')}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-colors sm:px-5 sm:py-2.5"
           style={{ backgroundColor: '#7c1e4e' }}
         >
           <svg
@@ -85,7 +85,7 @@ export default function SettingsPage() {
 
       {/* Settings list */}
       <div className="flex flex-col divide-y divide-white/10">
-        
+
 
         {/* Settings Option 1 */}
         <div className="flex items-center py-5">
@@ -93,9 +93,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile visibility */}
-        <div className="flex items-center justify-between py-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
           <span className="text-base text-gray-light">Decide Who sees your Profile</span>
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={currentVisibility}
               onChange={(e) =>
@@ -117,14 +117,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Hide recent movies */}
-        <div className="flex items-center justify-between py-5">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
+          <div className="min-w-0 flex-1 pr-2">
             <span className="text-base text-gray-light">Hide recent Movies</span>
             <p className="text-xs text-gray-muted mt-0.5">Prevents your recently watched movies from appearing in friends' activity feeds</p>
           </div>
           <button
             onClick={() => hideRecentMutation.mutate(!(profile?.hide_recent_movies ?? false))}
-            className={['relative w-12 h-6 rounded-full transition-colors', profile?.hide_recent_movies ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.hide_recent_movies ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={profile?.hide_recent_movies ?? false}
           >

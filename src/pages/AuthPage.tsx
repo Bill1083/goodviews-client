@@ -122,7 +122,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-end" style={{ paddingRight: '5vw' }}>
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center px-4 py-8 sm:justify-end sm:px-0 sm:py-0 sm:pr-[5vw]">
 
       {/* ── Blue glow accent (left side) ── */}
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-brand/15 blur-[160px] pointer-events-none" />
@@ -144,9 +144,9 @@ export default function AuthPage() {
 
       {/* ── Floating auth panel ── */}
       <div
-        className="relative z-10 flex flex-col items-center justify-center w-[349px] rounded-xl px-9 py-[22px]"
+        className="relative z-10 flex w-full max-w-[349px] flex-col items-center justify-center overflow-y-auto rounded-xl px-6 py-6 sm:px-9 sm:py-[22px]"
         style={{
-          height: '90vh',
+          maxHeight: '90vh',
           background: 'linear-gradient(to bottom, rgba(71,21,48,1) 0%, rgba(41,17,45,1) 50%, rgba(28,19,54,1) 100%)',
           boxShadow: '4px 4px 20px 0px rgba(0,0,0,0.55)',
         }}
