@@ -6,7 +6,8 @@ const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 const DRIFT_SPEED = 1 / 7 // slots per second — slow, continuous auto-scroll
 const RESUME_DELAY_MS = 1200 // pause auto-drift briefly after the user lets go
-const CLICK_MOVE_THRESHOLD = 6 // px — below this a pointer-up counts as a tap, not a swipe
+const CLICK_MOVE_THRESHOLD = 6 // px — below this a pointer-up counts as a tap, not a swipe (mouse)
+const TOUCH_CLICK_MOVE_THRESHOLD = 14 // px — touchscreens report several px of drift on an intentional tap
 
 interface Props {
   movies: Movie[]
@@ -23,6 +24,7 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
   const dragStartXRef = useRef(0)
   const dragStartOffsetRef = useRef(0)
   const dragMovedRef = useRef(0)
+  const dragPointerTypeRef = useRef<string>('mouse')
   const resumeAtRef = useRef(0)
   const rafRef = useRef<number>()
   const lastTsRef = useRef<number | null>(null)
@@ -65,6 +67,7 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     dragMovedRef.current = 0
     dragStartXRef.current = e.clientX
     dragStartOffsetRef.current = offset
+    dragPointerTypeRef.current = e.pointerType
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
   }
 
@@ -83,8 +86,9 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
 
   const handlePointerUp = (e: React.PointerEvent) => {
     const moved = dragMovedRef.current
+    const threshold = dragPointerTypeRef.current === 'touch' ? TOUCH_CLICK_MOVE_THRESHOLD : CLICK_MOVE_THRESHOLD
     endDrag()
-    if (moved >= CLICK_MOVE_THRESHOLD) return
+    if (moved >= threshold) return
 
     // Tap: figure out whether it landed on a clearly-visible poster (open that movie)
     // or on empty space around the carousel (open the full list page instead).
