@@ -78,11 +78,11 @@ function SectionHeader({ title, onViewAll }: { title: string; onViewAll: () => v
 
 function CarouselSkeleton() {
   return (
-    <div className="flex h-40 w-full items-center justify-center gap-4">
+    <div className="flex h-48 w-full items-center justify-center gap-4">
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="aspect-[2/3] h-32 animate-pulse rounded-card bg-navy-card/60"
+          className="aspect-[2/3] h-40 animate-pulse rounded-card bg-navy-card/60"
           style={{ opacity: i === 1 ? 1 : 0.5 }}
         />
       ))}
@@ -356,20 +356,28 @@ export default function DiscoverPage() {
         {!hasTyped && (
           <div className="flex w-full flex-col gap-10">
             <section className="flex w-full flex-col gap-3">
-              <SectionHeader title="🔥 Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
+              <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
               {trendingLoading ? (
                 <CarouselSkeleton />
               ) : (
-                <MovieCarousel movies={trending?.results ?? []} onOpenAll={() => navigate('/discover/popular')} />
+                <MovieCarousel
+                  movies={trending?.results ?? []}
+                  onOpenAll={() => navigate('/discover/popular')}
+                  onSelectMovie={setSelectedMovie}
+                />
               )}
             </section>
 
             <section className="flex w-full flex-col gap-3">
-              <SectionHeader title="✨ For You" onViewAll={() => navigate('/discover/for-you')} />
+              <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
               {topRatedLoading ? (
                 <CarouselSkeleton />
               ) : (
-                <MovieCarousel movies={topRated?.results ?? []} onOpenAll={() => navigate('/discover/for-you')} />
+                <MovieCarousel
+                  movies={topRated?.results ?? []}
+                  onOpenAll={() => navigate('/discover/for-you')}
+                  onSelectMovie={setSelectedMovie}
+                />
               )}
             </section>
           </div>

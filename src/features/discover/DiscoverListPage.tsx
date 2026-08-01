@@ -11,18 +11,21 @@ import type { Movie } from '../../types'
 
 type Kind = 'popular' | 'for-you'
 
-const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; emoji: string; accent: string }> = {
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
+const TMDB_POSTER = 'https://image.tmdb.org/t/p/w342'
+
+const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; accent: string; eyebrowColor: string }> = {
   popular: {
     title: 'Most Popular This Week',
     subtitle: "The films everyone's watching, rating, and talking about right now.",
-    emoji: '🔥',
-    accent: 'from-teal/25 via-navy-purple/10 to-transparent',
+    accent: 'from-teal/20 via-navy-purple/5 to-transparent',
+    eyebrowColor: 'text-teal',
   },
   'for-you': {
     title: 'For You',
     subtitle: 'Top-rated picks to get you started — personalized recommendations coming soon.',
-    emoji: '✨',
-    accent: 'from-magenta/25 via-navy-purple/10 to-transparent',
+    accent: 'from-magenta/20 via-navy-purple/5 to-transparent',
+    eyebrowColor: 'text-magenta',
   },
 }
 
@@ -42,6 +45,10 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
     queryFn: () => (kind === 'popular' ? getTrendingMovies(page) : getTopRatedMovies(page)),
     staleTime: 1000 * 60 * 30,
   })
+
+  const topMovie = page === 1 ? data?.results?.[0] : undefined
+  const backdropUrl = topMovie?.backdrop_path ? `${TMDB_BACKDROP}${topMovie.backdrop_path}` : null
+  const heroPosterUrl = topMovie?.poster_path ? `${TMDB_POSTER}${topMovie.poster_path}` : null
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -70,25 +77,53 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   return (
     <>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
-        {/* Hero */}
-        <div className={`relative overflow-hidden rounded-card border border-white/10 bg-gradient-to-br ${config.accent} bg-navy-card/30 px-6 py-10 sm:px-10 sm:py-14`}>
+        {/* Hero — features the #1 movie in this list as a big banner */}
+        <div
+          onClick={() => topMovie && setSelectedMovie(topMovie)}
+          className={`group relative h-64 w-full overflow-hidden rounded-card border border-white/10 bg-navy-card sm:h-80 md:h-[26rem]${topMovie ? ' cursor-pointer' : ''}`}
+        >
+          {backdropUrl && (
+            <img
+              src={backdropUrl}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+          )}
+          <div className={`absolute inset-0 bg-gradient-to-br ${config.accent}`} />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/55 to-transparent" />
+
           <button
-            onClick={() => navigate('/discover')}
-            className="mb-6 flex items-center gap-1.5 text-sm font-medium text-gray-muted transition-colors hover:text-gray-lighter"
+            onClick={(e) => { e.stopPropagation(); navigate('/discover') }}
+            className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white sm:left-6 sm:top-6"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Back to Discover
           </button>
-          <span className="text-4xl sm:text-5xl">{config.emoji}</span>
-          <h1
-            style={{ fontFamily: '"Source Sans 3", sans-serif' }}
-            className="mt-3 text-3xl font-semibold text-white sm:text-4xl"
-          >
-            {config.title}
-          </h1>
-          <p className="mt-2 max-w-xl text-sm text-gray-muted sm:text-base">{config.subtitle}</p>
+
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5 sm:p-8">
+            {heroPosterUrl && (
+              <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
+                <div className="aspect-[2/3] w-full">
+                  <img src={heroPosterUrl} alt="" className="h-full w-full object-cover" />
+                </div>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className={`text-xs font-semibold uppercase tracking-wider sm:text-sm ${config.eyebrowColor}`}>
+                {config.title}
+              </p>
+              <h1
+                style={{ fontFamily: '"Source Sans 3", sans-serif' }}
+                className="mt-1 truncate text-2xl font-bold text-white drop-shadow-md sm:text-4xl md:text-5xl"
+              >
+                {topMovie?.title ?? config.title}
+              </h1>
+              <p className="mt-2 max-w-xl text-xs text-gray-light/90 sm:text-sm line-clamp-2">{config.subtitle}</p>
+            </div>
+          </div>
         </div>
 
         {/* Grid */}

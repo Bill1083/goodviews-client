@@ -11,9 +11,10 @@ const CLICK_MOVE_THRESHOLD = 6 // px — below this a pointer-up counts as a tap
 interface Props {
   movies: Movie[]
   onOpenAll: () => void
+  onSelectMovie: (movie: Movie) => void
 }
 
-export default function MovieCarousel({ movies, onOpenAll }: Props) {
+export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -55,8 +56,8 @@ export default function MovieCarousel({ movies, onOpenAll }: Props) {
     }
   }, [n])
 
-  const slotWidth = Math.min(190, Math.max(110, containerWidth / 4.2))
-  const posterWidth = slotWidth * 0.72
+  const slotWidth = Math.min(220, Math.max(130, containerWidth / 3.7))
+  const posterWidth = slotWidth * 0.78
   const posterHeight = posterWidth * 1.5
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -80,10 +81,24 @@ export default function MovieCarousel({ movies, onOpenAll }: Props) {
     resumeAtRef.current = Date.now() + RESUME_DELAY_MS
   }
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     const moved = dragMovedRef.current
     endDrag()
-    if (moved < CLICK_MOVE_THRESHOLD) onOpenAll()
+    if (moved >= CLICK_MOVE_THRESHOLD) return
+
+    // Tap: figure out whether it landed on a clearly-visible poster (open that movie)
+    // or on empty space around the carousel (open the full list page instead).
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect || n === 0) { onOpenAll(); return }
+    const tapX = e.clientX - rect.left
+    const approxPosition = (tapX - containerWidth / 2) / slotWidth
+    if (Math.abs(approxPosition) <= 1.05) {
+      const i = Math.round(offset + approxPosition)
+      const idx = ((i % n) + n) % n
+      onSelectMovie(movies[idx])
+    } else {
+      onOpenAll()
+    }
   }
 
   if (n === 0 || containerWidth === 0) {
@@ -109,7 +124,7 @@ export default function MovieCarousel({ movies, onOpenAll }: Props) {
       onPointerUp={handlePointerUp}
       onPointerLeave={endDrag}
       onPointerCancel={endDrag}
-      className="relative w-full select-none overflow-hidden cursor-grab active:cursor-grabbing"
+      className="relative isolate w-full select-none overflow-hidden cursor-grab active:cursor-grabbing"
       style={{ height: posterHeight * 1.25, touchAction: 'none' }}
     >
       {items.map(({ key, movie, position }) => {
