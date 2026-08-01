@@ -15,6 +15,7 @@ import {
 } from '../services/apiClient'
 import MovieDescriptionPanel from './MovieDescriptionPanel'
 import ReviewModal from '../features/reviews/ReviewModal'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { FilmographyEntry, Movie } from '../types'
 
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w342'
@@ -174,6 +175,8 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
   const [selectedFilmEntry, setSelectedFilmEntry] = useState<FilmographyEntry | null>(null)
   const [innerPersonId, setInnerPersonId] = useState<number | null>(null)
   const [innerPersonName, setInnerPersonName] = useState('')
+
+  useBodyScrollLock(true)
 
   // Close on Escape
   useEffect(() => {

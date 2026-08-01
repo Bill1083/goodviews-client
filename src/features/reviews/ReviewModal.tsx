@@ -4,6 +4,7 @@ import { createReview, updateReview, getMyCategories, getMyFriendGroups, getMyFr
 import type { Movie } from '../../types'
 import StarRating from '../../components/StarRating'
 import PrimaryButton from '../../components/PrimaryButton'
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w185'
 
@@ -33,6 +34,9 @@ export default function ReviewModal({
   onSaved,
 }: Props) {
   const queryClient = useQueryClient()
+
+  useBodyScrollLock(true)
+
   const [rating, setRating] = useState(initialRating)
   const [reviewText, setReviewText] = useState(initialReviewText)
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(

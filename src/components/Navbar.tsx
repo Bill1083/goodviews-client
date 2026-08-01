@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
-import { getFriendRequests } from '../services/apiClient'
+import { getFriendRequests, getProfile } from '../services/apiClient'
 
 const NAV_TABS = [
   { label: 'Discover', path: '/' },
@@ -45,6 +45,12 @@ export default function Navbar() {
     refetchInterval: 30_000,
   })
   const hasPendingRequests = friendRequests.length > 0
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+    enabled: !!user,
+  })
 
   if (!user) return null
 
@@ -96,8 +102,14 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Spacer to balance layout — desktop only */}
-        <div className="hidden md:block w-20" />
+        {/* Username — desktop only, mirrors the logo's width so the tabs stay centered */}
+        <div className="hidden md:flex w-20 items-center justify-end pb-2">
+          {profile?.username && (
+            <span className="truncate text-sm font-medium text-gray-muted" title={profile.username}>
+              {profile.username}
+            </span>
+          )}
+        </div>
       </div>
     </header>
   )

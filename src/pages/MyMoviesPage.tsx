@@ -28,6 +28,7 @@ import PersonModal from '../components/PersonModal'
 import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
@@ -58,6 +59,8 @@ function SortPanel({
 }: {
   open: boolean; onClose: () => void; sortBy: SortKey | null; setSortBy: (k: SortKey | null) => void; showRating: boolean
 }) {
+  useBodyScrollLock(open)
+
   useEffect(() => {
     if (!open) return
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -150,6 +153,8 @@ function FilterPanel({
   const [genresOpen, setGenresOpen] = useState(true)
   const [actorQuery, setActorQuery] = useState(filterActor)
   const [directorQuery, setDirectorQuery] = useState(filterDirector)
+
+  useBodyScrollLock(open)
 
   useEffect(() => {
     if (!open) return
@@ -348,6 +353,8 @@ function FilterPanel({
 function ReviewsListModal({ movie, myReview, onClose }: {
   movie: Movie; myReview: Review; onClose: () => void
 }) {
+  useBodyScrollLock(true)
+
   const { data: reviewData, isLoading } = useQuery({
     queryKey: ['movie-reviews', movie.id],
     queryFn: () => getMovieReviews(movie.id),
@@ -612,6 +619,9 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
 }) {
   const queryClient = useQueryClient()
+
+  useBodyScrollLock(true)
+
   const movie = review.movies as Movie
   const totalWatched = (review.rewatch_count ?? 0) + 1
   const [showReviewModal, setShowReviewModal] = useState(false)

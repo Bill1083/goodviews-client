@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
 import { getProfile, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -12,6 +13,8 @@ export default function SettingsPage() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+
+  useBodyScrollLock(showSignOutConfirm || showDeleteConfirm)
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],

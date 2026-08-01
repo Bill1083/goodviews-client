@@ -1,8 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMovieDetails, getMovieReviews } from '../services/apiClient'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import StarRating from './StarRating'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
+
+const DISMISS_DISTANCE = 120 // px of downward drag before releasing counts as a dismiss
+const DISMISS_VELOCITY = 0.6 // px/ms — a fast downward flick dismisses even under the distance threshold
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
@@ -139,6 +143,68 @@ export default function MovieDetailModal({
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
   const [showAllCast, setShowAllCast] = useState(false)
 
+  useBodyScrollLock(true)
+
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const dismissDraggingRef = useRef(false)
+  const dismissStartYRef = useRef(0)
+  const dismissStartXRef = useRef(0)
+  const dismissLastDyRef = useRef(0)
+  const dismissLastTsRef = useRef(0)
+  const dismissVelocityRef = useRef(0)
+
+  const applyDismissTransform = (dy: number, animate: boolean) => {
+    const panel = panelRef.current
+    const overlay = overlayRef.current
+    if (panel) {
+      panel.style.transition = animate ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none'
+      panel.style.transform = dy > 0 ? `translateY(${dy}px)` : ''
+    }
+    if (overlay) {
+      overlay.style.transition = animate ? 'opacity 220ms ease' : 'none'
+      overlay.style.opacity = String(Math.max(0, 1 - dy / (DISMISS_DISTANCE * 2.5)))
+    }
+  }
+
+  const handleDragPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch') return
+    dismissDraggingRef.current = true
+    dismissStartYRef.current = e.clientY
+    dismissStartXRef.current = e.clientX
+    dismissLastDyRef.current = 0
+    dismissLastTsRef.current = performance.now()
+    dismissVelocityRef.current = 0
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+  }
+
+  const handleDragPointerMove = (e: React.PointerEvent) => {
+    if (!dismissDraggingRef.current) return
+    const dy = e.clientY - dismissStartYRef.current
+    const dx = e.clientX - dismissStartXRef.current
+    // Only a clearly-downward pull counts — ignore sideways or upward motion entirely
+    // so this can't fight with anything else on the header.
+    if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) return
+    const now = performance.now()
+    const dt = now - dismissLastTsRef.current
+    if (dt > 0) dismissVelocityRef.current = (dy - dismissLastDyRef.current) / dt
+    dismissLastDyRef.current = dy
+    dismissLastTsRef.current = now
+    applyDismissTransform(dy, false)
+  }
+
+  const endDismissDrag = () => {
+    if (!dismissDraggingRef.current) return
+    dismissDraggingRef.current = false
+    const dy = dismissLastDyRef.current
+    const velocity = dismissVelocityRef.current
+    if (dy > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY) {
+      onClose()
+      return
+    }
+    applyDismissTransform(0, true)
+  }
+
   const { data, isLoading } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
     queryFn: () => getMovieReviews(movie.id),
@@ -177,10 +243,12 @@ export default function MovieDetailModal({
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/80 backdrop-blur-sm p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         className="dialog-scale-in relative mx-auto flex max-h-screen w-full max-w-5xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
@@ -193,37 +261,51 @@ export default function MovieDetailModal({
           ×
         </button>
 
-        {/* Hero banner — a wide scene still from the film (TMDB backdrop), just tall enough to
-            frame the poster + title floating in front of it. Kept short so the year/director/
-            synopsis/cast/actions below don't require scrolling to reach on desktop. */}
-        {backdropUrl ? (
-          <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
-            <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
-              <div className="w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:w-24 md:w-28">
+        {/* Draggable header — on touch devices, pulling this down dismisses the modal
+            (mirrors the native bottom-sheet "swipe down to close" pattern). */}
+        <div
+          onPointerDown={handleDragPointerDown}
+          onPointerMove={handleDragPointerMove}
+          onPointerUp={endDismissDrag}
+          onPointerCancel={endDismissDrag}
+        >
+          {/* Drag handle — mobile only, hints the swipe-to-close gesture below */}
+          <div className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden">
+            <div className="h-1 w-10 rounded-full bg-white/25" />
+          </div>
+
+          {/* Hero banner — a wide scene still from the film (TMDB backdrop), just tall enough to
+              frame the poster + title floating in front of it. Kept short so the year/director/
+              synopsis/cast/actions below don't require scrolling to reach on desktop. */}
+          {backdropUrl ? (
+            <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
+              <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
+                <div className="w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:w-24 md:w-28">
+                  <div className="aspect-[2/3] w-full">
+                    <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1 pb-1">
+                  <h2 className="text-lg font-bold leading-tight text-white drop-shadow-md sm:text-2xl">{movie.title}</h2>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* No backdrop available — same poster + title pairing, just without the banner space. */
+            <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
+              <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
                 <div className="aspect-[2/3] w-full">
                   <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
                 </div>
               </div>
               <div className="min-w-0 flex-1 pb-1">
-                <h2 className="text-lg font-bold leading-tight text-white drop-shadow-md sm:text-2xl">{movie.title}</h2>
+                <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
               </div>
             </div>
-          </div>
-        ) : (
-          /* No backdrop available — same poster + title pairing, just without the banner space. */
-          <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
-            <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
-              <div className="aspect-[2/3] w-full">
-                <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
-              </div>
-            </div>
-            <div className="min-w-0 flex-1 pb-1">
-              <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
