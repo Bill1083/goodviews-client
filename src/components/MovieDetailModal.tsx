@@ -1,12 +1,12 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMovieDetails, getMovieReviews } from '../services/apiClient'
 import StarRating from './StarRating'
-import MovieDescriptionPanel from './MovieDescriptionPanel'
-import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo } from '../types'
+import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
+const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185'
 const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 export interface MovieDetailAction {
@@ -43,11 +43,12 @@ interface Props {
   /** Override the date shown on the pinned review (e.g. "Watched 3 times" instead of a date). */
   pinnedMetaText?: string
 
-  /** Extra content rendered between the rating stats and the description panel — used for
-   *  inline expandable panels such as "Send to Friends". */
+  /** Extra content rendered directly below the action buttons — used for inline expandable
+   *  panels such as "Send to Friends". */
   extraContent?: ReactNode
 
-  /** Footer action buttons, rendered left to right. */
+  /** Action buttons (write review, watchlist, send to friends, etc.), rendered left to right
+   *  above the reviews list. */
   actions: MovieDetailAction[]
 }
 
@@ -87,6 +88,39 @@ function StatChip({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+function CastAvatar({
+  actor,
+  onPersonClick,
+  size = 'md',
+}: {
+  actor: CastMember
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
+  size?: 'sm' | 'md'
+}) {
+  const dimension = size === 'sm' ? 'h-12 w-12' : 'h-14 w-14'
+  return (
+    <div
+      className={['flex w-16 shrink-0 flex-col items-center gap-1 text-center', onPersonClick ? 'cursor-pointer group' : ''].join(' ')}
+      onClick={onPersonClick ? () => onPersonClick(actor.id, actor.name, 'actor') : undefined}
+      role={onPersonClick ? 'button' : undefined}
+      tabIndex={onPersonClick ? 0 : undefined}
+      onKeyDown={onPersonClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onPersonClick(actor.id, actor.name, 'actor') } : undefined}
+    >
+      <div className={[dimension, 'shrink-0 overflow-hidden rounded-full border bg-navy-card/60 transition-colors', onPersonClick ? 'border-white/10 group-hover:border-magenta/50' : 'border-white/10'].join(' ')}>
+        {actor.profile_path ? (
+          <img src={`${TMDB_PROFILE}${actor.profile_path}`} alt={actor.name} className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-gray-muted">?</div>
+        )}
+      </div>
+      <p className={['w-full line-clamp-2 text-[10px] leading-tight transition-colors', onPersonClick ? 'text-gray-lighter group-hover:text-magenta' : 'text-gray-lighter'].join(' ')}>
+        {actor.name}
+      </p>
+      <p className="w-full line-clamp-1 text-[10px] italic leading-tight text-gray-muted">{actor.character}</p>
+    </div>
+  )
+}
+
 /** Single shared, responsive movie-details dialog used across search, watched, watchlist,
  *  friend-recommendation and friend-activity contexts so the presentation is identical everywhere. */
 export default function MovieDetailModal({
@@ -103,6 +137,7 @@ export default function MovieDetailModal({
   actions,
 }: Props) {
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
+  const [showAllCast, setShowAllCast] = useState(false)
 
   const { data, isLoading } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
@@ -117,6 +152,13 @@ export default function MovieDetailModal({
     staleTime: 1000 * 60 * 60,
   })
   const backdropUrl = details?.backdrop_path ? `${TMDB_BACKDROP}${details.backdrop_path}` : null
+  const directors = details?.credits?.crew?.filter((c) => c.job === 'Director') ?? []
+  const allCast = details?.credits?.cast ?? []
+  const topCast = allCast.slice(0, 3)
+  const restCast = allCast.slice(3)
+  const genres = details?.genres ?? []
+  const runtime = details?.runtime
+  const displayOverview = details?.overview ?? movie.overview
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -139,7 +181,7 @@ export default function MovieDetailModal({
       onClick={onClose}
     >
       <div
-        className="dialog-scale-in relative mx-auto flex max-h-screen w-full max-w-4xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-white/10"
+        className="dialog-scale-in relative mx-auto flex max-h-screen w-full max-w-5xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — floats over whichever corner is on top */}
@@ -151,11 +193,11 @@ export default function MovieDetailModal({
           ×
         </button>
 
-        {/* Hero banner — a wide scene still from the film (TMDB backdrop). It sits behind
-            everything as a fading backdrop; the poster + title float in front of it, fully
-            visible, in their own layer rather than being cropped by it. */}
+        {/* Hero banner — a wide scene still from the film (TMDB backdrop), just tall enough to
+            frame the poster + title floating in front of it. Kept short so the year/director/
+            synopsis/cast/actions below don't require scrolling to reach on desktop. */}
         {backdropUrl ? (
-          <div className="relative h-52 w-full shrink-0 overflow-hidden bg-navy-card sm:h-64 md:h-72 lg:h-80">
+          <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
             <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
@@ -166,9 +208,6 @@ export default function MovieDetailModal({
               </div>
               <div className="min-w-0 flex-1 pb-1">
                 <h2 className="text-lg font-bold leading-tight text-white drop-shadow-md sm:text-2xl">{movie.title}</h2>
-                {movie.release_date && (
-                  <p className="mt-0.5 text-sm text-white/75 drop-shadow-md">{movie.release_date.slice(0, 4)}</p>
-                )}
               </div>
             </div>
           </div>
@@ -182,9 +221,6 @@ export default function MovieDetailModal({
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <h2 className="text-lg font-bold leading-tight text-gray-lighter sm:text-2xl">{movie.title}</h2>
-              {movie.release_date && (
-                <p className="mt-0.5 text-sm text-gray-muted">{movie.release_date.slice(0, 4)}</p>
-              )}
             </div>
           </div>
         )}
@@ -197,29 +233,110 @@ export default function MovieDetailModal({
             </div>
           ) : (
             <>
-              {/* Rating stats */}
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <StatChip label="Your Rating">
-                  {myReview ? (
-                    <div className="flex items-center gap-2">
-                      <StarRating value={myReview.rating} readOnly size="sm" />
-                      <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm italic text-gray-muted">Not watched yet</span>
+              {/* Year / director / genres — next to the synopsis, opposite the poster+title above */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
+                  {(movie.release_date || directors.length > 0) && (
+                    <p className="text-sm leading-relaxed">
+                      {movie.release_date && (
+                        <span className="font-medium text-gray-lighter">{movie.release_date.slice(0, 4)}</span>
+                      )}
+                      {directors.length > 0 && (
+                        <span className="text-gray-muted">
+                          {movie.release_date ? ' · ' : ''}
+                          Directed by{' '}
+                          {directors.map((d, i) => (
+                            <span key={d.id}>
+                              {onPersonClick ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onPersonClick(d.id, d.name, 'director')}
+                                  className="text-gray-lighter underline decoration-white/25 underline-offset-2 transition-colors hover:text-magenta hover:decoration-magenta/50"
+                                >
+                                  {d.name}
+                                </button>
+                              ) : (
+                                <span className="text-gray-lighter">{d.name}</span>
+                              )}
+                              {i < directors.length - 1 ? ', ' : ''}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </p>
                   )}
-                </StatChip>
-                <StatChip label="Avg Rating (You & Friends)">
-                  {avgRating !== null ? (
-                    <div className="flex items-center gap-2">
-                      <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
-                      <span className="text-xs text-gray-muted">{avgRating}/5</span>
+                  {(runtime || genres.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {runtime != null && runtime > 0 && (
+                        <span className="text-xs text-gray-muted">
+                          {Math.floor(runtime / 60)}h {runtime % 60}m
+                        </span>
+                      )}
+                      {genres.map((g) => (
+                        <span key={g.id} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-muted">
+                          {g.name}
+                        </span>
+                      ))}
                     </div>
-                  ) : (
-                    <span className="text-sm italic text-gray-muted">No reviews yet</span>
                   )}
-                </StatChip>
+                </div>
+                {displayOverview && (
+                  <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light/80">{displayOverview}</p>
+                )}
               </div>
+
+              {/* Rating stats + top cast */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+                  <StatChip label="Your Rating">
+                    {myReview ? (
+                      <div className="flex items-center gap-2">
+                        <StarRating value={myReview.rating} readOnly size="sm" />
+                        <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm italic text-gray-muted">Not watched yet</span>
+                    )}
+                  </StatChip>
+                  <StatChip label="Avg Rating (You & Friends)">
+                    {avgRating !== null ? (
+                      <div className="flex items-center gap-2">
+                        <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
+                        <span className="text-xs text-gray-muted">{avgRating}/5</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm italic text-gray-muted">No reviews yet</span>
+                    )}
+                  </StatChip>
+                </div>
+
+                {topCast.length > 0 && (
+                  <div className="flex flex-col gap-2 sm:w-48 sm:shrink-0">
+                    <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
+                    <div className="flex gap-2">
+                      {topCast.map((actor) => (
+                        <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} />
+                      ))}
+                    </div>
+                    {restCast.length > 0 && (
+                      <button
+                        onClick={() => setShowAllCast((v) => !v)}
+                        className="self-start text-xs text-gray-muted transition-colors hover:text-gray-lighter"
+                      >
+                        {showAllCast ? 'Show less' : `+${restCast.length} more`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {showAllCast && restCast.length > 0 && (
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+                  {restCast.map((actor) => (
+                    <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} size="sm" />
+                  ))}
+                </div>
+              )}
 
               {/* Your review text + rewatch controls */}
               {myReview && (
@@ -258,9 +375,14 @@ export default function MovieDetailModal({
                 </div>
               )}
 
-              {extraContent}
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2">
+                {actions.map((action) => (
+                  <ActionButton key={action.key} action={action} />
+                ))}
+              </div>
 
-              <MovieDescriptionPanel movieId={movie.id} overview={movie.overview} onPersonClick={onPersonClick} />
+              {extraContent}
 
               {/* Reviews */}
               <div className="flex flex-col gap-3">
@@ -332,13 +454,6 @@ export default function MovieDetailModal({
               </div>
             </>
           )}
-
-          {/* Actions */}
-          <div className="mt-auto flex flex-wrap gap-2 pt-1">
-            {actions.map((action) => (
-              <ActionButton key={action.key} action={action} />
-            ))}
-          </div>
         </div>
       </div>
     </div>
