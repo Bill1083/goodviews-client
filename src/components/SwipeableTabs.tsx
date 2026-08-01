@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { triggerHaptic } from '../utils/haptics'
 
 const SETTLE_MS = 320
 const SETTLE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
@@ -37,7 +36,7 @@ export default function SwipeableTabs({ paths, panels }: Props) {
   const lastTsRef = useRef(0)
   const velocityRef = useRef(0)
   const widthRef = useRef(0)
-  const hapticFiredRef = useRef(false)
+  const suppressClickRef = useRef(false)
 
   const currentIndex = Math.max(0, paths.indexOf(location.pathname))
 
@@ -71,11 +70,10 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     // Touch/pen only — a mouse-drag version of this would hijack text selection on desktop,
     // which never swiped between tabs before.
     if (e.pointerType === 'mouse') return
-    let target = e.target as Element | null
-    while (target) {
-      if (target.hasAttribute?.('data-no-swipe')) return
-      target = target.parentElement
-    }
+    // Native interactive elements (and anything explicitly opted out) never start a page
+    // swipe — without this, a button near the top of a page can absorb the beginning of a
+    // real swipe, get treated as an aborted drag, and still receive a spurious click on release.
+    if ((e.target as Element)?.closest?.('button, a, input, select, textarea, [role="button"], [data-no-swipe]')) return
     draggingRef.current = true
     lockedAxisRef.current = null
     startXRef.current = e.clientX
@@ -83,7 +81,6 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     lastDxRef.current = 0
     lastTsRef.current = performance.now()
     velocityRef.current = 0
-    hapticFiredRef.current = false
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -99,6 +96,10 @@ export default function SwipeableTabs({ paths, panels }: Props) {
         draggingRef.current = false
         return
       }
+      // We've just claimed this gesture as a horizontal drag attempt — even if it ends up
+      // too small to commit to a tab change, it shouldn't *also* register as a click on
+      // whatever was underneath when the pointer lifts.
+      suppressClickRef.current = true
       try {
         ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       } catch {
@@ -117,17 +118,6 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     lastDxRef.current = dx
     lastTsRef.current = now
 
-    // A short buzz the moment the drag crosses into "will commit to the next/prev tab"
-    // territory — only when there's actually a tab in that direction to land on.
-    const width = widthRef.current || 1
-    const willCommit = !atStart && !atEnd && Math.abs(dx) >= width * COMMIT_FRACTION
-    if (willCommit && !hapticFiredRef.current) {
-      hapticFiredRef.current = true
-      triggerHaptic()
-    } else if (!willCommit) {
-      hapticFiredRef.current = false
-    }
-
     applyTransform(index, clamped, false)
   }
 
@@ -135,6 +125,18 @@ export default function SwipeableTabs({ paths, panels }: Props) {
     lockedAxisRef.current = null
     if (!draggingRef.current) return
     draggingRef.current = false
+
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false
+      const suppressOnce = (e: MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+      document.addEventListener('click', suppressOnce, { capture: true, once: true })
+      // pointercancel (e.g. the OS interrupts the gesture) doesn't reliably follow up with
+      // a click event — don't let this listener linger forever waiting for one that never comes.
+      setTimeout(() => document.removeEventListener('click', suppressOnce, { capture: true }), 400)
+    }
 
     const index = indexRef.current
     const width = widthRef.current || 1
@@ -168,7 +170,12 @@ export default function SwipeableTabs({ paths, panels }: Props) {
         onPointerCancel={settle}
       >
         {panels.map((panel, i) => (
-          <div key={paths[i]} className="h-full w-full shrink-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div
+            key={paths[i]}
+            data-scroll-lock-target
+            className="h-full w-full shrink-0 overflow-y-auto overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {panel}
           </div>
         ))}

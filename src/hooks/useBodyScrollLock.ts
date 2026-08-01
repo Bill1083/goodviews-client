@@ -2,12 +2,18 @@ import { useEffect } from 'react'
 
 let lockCount = 0
 let savedScrollY = 0
+let lockedPanels: { el: HTMLElement; prevOverflow: string }[] = []
 
 /** Prevents the page behind a modal/overlay from scrolling while `active` is true.
  *  Uses position:fixed + restoring scrollY (not just overflow:hidden) because iOS Safari
  *  still allows rubber-band scrolling behind a plain `overflow: hidden` body. Reference-counted
  *  so multiple overlays open at once (e.g. a modal that opens another modal) don't fight over
- *  restoring body styles when the first one closes. */
+ *  restoring body styles when the first one closes.
+ *
+ *  Locking `document.body` alone isn't enough on the SwipeableTabs carousel, where each tab
+ *  scrolls inside its own `[data-scroll-lock-target]` container rather than the body — so
+ *  those are located and overflow-hidden too. On routes where body really is the scroll
+ *  owner, no such elements exist and this is a no-op. */
 export function useBodyScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return
@@ -20,6 +26,10 @@ export function useBodyScrollLock(active: boolean) {
       body.left = '0'
       body.right = '0'
       body.width = '100%'
+
+      lockedPanels = Array.from(document.querySelectorAll<HTMLElement>('[data-scroll-lock-target]'))
+        .map((el) => ({ el, prevOverflow: el.style.overflow }))
+      lockedPanels.forEach(({ el }) => { el.style.overflow = 'hidden' })
     }
     lockCount += 1
 
@@ -33,6 +43,9 @@ export function useBodyScrollLock(active: boolean) {
         body.right = ''
         body.width = ''
         window.scrollTo(0, savedScrollY)
+
+        lockedPanels.forEach(({ el, prevOverflow }) => { el.style.overflow = prevOverflow })
+        lockedPanels = []
       }
     }
   }, [active])

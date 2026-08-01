@@ -16,7 +16,6 @@ import {
 import MovieDescriptionPanel from './MovieDescriptionPanel'
 import ReviewModal from '../features/reviews/ReviewModal'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss'
 import type { FilmographyEntry, Movie } from '../types'
 
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w342'
@@ -178,7 +177,6 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
   const [innerPersonName, setInnerPersonName] = useState('')
 
   useBodyScrollLock(true)
-  const { overlayRef, panelRef, handlers: dismissHandlers } = useSwipeToDismiss(onClose)
 
   // Close on Escape
   useEffect(() => {
@@ -277,31 +275,24 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
 
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
-        ref={panelRef}
         className="panel-card flex w-full max-w-2xl flex-col gap-0 overflow-hidden max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — draggable down on touch devices to dismiss */}
-        <div className="shrink-0" {...dismissHandlers}>
-          <div className="flex justify-center pb-1 pt-2 sm:hidden">
-            <div className="h-1 w-10 rounded-full bg-white/25" />
-          </div>
-          <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-white/10 sm:pt-5">
-            <h2 className="text-base font-bold text-gray-lighter truncate">
-              {isLoading ? 'Loading…' : (person?.name ?? 'Person')}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0 ml-3"
-            >
-              ×
-            </button>
-          </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0">
+          <h2 className="text-base font-bold text-gray-lighter truncate">
+            {isLoading ? 'Loading…' : (person?.name ?? 'Person')}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0 ml-3"
+          >
+            ×
+          </button>
         </div>
 
         {/* Body */}

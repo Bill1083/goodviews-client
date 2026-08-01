@@ -5,9 +5,6 @@
 @layer base {
   html, body {
     min-height: 100vh;
-    /* Stop the whole page rubber-banding/bouncing past its edges on iOS — feels less like a
-       web page and more like the native app UI we're going for. */
-    overscroll-behavior-y: none;
   }
 
   html {

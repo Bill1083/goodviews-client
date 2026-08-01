@@ -5,7 +5,6 @@ import type { Movie } from '../../types'
 import StarRating from '../../components/StarRating'
 import PrimaryButton from '../../components/PrimaryButton'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
-import { useSwipeToDismiss } from '../../hooks/useSwipeToDismiss'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w185'
 
@@ -37,7 +36,6 @@ export default function ReviewModal({
   const queryClient = useQueryClient()
 
   useBodyScrollLock(true)
-  const { overlayRef, panelRef, handlers: dismissHandlers } = useSwipeToDismiss(onClose)
 
   const [rating, setRating] = useState(initialRating)
   const [reviewText, setReviewText] = useState(initialReviewText)
@@ -138,47 +136,40 @@ export default function ReviewModal({
 
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/70 backdrop-blur-sm px-4"
       onClick={onClose}
     >
       <div
-        ref={panelRef}
         className="w-full max-w-lg rounded-card border border-purple/30 bg-navy p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — draggable down on touch devices to dismiss */}
-        <div {...dismissHandlers}>
-          <div className="flex justify-center pb-2 -mt-2 sm:hidden">
-            <div className="h-1 w-10 rounded-full bg-white/25" />
-          </div>
-          <div className="flex items-start gap-4 mb-5">
-            {movie.poster_path && (
-              <img
-                src={`${TMDB_IMG}${movie.poster_path}`}
-                alt={movie.title}
-                className="h-24 w-16 rounded object-cover flex-shrink-0"
-              />
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-5">
+          {movie.poster_path && (
+            <img
+              src={`${TMDB_IMG}${movie.poster_path}`}
+              alt={movie.title}
+              className="h-24 w-16 rounded object-cover flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-muted uppercase tracking-wide mb-0.5">{modalTitle}</p>
+            <h2 className="text-lg font-semibold text-gray-light leading-snug">
+              {movie.title}
+            </h2>
+            {movie.release_date && (
+              <p className="text-xs text-gray-muted mt-0.5">
+                {movie.release_date.slice(0, 4)}
+              </p>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-muted uppercase tracking-wide mb-0.5">{modalTitle}</p>
-              <h2 className="text-lg font-semibold text-gray-light leading-snug">
-                {movie.title}
-              </h2>
-              {movie.release_date && (
-                <p className="text-xs text-gray-muted mt-0.5">
-                  {movie.release_date.slice(0, 4)}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="text-gray-muted hover:text-gray-light text-xl leading-none"
-            >
-              ×
-            </button>
           </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-gray-muted hover:text-gray-light text-xl leading-none"
+          >
+            ×
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
