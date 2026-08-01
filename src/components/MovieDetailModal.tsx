@@ -226,7 +226,7 @@ export default function MovieDetailModal({
         )}
 
         {/* Details — scrollable */}
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 pt-4 sm:gap-5 sm:p-6 sm:pt-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <span className="text-sm text-gray-muted">Loading…</span>
@@ -283,35 +283,9 @@ export default function MovieDetailModal({
                 {displayOverview && (
                   <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light/80">{displayOverview}</p>
                 )}
-              </div>
-
-              {/* Rating stats + top cast */}
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-                  <StatChip label="Your Rating">
-                    {myReview ? (
-                      <div className="flex items-center gap-2">
-                        <StarRating value={myReview.rating} readOnly size="sm" />
-                        <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm italic text-gray-muted">Not watched yet</span>
-                    )}
-                  </StatChip>
-                  <StatChip label="Avg Rating (You & Friends)">
-                    {avgRating !== null ? (
-                      <div className="flex items-center gap-2">
-                        <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
-                        <span className="text-xs text-gray-muted">{avgRating}/5</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm italic text-gray-muted">No reviews yet</span>
-                    )}
-                  </StatChip>
-                </div>
 
                 {topCast.length > 0 && (
-                  <div className="flex flex-col gap-2 sm:w-48 sm:shrink-0">
+                  <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
                     <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
                     <div className="flex gap-2">
                       {topCast.map((actor) => (
@@ -328,6 +302,30 @@ export default function MovieDetailModal({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Rating stats — stands alone so a short row here doesn't leave a gap before the actions */}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <StatChip label="Your Rating">
+                  {myReview ? (
+                    <div className="flex items-center gap-2">
+                      <StarRating value={myReview.rating} readOnly size="sm" />
+                      <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm italic text-gray-muted">Not watched yet</span>
+                  )}
+                </StatChip>
+                <StatChip label="Avg Rating (You & Friends)">
+                  {avgRating !== null ? (
+                    <div className="flex items-center gap-2">
+                      <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
+                      <span className="text-xs text-gray-muted">{avgRating}/5</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm italic text-gray-muted">No reviews yet</span>
+                  )}
+                </StatChip>
               </div>
 
               {showAllCast && restCast.length > 0 && (
