@@ -10,10 +10,8 @@ let lockedPanels: { el: HTMLElement; prevOverflow: string }[] = []
  *  so multiple overlays open at once (e.g. a modal that opens another modal) don't fight over
  *  restoring body styles when the first one closes.
  *
- *  Locking `document.body` alone isn't enough on the SwipeableTabs carousel, where each tab
- *  scrolls inside its own `[data-scroll-lock-target]` container rather than the body — so
- *  those are located and overflow-hidden too. On routes where body really is the scroll
- *  owner, no such elements exist and this is a no-op. */
+ *  Also locks any `[data-scroll-lock-target]` container, for routes where a nested element
+ *  (rather than the body) owns the scroll. Where no such elements exist, that part is a no-op. */
 export function useBodyScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return

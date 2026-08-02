@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
-import SwipeableTabs from './components/SwipeableTabs'
 import AuthPage from './pages/AuthPage'
 import MyMoviesPage from './pages/MyMoviesPage'
 import DiscoverPage from './features/discover/DiscoverPage'
@@ -15,9 +14,7 @@ import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
-// The 3 top-level tabs — dragged between as a live carousel by SwipeableTabs rather than
-// going through <Routes>'s normal mount/unmount per navigation.
-const TAB_ROUTES = ['/', '/my-movies', '/profile']
+const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
 function getRouteIndex(path: string) {
   const idx = ROUTE_ORDER.indexOf(path)
   return idx === -1 ? 0 : idx
@@ -25,9 +22,34 @@ function getRouteIndex(path: string) {
 
 function AppRoutes() {
   const location = useLocation()
+  const navigate = useNavigate()
   const prevPath = useRef(location.pathname)
   const [transitionClass, setTransitionClass] = useState('')
-  const isTabRoute = TAB_ROUTES.includes(location.pathname)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Don't intercept swipes on elements that opt out (e.g. horizontal scroll containers)
+    let target = e.target as Element | null
+    while (target) {
+      if (target instanceof Element && target.hasAttribute('data-no-swipe')) return
+      target = target.parentElement
+    }
+    // Only fire for clearly horizontal swipes (≥80px horizontal, 1.5× more horizontal than vertical)
+    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const idx = SWIPE_ROUTES.indexOf(location.pathname)
+      if (idx === -1) return
+      if (dx < 0 && idx < SWIPE_ROUTES.length - 1) navigate(SWIPE_ROUTES[idx + 1])
+      else if (dx > 0 && idx > 0) navigate(SWIPE_ROUTES[idx - 1])
+    }
+  }
 
   useLayoutEffect(() => {
     const prevIdx = getRouteIndex(prevPath.current)
@@ -41,52 +63,69 @@ function AppRoutes() {
 
   return (
     <div
-      className={!isTabRoute && transitionClass ? transitionClass : undefined}
+      className={transitionClass || undefined}
       onAnimationEnd={() => setTransitionClass('')}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{ flex: 1, minHeight: 0 }}
     >
-      {isTabRoute ? (
-        <ProtectedRoute>
-          <SwipeableTabs
-            paths={TAB_ROUTES}
-            panels={[<DiscoverPage />, <MyMoviesPage />, <ProfilePage />]}
-          />
-        </ProtectedRoute>
-      ) : (
-        <Routes location={location}>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route
-            path="/discover/popular"
-            element={
-              <ProtectedRoute>
-                <DiscoverListPage kind="popular" />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/discover/for-you"
-            element={
-              <ProtectedRoute>
-                <DiscoverListPage kind="for-you" />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/discover" element={<Navigate to="/" replace />} />
-          <Route path="/search" element={<Navigate to="/" replace />} />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<Navigate to="/auth" replace />} />
-          <Route path="/register" element={<Navigate to="/auth" replace />} />
-        </Routes>
-      )}
+      <Routes location={location}>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <DiscoverPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover/popular"
+          element={
+            <ProtectedRoute>
+              <DiscoverListPage kind="popular" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover/for-you"
+          element={
+            <ProtectedRoute>
+              <DiscoverListPage kind="for-you" />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/discover" element={<Navigate to="/" replace />} />
+        <Route
+          path="/my-movies"
+          element={
+            <ProtectedRoute>
+              <MyMoviesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/search" element={<Navigate to="/" replace />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/register" element={<Navigate to="/auth" replace />} />
+      </Routes>
     </div>
   )
 }
@@ -117,4 +156,3 @@ export default function App() {
     </BrowserRouter>
   )
 }
-

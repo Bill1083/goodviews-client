@@ -90,6 +90,15 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     endDrag()
     if (moved >= threshold) return
 
+    // A tap on a touchscreen opens a movie synchronously here, on pointerup — but the
+    // browser still fires a compatibility "click" a beat later at the same screen
+    // coordinates. By then the modal we just opened has its own full-screen backdrop
+    // sitting there, and that trailing click lands on *it* and closes the modal we just
+    // opened. Swallow that one ghost click so the tap doesn't immediately undo itself.
+    const swallowNextClick = (ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation() }
+    document.addEventListener('click', swallowNextClick, { capture: true, once: true })
+    setTimeout(() => document.removeEventListener('click', swallowNextClick, { capture: true }), 400)
+
     // Tap: figure out whether it landed on a clearly-visible poster (open that movie)
     // or on empty space around the carousel (open the full list page instead).
     const rect = containerRef.current?.getBoundingClientRect()
