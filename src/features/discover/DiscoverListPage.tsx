@@ -49,6 +49,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   const topMovie = page === 1 ? data?.results?.[0] : undefined
   const backdropUrl = topMovie?.backdrop_path ? `${TMDB_BACKDROP}${topMovie.backdrop_path}` : null
   const heroPosterUrl = topMovie?.poster_path ? `${TMDB_POSTER}${topMovie.poster_path}` : null
+  const bannerLoading = !data
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -80,7 +81,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
         {/* Hero — features the #1 movie in this list as a big banner */}
         <div
           onClick={() => topMovie && setSelectedMovie(topMovie)}
-          className={`group relative h-64 w-full overflow-hidden rounded-card border border-white/10 bg-navy-card sm:h-80 md:h-[26rem]${topMovie ? ' cursor-pointer' : ''}`}
+          className={`group relative h-64 w-full overflow-hidden rounded-card border border-white/10 bg-navy-card sm:h-80 md:h-[26rem]${topMovie ? ' cursor-pointer' : ''}${bannerLoading ? ' animate-pulse' : ''}`}
         >
           {backdropUrl && (
             <img
@@ -104,25 +105,38 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           </button>
 
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5 sm:p-8">
-            {heroPosterUrl && (
-              <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
-                <div className="aspect-[2/3] w-full">
-                  <img src={heroPosterUrl} alt="" className="h-full w-full object-cover" />
+            {bannerLoading ? (
+              <>
+                <div className="hidden aspect-[2/3] w-20 shrink-0 rounded-lg border-2 border-white/10 bg-navy-card/80 sm:block md:w-24" />
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="h-3 w-28 rounded bg-navy-card/80" />
+                  <div className="h-8 w-1/2 rounded bg-navy-card/80 sm:h-10" />
+                  <div className="h-3 w-2/3 rounded bg-navy-card/80" />
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {heroPosterUrl && (
+                  <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
+                    <div className="aspect-[2/3] w-full">
+                      <img src={heroPosterUrl} alt="" className="h-full w-full object-cover" />
+                    </div>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold uppercase tracking-wider sm:text-sm ${config.eyebrowColor}`}>
+                    {config.title}
+                  </p>
+                  <h1
+                    style={{ fontFamily: '"Source Sans 3", sans-serif' }}
+                    className="mt-1 truncate text-2xl font-bold text-white drop-shadow-md sm:text-4xl md:text-5xl"
+                  >
+                    {topMovie?.title ?? config.title}
+                  </h1>
+                  <p className="mt-2 max-w-xl text-xs text-gray-light/90 sm:text-sm line-clamp-2">{config.subtitle}</p>
+                </div>
+              </>
             )}
-            <div className="min-w-0 flex-1">
-              <p className={`text-xs font-semibold uppercase tracking-wider sm:text-sm ${config.eyebrowColor}`}>
-                {config.title}
-              </p>
-              <h1
-                style={{ fontFamily: '"Source Sans 3", sans-serif' }}
-                className="mt-1 truncate text-2xl font-bold text-white drop-shadow-md sm:text-4xl md:text-5xl"
-              >
-                {topMovie?.title ?? config.title}
-              </h1>
-              <p className="mt-2 max-w-xl text-xs text-gray-light/90 sm:text-sm line-clamp-2">{config.subtitle}</p>
-            </div>
           </div>
         </div>
 

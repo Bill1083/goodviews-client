@@ -358,8 +358,13 @@ export default function RecommendationsSection() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <span className="text-sm text-gray-muted">Loading…</span>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <div className="aspect-[2/3] w-full animate-pulse rounded-card bg-navy-card/60" />
+              <div className="mx-auto h-3 w-3/4 animate-pulse rounded bg-navy-card/60" />
+            </div>
+          ))}
         </div>
       ) : senderGroups.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">

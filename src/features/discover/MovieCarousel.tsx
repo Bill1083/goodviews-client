@@ -1,6 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Movie } from '../../types'
 
+function CarouselPosterImg({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        draggable={false}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+      />
+    </>
+  )
+}
+
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
@@ -161,13 +178,7 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
             }}
           >
             <div className="relative h-full w-full overflow-hidden rounded-card shadow-lg shadow-black/40 border border-white/10 bg-navy-card/40">
-              <img
-                src={posterUrl}
-                alt={movie.title}
-                className="h-full w-full object-cover"
-                draggable={false}
-                loading="lazy"
-              />
+              <CarouselPosterImg src={posterUrl} alt={movie.title} />
               {absPos < 0.6 && (
                 <div
                   className="absolute inset-x-0 bottom-0 px-2 py-1.5"

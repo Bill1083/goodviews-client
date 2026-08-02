@@ -326,7 +326,7 @@ export default function DiscoverPage() {
               </button>
             </>
           ) : (
-            <>
+            <div className="search-ease-in flex w-full items-center gap-4">
               <div
                 className={[
                   'transition-all duration-500 ease-out',
@@ -348,7 +348,7 @@ export default function DiscoverPage() {
               >
                 <CloseIcon />
               </button>
-            </>
+            </div>
           )}
         </div>
 

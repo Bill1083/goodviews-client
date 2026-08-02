@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getMovieDetails, getMovieReviews } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
+import { getLastPointerPosition } from '../utils/pointerTracker'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
@@ -86,6 +87,72 @@ function ActionButton({ action }: { action: MovieDetailAction }) {
   )
 }
 
+/** Mirrors the real hero banner's layout so it doesn't pop/reflow once the backdrop arrives. */
+function BannerSkeleton() {
+  return (
+    <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56 animate-pulse">
+      <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/70 to-navy-card/40" />
+      <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
+        <div className="aspect-[2/3] w-20 shrink-0 rounded-lg border-2 border-white/10 bg-navy-card/80 sm:w-24 md:w-28" />
+        <div className="min-w-0 flex-1 pb-1">
+          <div className="h-5 w-2/3 rounded bg-navy-card/80 sm:h-7" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Mirrors the loaded body's layout (synopsis / cast / stats / reviews) as pulsing blocks. */
+function DetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+        <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
+          <div className="h-4 w-36 rounded bg-navy-card/70" />
+          <div className="flex gap-1.5">
+            <div className="h-5 w-14 rounded-full bg-navy-card/70" />
+            <div className="h-5 w-16 rounded-full bg-navy-card/70" />
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="h-3 w-full rounded bg-navy-card/70" />
+          <div className="h-3 w-full rounded bg-navy-card/70" />
+          <div className="h-3 w-2/3 rounded bg-navy-card/70" />
+        </div>
+        <div className="flex gap-2 sm:w-44 sm:shrink-0">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 w-14 shrink-0 rounded-full bg-navy-card/70" />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="h-16 flex-1 rounded-xl bg-navy-card/70" />
+        <div className="h-16 flex-1 rounded-xl bg-navy-card/70" />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
+        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
+        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="h-4 w-16 rounded bg-navy-card/70" />
+        {[0, 1].map((i) => (
+          <div key={i} className="flex flex-col gap-2 border-b border-white/8 pb-4 last:border-0">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-navy-card/70" />
+              <div className="h-3 w-24 rounded bg-navy-card/70" />
+            </div>
+            <div className="ml-10 h-3 w-5/6 rounded bg-navy-card/70" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function StatChip({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-1 flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.03] px-3.5 py-3 min-w-[140px]">
@@ -146,9 +213,21 @@ export default function MovieDetailModal({
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useBodyScrollLock(true)
   useCloseOnBack(onClose)
+
+  // Anchor the entrance animation's transform-origin to wherever the user actually
+  // clicked/tapped, so the dialog visually launches forward from the poster they
+  // selected instead of just fading in centered on the screen.
+  useLayoutEffect(() => {
+    const el = dialogRef.current
+    const origin = getLastPointerPosition()
+    if (!el || !origin) return
+    const rect = el.getBoundingClientRect()
+    el.style.transformOrigin = `${origin.x - rect.left}px ${origin.y - rect.top}px`
+  }, [])
 
   const { data, isLoading } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
@@ -157,7 +236,7 @@ export default function MovieDetailModal({
   })
 
   // Shares its cache with MovieDescriptionPanel's identical query, so this rarely costs an extra request.
-  const { data: details } = useQuery<MovieDetails>({
+  const { data: details, isLoading: detailsLoading } = useQuery<MovieDetails>({
     queryKey: ['movie-details', movie.id],
     queryFn: () => getMovieDetails(movie.id),
     staleTime: 1000 * 60 * 60,
@@ -191,11 +270,12 @@ export default function MovieDetailModal({
   return (
     <>
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/80 backdrop-blur-sm p-0 sm:items-center sm:p-4"
+      className="modal-backdrop-fade fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-navy/80 backdrop-blur-sm p-3 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="dialog-scale-in relative mx-auto flex max-h-screen w-full max-w-5xl flex-col overflow-hidden bg-navy-wine shadow-2xl sm:my-8 sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-white/10"
+        ref={dialogRef}
+        className="modal-zoom-forward relative mx-auto flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-navy-wine shadow-2xl sm:my-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — floats over whichever corner is on top */}
@@ -210,7 +290,9 @@ export default function MovieDetailModal({
         {/* Hero banner — a wide scene still from the film (TMDB backdrop), just tall enough to
             frame the poster + title floating in front of it. Kept short so the year/director/
             synopsis/cast/actions below don't require scrolling to reach on desktop. */}
-        {backdropUrl ? (
+        {detailsLoading ? (
+          <BannerSkeleton />
+        ) : backdropUrl ? (
           <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
             <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
@@ -242,9 +324,7 @@ export default function MovieDetailModal({
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
           {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <span className="text-sm text-gray-muted">Loading…</span>
-            </div>
+            <DetailSkeleton />
           ) : (
             <>
               {/* Year / director / genres — next to the synopsis, opposite the poster+title above */}

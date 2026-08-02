@@ -169,6 +169,36 @@ function FilmographyMovieView({
   )
 }
 
+// ─── Loading skeleton (profile + biography + filmography grid) ────────────────
+function PersonSkeleton() {
+  return (
+    <div className="flex flex-col gap-5 animate-pulse">
+      <div className="flex gap-4">
+        <div className="w-24 h-36 sm:w-32 sm:h-48 shrink-0 rounded-xl bg-navy-card/60 border border-white/10" />
+        <div className="flex flex-col gap-2 flex-1 min-w-0 pt-1">
+          <div className="h-5 w-2/3 rounded bg-navy-card/60" />
+          <div className="h-4 w-24 rounded-full bg-navy-card/60" />
+          <div className="h-3 w-40 rounded bg-navy-card/60 mt-1" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="h-3 w-20 rounded bg-navy-card/60" />
+        <div className="h-3 w-full rounded bg-navy-card/60" />
+        <div className="h-3 w-full rounded bg-navy-card/60" />
+        <div className="h-3 w-1/2 rounded bg-navy-card/60" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="h-3 w-16 rounded bg-navy-card/60" />
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] w-full rounded-lg bg-navy-card/60" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main PersonModal ─────────────────────────────────────────────────────────
 export default function PersonModal({ personId, onClose, onMovieSelect }: Props) {
   const qc = useQueryClient()
@@ -285,7 +315,11 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0">
           <h2 className="text-base font-bold text-gray-lighter truncate">
-            {isLoading ? 'Loading…' : (person?.name ?? 'Person')}
+            {isLoading ? (
+              <span className="inline-block h-4 w-32 animate-pulse rounded bg-navy-card/60 align-middle" />
+            ) : (
+              person?.name ?? 'Person'
+            )}
           </h2>
           <button
             onClick={onClose}
@@ -297,11 +331,7 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-5">
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <span className="text-sm text-gray-muted animate-pulse">Loading…</span>
-            </div>
-          )}
+          {isLoading && <PersonSkeleton />}
 
           {isError && (
             <div className="flex items-center justify-center py-16">
@@ -566,7 +596,16 @@ function InnerPersonView({
   })
 
   if (isLoading) {
-    return <p className="text-sm text-gray-muted animate-pulse">Loading {personName}…</p>
+    return (
+      <div className="flex gap-3 animate-pulse">
+        <span className="sr-only">Loading {personName}…</span>
+        <div className="w-16 h-24 rounded-lg bg-navy-card/60 border border-white/10 shrink-0" />
+        <div className="flex flex-col gap-2 flex-1 pt-1">
+          <div className="h-4 w-2/3 rounded bg-navy-card/60" />
+          <div className="h-3 w-20 rounded-full bg-navy-card/60" />
+        </div>
+      </div>
+    )
   }
   if (!person) return null
 

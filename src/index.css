@@ -38,6 +38,21 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-teal/70;
   }
+
+  /* On phones, the custom teal scrollbar thumb reads as a heavy, always-visible
+     bar along the edge of every scroll container (especially modals). Mobile
+     platforms already have their own overlay scroll indicators, so hand
+     scrolling back to the native/OS treatment below this width. */
+  @media (max-width: 640px) {
+    * {
+      scrollbar-width: none;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+  }
 }
 
 @layer components {
@@ -151,4 +166,34 @@ option.custom-option {
 .rec-card-new {
   animation: pinkPulse 1.8s ease-in-out infinite;
   border-radius: 0.5rem;
+}
+
+/* ─── Discover search bar ease-in ────────────────────────────────────────── */
+@keyframes searchEaseIn {
+  from { opacity: 0; transform: translateX(14px) scaleX(0.88); }
+  to   { opacity: 1; transform: translateX(0)     scaleX(1); }
+}
+.search-ease-in {
+  transform-origin: right center;
+  animation: searchEaseIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Movie modal "coming forward" open sequence ─────────────────────────── */
+@keyframes modalBackdropFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-backdrop-fade {
+  animation: modalBackdropFadeIn 0.22s ease-out both;
+}
+
+/* Anchored (via inline transform-origin, set from the click/tap position) so the
+   dialog visually launches forward from whatever poster the user selected. */
+@keyframes zoomForward {
+  from { transform: scale(0.2); opacity: 0; }
+  55%  { opacity: 1; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.modal-zoom-forward {
+  animation: zoomForward 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

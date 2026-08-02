@@ -57,6 +57,7 @@ export default function MovieCard({
 }: Props) {
   const [cardHovered, setCardHovered] = useState(false)
   const [iconHovered, setIconHovered] = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(false)
 
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
   const hasWatchlist = !!(onWatchlistAdd || onWatchlistRemove || watchlistRemoveOnly)
@@ -97,12 +98,14 @@ export default function MovieCard({
         transition: 'outline-color 0.15s ease',
       }}
     >
-      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative">
+      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative bg-navy-card/60">
+        {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
         <img
           src={posterUrl}
           alt={`${movie.title} poster`}
           loading="lazy"
-          className="h-full w-full object-cover"
+          onLoad={() => setImgLoaded(true)}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
         />
         {/* Watchlist overlay — visible on card hover */}
         {hasWatchlist && cardHovered && (

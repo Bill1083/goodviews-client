@@ -53,6 +53,20 @@ const SIDEBAR_LINKS: { id: SidebarSection; label: string }[] = [
   { id: 'Friends', label: 'Friends' },
 ]
 
+// ─── Grid loading skeleton (watched / want-to-watch) ──────────────────────────
+function MovieGridSkeleton({ count = 10 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex flex-col gap-2">
+          <div className="aspect-[2/3] w-full animate-pulse rounded-card bg-navy-card/60" />
+          <div className="mx-auto h-3 w-3/4 animate-pulse rounded bg-navy-card/60" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Sort Panel ───────────────────────────────────────────────────────────────
 function SortPanel({
   open, onClose, sortBy, setSortBy, showRating,
@@ -391,7 +405,17 @@ function ReviewsListModal({ movie, myReview, onClose }: {
 
         {/* Friends' reviews */}
         {isLoading ? (
-          <p className="text-sm text-gray-muted text-center py-4">Loading…</p>
+          <div className="flex flex-col gap-3 animate-pulse">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex flex-col gap-2 rounded-lg border border-white/10 bg-navy-card/40 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-3 w-24 rounded bg-navy-card/70" />
+                  <div className="h-3 w-16 rounded bg-navy-card/70" />
+                </div>
+                <div className="h-3 w-1/3 rounded bg-navy-card/70" />
+              </div>
+            ))}
+          </div>
         ) : friendReviews.length === 0 ? (
           <p className="text-sm text-gray-muted italic text-center py-4">No friends have reviewed this movie yet.</p>
         ) : (
@@ -1118,7 +1142,7 @@ export default function MyMoviesPage() {
         {activeSection === 'watched' && (
           <>
             {isLoading ? (
-              <div className="flex items-center justify-center py-24"><span className="text-sm text-gray-muted">Loading…</span></div>
+              <MovieGridSkeleton />
             ) : movieReviewPairs.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
                 <p className="text-gray-300">No movies reviewed yet.</p>
@@ -1148,7 +1172,7 @@ export default function MyMoviesPage() {
         {activeSection === 'want-to-watch' && (
           <>
             {watchlistLoading ? (
-              <div className="flex items-center justify-center py-24"><span className="text-sm text-gray-muted">Loading…</span></div>
+              <MovieGridSkeleton />
             ) : watchlistData.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
                 <p className="text-gray-300">Your watchlist is empty.</p>
