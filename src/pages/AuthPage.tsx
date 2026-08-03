@@ -1,7 +1,63 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
+import { getTrendingMovies, getTopRatedMovies } from '../services/apiClient'
+import type { Movie } from '../types'
 import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
+
+const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
+
+/** Decorative posters drifting outward from the centre — some "currently popular"
+ *  (trending) titles mixed with "classics" (top-rated), purely ambient/aria-hidden. */
+function AuthPosterField({ movies }: { movies: Movie[] }) {
+  const posters = useMemo(
+    () =>
+      movies.map((movie, i) => {
+        const angle = Math.random() * Math.PI * 2
+        const radius = 30 + Math.random() * 22 // vmin travelled from centre
+        const duration = 14 + Math.random() * 12
+        return {
+          key: `${movie.id}-${i}`,
+          posterPath: movie.poster_path,
+          tx: Math.cos(angle) * radius,
+          ty: Math.sin(angle) * radius,
+          rot: -10 + Math.random() * 20,
+          size: 76 + Math.random() * 44,
+          duration,
+          delay: -Math.random() * duration, // negative = start mid-flight, staggers them immediately
+        }
+      }),
+    [movies]
+  )
+
+  return (
+    <div className="auth-poster-stage pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+      {posters.map(({ key, posterPath, tx, ty, rot, size, duration, delay }) => (
+        <div
+          key={key}
+          className="auth-poster"
+          style={
+            {
+              '--tx': `${tx}vmin`,
+              '--ty': `${ty}vmin`,
+              '--duration': `${duration}s`,
+              '--delay': `${delay}s`,
+              width: size,
+            } as React.CSSProperties
+          }
+        >
+          <img
+            src={`${TMDB_POSTER}${posterPath}`}
+            alt=""
+            className="w-full rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+            style={{ transform: `rotate(${rot}deg)` }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 /** Film strip SVG — large (91 × 73), used for the top-left GV logo */
 function FilmStripLarge() {
@@ -42,6 +98,28 @@ const labelClass = 'text-[15px] text-white leading-none'
 
 export default function AuthPage() {
   const navigate = useNavigate()
+
+  // Background poster field: mix of "currently popular" and "classic" movies
+  const { data: trending } = useQuery({
+    queryKey: ['auth-bg', 'trending'],
+    queryFn: ({ signal }) => getTrendingMovies(1, signal),
+    staleTime: 1000 * 60 * 30,
+    retry: false,
+  })
+  const { data: topRated } = useQuery({
+    queryKey: ['auth-bg', 'top-rated'],
+    queryFn: ({ signal }) => getTopRatedMovies(1, signal),
+    staleTime: 1000 * 60 * 30,
+    retry: false,
+  })
+  const bgMovies = useMemo(() => {
+    const popular = (trending?.results ?? []).filter((m) => m.poster_path)
+    const classics = (topRated?.results ?? []).filter((m) => m.poster_path)
+    return [...popular.slice(0, 8), ...classics.slice(0, 8)]
+      .map((movie) => ({ movie, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ movie }) => movie)
+  }, [trending, topRated])
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('')
@@ -128,6 +206,9 @@ export default function AuthPage() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center px-4 py-8 sm:justify-end sm:px-0 sm:py-0 sm:pr-[5vw]">
 
+      {/* ── Ambient popular/classic movie posters ── */}
+      <AuthPosterField movies={bgMovies} />
+
       {/* ── Blue glow accent (left side) ── */}
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-brand/15 blur-[160px] pointer-events-none" />
 
@@ -151,7 +232,7 @@ export default function AuthPage() {
         className="relative z-10 flex w-full max-w-[349px] flex-col items-center justify-center overflow-y-auto rounded-xl px-6 py-6 sm:px-9 sm:py-[22px]"
         style={{
           maxHeight: '90vh',
-          background: 'linear-gradient(to bottom, rgba(71,21,48,1) 0%, rgba(41,17,45,1) 50%, rgba(28,19,54,1) 100%)',
+          background: 'linear-gradient(to bottom, rgba(9,29,91,0.85) 0%, rgba(0,10,41,0.9) 50%, rgba(32,10,50,0.85) 100%)',
           boxShadow: '4px 4px 20px 0px rgba(0,0,0,0.55)',
         }}
       >
@@ -195,15 +276,15 @@ export default function AuthPage() {
             />
           </div>
           {loginError && (
-            <p className="rounded-md bg-red-900/30 border border-red-500/30 px-2 py-1 text-sm text-red-400">
+            <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
               {loginError}
             </p>
           )}
           <button
             type="submit"
             disabled={loginLoading}
-            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#1c2397', height: 32 }}
+            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-blue-brand hover:brightness-110"
+            style={{ height: 32 }}
           >
             {loginLoading ? 'Signing in…' : 'Log In'}
           </button>
@@ -257,15 +338,15 @@ export default function AuthPage() {
             />
           </div>
           {regError && (
-            <p className="rounded-md bg-red-900/30 border border-red-500/30 px-2 py-1 text-sm text-red-400">
+            <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
               {regError}
             </p>
           )}
           <button
             type="submit"
             disabled={regLoading}
-            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#a503ab', height: 32 }}
+            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-magenta-dark hover:brightness-110"
+            style={{ height: 32 }}
           >
             {regLoading ? 'Creating account…' : 'Sign Up'}
           </button>

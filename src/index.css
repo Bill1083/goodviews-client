@@ -197,3 +197,31 @@ option.custom-option {
 .modal-zoom-forward {
   animation: zoomForward 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* ─── Auth page ambient poster field ─────────────────────────────────────── */
+/* Posters spawn at --origin-x/50% and drift out to a per-poster (--tx, --ty)
+   offset, fading in then out so the loop point (start === end, opacity 0)
+   is invisible. --origin-x shifts left on larger screens to sit in the open
+   space beside the auth card instead of behind it. */
+.auth-poster-stage {
+  --origin-x: 50%;
+}
+@media (min-width: 640px) {
+  .auth-poster-stage {
+    --origin-x: 36%;
+  }
+}
+@keyframes posterDrift {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(0.5); opacity: 0; }
+  12%  { opacity: 0.85; }
+  82%  { opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(1); opacity: 0; }
+}
+.auth-poster {
+  position: absolute;
+  left: var(--origin-x);
+  top: 50%;
+  animation: posterDrift var(--duration, 16s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
