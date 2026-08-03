@@ -27,13 +27,14 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
   const posters = useMemo(
     () =>
       movies.map((movie, i) => {
-        // Spread spawn points across nearly the whole screen (not just a
-        // central band), then bias each poster's drift direction to point
-        // generally away from screen-centre (toward whichever edge it's
-        // already closest to) with some jitter, and travel far enough that
-        // it actually reads as heading for the edge rather than sitting put.
-        const ox = 3 + Math.random() * 94 // % — random spawn position on screen
-        const oy = 4 + Math.random() * 92
+        // Most posters spawn near screen-centre (with some jitter); only a
+        // few spawn out at a random spot anywhere on screen. Each poster's
+        // drift direction is biased away from screen-centre (toward
+        // whichever edge it's already closest to) with some jitter, and
+        // travels far enough that it actually reads as heading for the edge.
+        const spawnsFromCentre = Math.random() < 0.75
+        const ox = spawnsFromCentre ? 50 + (Math.random() - 0.5) * 36 : 3 + Math.random() * 94
+        const oy = spawnsFromCentre ? 50 + (Math.random() - 0.5) * 36 : 4 + Math.random() * 92
         const outwardAngle = Math.atan2(oy - 50, ox - 50)
         const angle = outwardAngle + (Math.random() - 0.5) * (Math.PI / 2) // ±45° jitter
         const radius = 30 + Math.random() * 34 // vmin travelled from the spawn point
