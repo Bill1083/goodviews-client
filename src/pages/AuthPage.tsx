@@ -120,7 +120,7 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
 
   if (ordered.length === 0) return null
 
-  const duration = Math.max(30, ordered.length * 6)
+  const duration = Math.max(50, ordered.length * 10)
 
   return (
     <div
