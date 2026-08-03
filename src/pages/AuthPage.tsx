@@ -332,7 +332,7 @@ export default function AuthPage() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-brand/15 blur-[160px] pointer-events-none" />
 
       {/* ── Top-left GV logo ── */}
-      <div className="absolute top-8 left-8 z-20 hidden lg:block">
+      <div className="absolute top-8 left-8 z-20 hidden sm:block">
         <div className="relative" style={{ width: 91, height: 73 }}>
           <FilmStripLarge />
           <span
