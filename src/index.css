@@ -229,3 +229,47 @@ option.custom-option {
   from { transform: translate(-50%, -50%); }
   to   { transform: translate(-50%, 0%); }
 }
+
+/* Sprocket-hole rails sitting just outside each poster, like a 35mm film
+   strip border. Holes are punched via a repeating radial-gradient mask. */
+.film-reel-frame {
+  position: relative;
+}
+.film-reel-frame::before,
+.film-reel-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  background-color: #0c0c12;
+  background-image: radial-gradient(circle, transparent 0 3px, #0c0c12 3.5px 100%);
+  background-size: 100% 17px;
+  background-repeat: repeat-y;
+}
+.film-reel-frame::before { left: -11px; border-radius: 3px 0 0 3px; }
+.film-reel-frame::after  { right: -11px; border-radius: 0 3px 3px 0; }
+
+/* Soft vignette on the poster's own left/right edges so it blends into the
+   rail/background instead of ending in a hard line. */
+.film-poster {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+}
+
+/* Gentle old-projector flicker over the whole reel — subtle & slow, not a
+   strobe: small opacity/brightness dips at irregular intervals. */
+@keyframes filmFlicker {
+  0%, 100% { opacity: 1;    filter: brightness(1); }
+  6%       { opacity: 0.92; filter: brightness(0.94); }
+  9%       { opacity: 1;    filter: brightness(1.03); }
+  32%      { opacity: 0.95; filter: brightness(0.97); }
+  35%      { opacity: 1;    filter: brightness(1); }
+  61%      { opacity: 0.9;  filter: brightness(0.93); }
+  64%      { opacity: 1;    filter: brightness(1.02); }
+  85%      { opacity: 0.96; filter: brightness(0.97); }
+  88%      { opacity: 1;    filter: brightness(1); }
+}
+.film-flicker {
+  animation: filmFlicker 5s ease-in-out infinite;
+}

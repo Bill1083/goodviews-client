@@ -29,7 +29,9 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
       movies.map((movie, i) => {
         const angle = Math.random() * Math.PI * 2
         const radius = 14 + Math.random() * 16 // vmin travelled from the spawn point
-        const duration = 18 + Math.random() * 10
+        // The very first poster fades in noticeably faster than the rest — the
+        // page needs *something* on screen quickly, before login is even possible.
+        const duration = i === 0 ? 7 + Math.random() * 2 : 18 + Math.random() * 10
         return {
           key: `${movie.id}-${i}`,
           posterPath: movie.poster_path,
@@ -95,10 +97,17 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
   )
 }
 
-const CAROUSEL_POSTER_WIDTH = 116
+// Matches the auth card's own responsive width (w-full, capped at 349px,
+// inside the root's px-4 gutter) so the posters line up with the login section.
+// Uses vw rather than % because the scrolling track is a shrink-to-fit
+// absolutely-positioned box — a %-width child would create a circular
+// sizing dependency against it.
+const CAROUSEL_FRAME_CLASS = 'w-[calc(100vw-32px)] max-w-[349px]'
 
 /** Phone: a single vertical carousel of uniform-size posters in random order,
- *  scrolling slowly top-to-bottom behind the (semi-transparent) auth card. */
+ *  scrolling slowly top-to-bottom behind the (semi-transparent) auth card —
+ *  framed like an old film strip, with sprocket-hole rails and a soft
+ *  projector flicker over the whole reel. */
 function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
   const ordered = useMemo(
     () =>
@@ -114,19 +123,22 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
   const duration = Math.max(30, ordered.length * 6)
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div
+      className="film-flicker pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      aria-hidden="true"
+    >
       <div
-        className="auth-poster-carousel-track flex flex-col items-center gap-4"
+        className="auth-poster-carousel-track flex flex-col items-center gap-5"
         style={{ '--carousel-duration': `${duration}s` } as React.CSSProperties}
       >
         {[...ordered, ...ordered].map((movie, i) => (
-          <img
-            key={`${movie.id}-${i}`}
-            src={`${TMDB_POSTER}${movie.poster_path}`}
-            alt=""
-            className="rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.5)] object-cover"
-            style={{ width: CAROUSEL_POSTER_WIDTH }}
-          />
+          <div key={`${movie.id}-${i}`} className={`film-reel-frame ${CAROUSEL_FRAME_CLASS}`}>
+            <img
+              src={`${TMDB_POSTER}${movie.poster_path}`}
+              alt=""
+              className="film-poster w-full aspect-[2/3] rounded-md object-cover"
+            />
+          </div>
         ))}
       </div>
     </div>
