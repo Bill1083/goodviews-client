@@ -250,8 +250,8 @@ option.custom-option {
     to bottom,
     transparent 0,
     transparent 12px,
-    #4b4550 12px,
-    #4b4550 24px
+    #38343d 12px,
+    #38343d 24px
   );
 }
 .film-reel-frame::before { left: -16px; }
@@ -265,10 +265,11 @@ option.custom-option {
   mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
 }
 
-/* A couple of carousel slots show the logo instead of a poster — same faded-
-   charcoal tone as the sprocket rails, sized to match the poster thumbnails. */
+/* A couple of carousel slots show the logo instead of a poster, in the same
+   faded-charcoal tone as the sprocket rails — kept thin (no poster aspect
+   ratio), just tall enough to wrap the logo, like a leader frame. */
 .auth-logo-card {
-  background-color: rgba(75, 69, 80, 0.55);
+  background-color: rgba(56, 52, 61, 0.55);
 }
 
 /* Old-projector flicker over the whole reel: a real flicker reads as a very

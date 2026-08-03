@@ -166,7 +166,7 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
                 className="film-poster w-full aspect-[2/3] rounded-md object-cover"
               />
             ) : (
-              <div className="film-poster auth-logo-card flex w-full aspect-[2/3] items-center justify-center rounded-md">
+              <div className="film-poster auth-logo-card flex w-full items-center justify-center rounded-md py-2">
                 <FilmStripSmall width={48} height={42} />
               </div>
             )}
