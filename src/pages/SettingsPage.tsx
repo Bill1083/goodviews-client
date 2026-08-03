@@ -8,6 +8,7 @@ import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useAuthStore } from '../store/authStore'
 import { verifyReauth } from '../utils/mfa'
+import { PASSWORD_HINT, validatePassword } from '../utils/passwordPolicy'
 import ReauthField from '../components/ReauthField'
 
 function SectionHeading({ icon, tone = 'teal', children }: { icon: React.ReactNode; tone?: 'teal' | 'red'; children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordReauth, setPasswordReauth] = useState('')
   const [passwordMismatch, setPasswordMismatch] = useState(false)
+  const [passwordPolicyError, setPasswordPolicyError] = useState<string | null>(null)
 
   // Two-factor (TOTP) enrollment flow
   const [enrolling, setEnrolling] = useState(false)
@@ -134,12 +136,19 @@ export default function SettingsPage() {
   }
 
   const handleUpdatePassword = () => {
+    const policyError = validatePassword(newPassword)
+    if (policyError) {
+      setPasswordPolicyError(policyError)
+      setPasswordMismatch(false)
+      return
+    }
+    setPasswordPolicyError(null)
     if (newPassword !== confirmPassword) {
       setPasswordMismatch(true)
       return
     }
     setPasswordMismatch(false)
-    if (!newPassword || !passwordReauth) return
+    if (!passwordReauth) return
     passwordMutation.mutate(newPassword)
   }
 
@@ -471,7 +480,7 @@ export default function SettingsPage() {
             <input
               type="password"
               value={newPassword}
-              onChange={(e) => { setNewPassword(e.target.value); setPasswordMismatch(false) }}
+              onChange={(e) => { setNewPassword(e.target.value); setPasswordMismatch(false); setPasswordPolicyError(null) }}
               placeholder="New password"
               autoComplete="new-password"
               className="input-base flex-1 min-w-[160px]"
@@ -485,6 +494,7 @@ export default function SettingsPage() {
               className="input-base flex-1 min-w-[160px]"
             />
           </div>
+          <p className="text-xs text-gray-muted">{PASSWORD_HINT}</p>
           <div className="max-w-xs">
             <ReauthField hasMfa={hasMfa} value={passwordReauth} onChange={setPasswordReauth} />
           </div>
@@ -497,6 +507,7 @@ export default function SettingsPage() {
               {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
             </button>
           </div>
+          {passwordPolicyError && <p className="text-xs text-red-400">{passwordPolicyError}</p>}
           {passwordMismatch && <p className="text-xs text-red-400">Passwords don't match.</p>}
           {passwordMutation.isSuccess && <p className="text-xs text-teal">Password updated successfully.</p>}
           {passwordMutation.isError && (

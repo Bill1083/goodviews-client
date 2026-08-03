@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import { validatePassword } from '../utils/passwordPolicy'
 
 /** Film strip SVG — large (91 × 73), used for the top-left GV logo */
 function FilmStripLarge() {
@@ -105,8 +106,9 @@ export default function AuthPage() {
       setRegError('Username must be at least 3 characters.')
       return
     }
-    if (regPassword.length < 8) {
-      setRegError('Password must be at least 8 characters.')
+    const passwordError = validatePassword(regPassword)
+    if (passwordError) {
+      setRegError(passwordError)
       return
     }
     setRegLoading(true)
@@ -250,7 +252,7 @@ export default function AuthPage() {
               onChange={(e) => setRegPassword(e.target.value)}
               className={authInputClass}
               style={authInputStyle}
-              placeholder="Min. 8 characters"
+              placeholder="Min. 10 chars, 1 number, 1 symbol"
             />
           </div>
           {regError && (
