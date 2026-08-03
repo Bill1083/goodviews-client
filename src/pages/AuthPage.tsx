@@ -150,7 +150,7 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
 
   return (
     <div
-      className="film-flicker pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="film-flicker auth-carousel-fade pointer-events-none absolute inset-0 z-0 overflow-hidden"
       aria-hidden="true"
     >
       <div

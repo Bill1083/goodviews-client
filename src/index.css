@@ -257,12 +257,20 @@ option.custom-option {
 .film-reel-frame::before { left: -16px; }
 .film-reel-frame::after  { right: -16px; }
 
-/* Vignette on the poster's own left/right edges, faded down a good deal so it
-   blends into the rail/background rather than reading as a bright rectangle. */
+/* Vignette on the poster's own left/right edges, faded down a lot so the
+   whole reel reads as quiet background texture rather than something that
+   competes with the login form for attention. */
 .film-poster {
-  opacity: 0.72;
+  opacity: 0.42;
   -webkit-mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
+}
+
+/* Fades the whole scrolling reel out near the top and bottom of the screen,
+   so posters ease in/out at the viewport edge instead of cutting off hard. */
+.auth-carousel-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
 }
 
 /* A couple of carousel slots show the logo instead of a poster, in the same
