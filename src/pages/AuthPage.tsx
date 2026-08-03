@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
@@ -16,7 +16,7 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
       movies.map((movie, i) => {
         const angle = Math.random() * Math.PI * 2
         const radius = 30 + Math.random() * 22 // vmin travelled from centre
-        const duration = 14 + Math.random() * 12
+        const duration = 18 + Math.random() * 10
         return {
           key: `${movie.id}-${i}`,
           posterPath: movie.poster_path,
@@ -25,15 +25,35 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
           rot: -10 + Math.random() * 20,
           size: 76 + Math.random() * 44,
           duration,
-          delay: -Math.random() * duration, // negative = start mid-flight, staggers them immediately
         }
       }),
     [movies]
   )
 
+  // Bring posters in one at a time rather than spawning the whole field at once —
+  // each newly-mounted poster starts its own animation fresh from tiny/invisible,
+  // which also hides the async poster image load behind the fade-in.
+  const maxVisible = Math.min(posters.length, 9)
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  useEffect(() => {
+    if (maxVisible === 0) return
+    setVisibleCount(1)
+    const interval = setInterval(() => {
+      setVisibleCount((count) => {
+        if (count >= maxVisible) {
+          clearInterval(interval)
+          return count
+        }
+        return count + 1
+      })
+    }, 2200)
+    return () => clearInterval(interval)
+  }, [maxVisible])
+
   return (
     <div className="auth-poster-stage pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-      {posters.map(({ key, posterPath, tx, ty, rot, size, duration, delay }) => (
+      {posters.slice(0, visibleCount).map(({ key, posterPath, tx, ty, rot, size, duration }) => (
         <div
           key={key}
           className="auth-poster"
@@ -42,7 +62,6 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
               '--tx': `${tx}vmin`,
               '--ty': `${ty}vmin`,
               '--duration': `${duration}s`,
-              '--delay': `${delay}s`,
               width: size,
             } as React.CSSProperties
           }
