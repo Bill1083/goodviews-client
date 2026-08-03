@@ -257,13 +257,13 @@ option.custom-option {
 .film-reel-frame::before { left: -16px; }
 .film-reel-frame::after  { right: -16px; }
 
-/* Vignette on the poster's own left/right edges, faded down a lot so the
-   whole reel reads as quiet background texture rather than something that
-   competes with the login form for attention. */
+/* Vignette on all four edges of the poster itself (not just left/right),
+   faded down a lot so the whole reel reads as quiet background texture
+   rather than something that competes with the login form for attention. */
 .film-poster {
   opacity: 0.42;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 55%, transparent 100%);
 }
 
 /* Fades the whole scrolling reel out near the top and bottom of the screen,
@@ -278,18 +278,4 @@ option.custom-option {
    ratio), just tall enough to wrap the logo, like a leader frame. */
 .auth-logo-card {
   background-color: rgba(56, 52, 61, 0.55);
-}
-
-/* Old-projector flicker over the whole reel: a real flicker reads as a very
-   quick double-blink (like a dragonfly wing beat) followed by several
-   seconds of nothing — not a slow rhythmic pulse. */
-@keyframes filmFlicker {
-  0%, 0.5%, 100% { opacity: 1;    filter: brightness(1); }
-  0.65%          { opacity: 0.45; filter: brightness(0.75); }
-  0.85%          { opacity: 1;    filter: brightness(1.1); }
-  1%             { opacity: 0.55; filter: brightness(0.8); }
-  1.15%          { opacity: 1;    filter: brightness(1); }
-}
-.film-flicker {
-  animation: filmFlicker 4.6s linear infinite;
 }

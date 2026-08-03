@@ -114,8 +114,7 @@ const CAROUSEL_FRAME_CLASS = 'w-[calc(100vw-32px)] max-w-[349px]'
 
 /** Phone: a single vertical carousel of uniform-size posters in random order,
  *  scrolling slowly top-to-bottom behind the (semi-transparent) auth card —
- *  framed like an old film strip, with sprocket-hole rails and a soft
- *  projector flicker over the whole reel. */
+ *  framed like an old film strip, with sprocket-hole rails. */
 type CarouselEntry =
   | { type: 'movie'; key: string; posterPath: string | null }
   | { type: 'logo'; key: string }
@@ -150,7 +149,7 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
 
   return (
     <div
-      className="film-flicker auth-carousel-fade pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="auth-carousel-fade pointer-events-none absolute inset-0 z-0 overflow-hidden"
       aria-hidden="true"
     >
       <div
