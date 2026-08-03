@@ -13,6 +13,10 @@ export default function SettingsPage() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMismatch, setPasswordMismatch] = useState(false)
 
   useBodyScrollLock(showSignOutConfirm || showDeleteConfirm)
 
@@ -31,6 +35,50 @@ export default function SettingsPage() {
     mutationFn: (val: boolean) => updateProfile({ hide_recent_movies: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
   })
+
+  const muteRecommendationsMutation = useMutation({
+    mutationFn: (val: boolean) => updateProfile({ mute_recommendations: val }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
+  const muteFriendRequestsMutation = useMutation({
+    mutationFn: (val: boolean) => updateProfile({ mute_friend_requests: val }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
+  const emailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { error } = await supabase.auth.updateUser({ email })
+      if (error) throw error
+    },
+    onSuccess: () => setNewEmail(''),
+  })
+
+  const passwordMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      setNewPassword('')
+      setConfirmPassword('')
+    },
+  })
+
+  const handleUpdateEmail = () => {
+    if (!newEmail.trim()) return
+    emailMutation.mutate(newEmail.trim())
+  }
+
+  const handleUpdatePassword = () => {
+    if (newPassword !== confirmPassword) {
+      setPasswordMismatch(true)
+      return
+    }
+    setPasswordMismatch(false)
+    if (!newPassword) return
+    passwordMutation.mutate(newPassword)
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -89,11 +137,7 @@ export default function SettingsPage() {
       {/* Settings list */}
       <div className="flex flex-col divide-y divide-white/10">
 
-
-        {/* Settings Option 1 */}
-        <div className="flex items-center py-5">
-          <span className="text-base text-gray-light">Settings Option 1</span>
-        </div>
+        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Privacy</p>
 
         {/* Profile visibility */}
         <div className="flex flex-wrap items-center justify-between gap-3 py-5">
@@ -135,9 +179,107 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Settings Option 2 */}
-        <div className="flex items-center py-5">
-          <span className="text-base text-gray-light">Settings Option 2</span>
+        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Notifications</p>
+
+        {/* Mute recommendation alerts */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
+          <div className="min-w-0 flex-1 pr-2">
+            <span className="text-base text-gray-light">Mute Recommendation Alerts</span>
+            <p className="text-xs text-gray-muted mt-0.5">Stop notifying you when friends recommend a movie to you</p>
+          </div>
+          <button
+            onClick={() => muteRecommendationsMutation.mutate(!(profile?.mute_recommendations ?? false))}
+            className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.mute_recommendations ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            role="switch"
+            aria-checked={profile?.mute_recommendations ?? false}
+          >
+            <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.mute_recommendations ? 'translate-x-6' : ''].join(' ')} />
+          </button>
+        </div>
+
+        {/* Mute friend request alerts */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
+          <div className="min-w-0 flex-1 pr-2">
+            <span className="text-base text-gray-light">Mute Friend Request Alerts</span>
+            <p className="text-xs text-gray-muted mt-0.5">Stop notifying you when someone sends you a friend request</p>
+          </div>
+          <button
+            onClick={() => muteFriendRequestsMutation.mutate(!(profile?.mute_friend_requests ?? false))}
+            className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.mute_friend_requests ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            role="switch"
+            aria-checked={profile?.mute_friend_requests ?? false}
+          >
+            <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.mute_friend_requests ? 'translate-x-6' : ''].join(' ')} />
+          </button>
+        </div>
+
+        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Account</p>
+
+        {/* Change email */}
+        <div className="flex flex-col gap-2 py-5">
+          <span className="text-base text-gray-light">Change Email</span>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="New email address"
+              autoComplete="email"
+              className="input-base flex-1 min-w-[200px]"
+            />
+            <button
+              onClick={handleUpdateEmail}
+              disabled={!newEmail.trim() || emailMutation.isPending}
+              className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {emailMutation.isPending ? 'Updating…' : 'Update Email'}
+            </button>
+          </div>
+          {emailMutation.isSuccess && (
+            <p className="text-xs text-teal">Confirmation link sent to your new email — check your inbox to finish the change.</p>
+          )}
+          {emailMutation.isError && (
+            <p className="text-xs text-red-400">
+              {(emailMutation.error as { message?: string })?.message ?? 'Failed to update email. Please try again.'}
+            </p>
+          )}
+        </div>
+
+        {/* Change password */}
+        <div className="flex flex-col gap-2 py-5">
+          <span className="text-base text-gray-light">Change Password</span>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => { setNewPassword(e.target.value); setPasswordMismatch(false) }}
+              placeholder="New password"
+              autoComplete="new-password"
+              className="input-base flex-1 min-w-[160px]"
+            />
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => { setConfirmPassword(e.target.value); setPasswordMismatch(false) }}
+              placeholder="Confirm new password"
+              autoComplete="new-password"
+              className="input-base flex-1 min-w-[160px]"
+            />
+            <button
+              onClick={handleUpdatePassword}
+              disabled={!newPassword || !confirmPassword || passwordMutation.isPending}
+              className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
+            </button>
+          </div>
+          {passwordMismatch && <p className="text-xs text-red-400">Passwords don't match.</p>}
+          {passwordMutation.isSuccess && <p className="text-xs text-teal">Password updated successfully.</p>}
+          {passwordMutation.isError && (
+            <p className="text-xs text-red-400">
+              {(passwordMutation.error as { message?: string })?.message ?? 'Failed to update password. Please try again.'}
+            </p>
+          )}
         </div>
 
         {/* Logout */}

@@ -263,6 +263,8 @@ export interface ProfileData {
   avatar_color: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
+  mute_recommendations: boolean
+  mute_friend_requests: boolean
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -276,6 +278,8 @@ export async function updateProfile(payload: Partial<{
   avatar_color: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
+  mute_recommendations: boolean
+  mute_friend_requests: boolean
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data
