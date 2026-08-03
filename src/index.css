@@ -231,9 +231,11 @@ option.custom-option {
 }
 
 /* Sprocket-hole rails sitting just outside each poster, like a 35mm film
-   strip border — a stack of small square perforations, genuinely see-through
+   strip border — a stack of square perforations, genuinely see-through
    (no background-color layer, or the "holes" would just show solid colour
-   again) so whatever's behind the reel shows through each one. */
+   again) so whatever's behind the reel shows through each one. Rail colour
+   is a faded charcoal rather than true black so the squares actually read
+   against a near-black page background — reused on the logo card below. */
 .film-reel-frame {
   position: relative;
 }
@@ -243,17 +245,17 @@ option.custom-option {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 11px;
+  width: 16px;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 8px,
-    #0c0c12 8px,
-    #0c0c12 18px
+    transparent 12px,
+    #4b4550 12px,
+    #4b4550 24px
   );
 }
-.film-reel-frame::before { left: -11px; }
-.film-reel-frame::after  { right: -11px; }
+.film-reel-frame::before { left: -16px; }
+.film-reel-frame::after  { right: -16px; }
 
 /* Vignette on the poster's own left/right edges, faded down a good deal so it
    blends into the rail/background rather than reading as a bright rectangle. */
@@ -263,19 +265,22 @@ option.custom-option {
   mask-image: linear-gradient(to right, transparent 0, black 16%, black 84%, transparent 100%);
 }
 
-/* Old-projector flicker over the whole reel — more noticeable dips than a
-   first pass, still slow/smooth (not a strobe). */
+/* A couple of carousel slots show the logo instead of a poster — same faded-
+   charcoal tone as the sprocket rails, sized to match the poster thumbnails. */
+.auth-logo-card {
+  background-color: rgba(75, 69, 80, 0.55);
+}
+
+/* Old-projector flicker over the whole reel: a real flicker reads as a very
+   quick double-blink (like a dragonfly wing beat) followed by several
+   seconds of nothing — not a slow rhythmic pulse. */
 @keyframes filmFlicker {
-  0%, 100% { opacity: 1;    filter: brightness(1); }
-  6%       { opacity: 0.78; filter: brightness(0.85); }
-  9%       { opacity: 1;    filter: brightness(1.08); }
-  32%      { opacity: 0.82; filter: brightness(0.88); }
-  35%      { opacity: 1;    filter: brightness(1); }
-  61%      { opacity: 0.74; filter: brightness(0.82); }
-  64%      { opacity: 1;    filter: brightness(1.06); }
-  85%      { opacity: 0.85; filter: brightness(0.88); }
-  88%      { opacity: 1;    filter: brightness(1); }
+  0%, 0.5%, 100% { opacity: 1;    filter: brightness(1); }
+  0.65%          { opacity: 0.45; filter: brightness(0.75); }
+  0.85%          { opacity: 1;    filter: brightness(1.1); }
+  1%             { opacity: 0.55; filter: brightness(0.8); }
+  1.15%          { opacity: 1;    filter: brightness(1); }
 }
 .film-flicker {
-  animation: filmFlicker 3.6s ease-in-out infinite;
+  animation: filmFlicker 4.6s linear infinite;
 }

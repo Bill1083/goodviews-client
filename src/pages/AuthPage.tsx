@@ -27,16 +27,24 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
   const posters = useMemo(
     () =>
       movies.map((movie, i) => {
-        const angle = Math.random() * Math.PI * 2
-        const radius = 14 + Math.random() * 16 // vmin travelled from the spawn point
+        // Spread spawn points across nearly the whole screen (not just a
+        // central band), then bias each poster's drift direction to point
+        // generally away from screen-centre (toward whichever edge it's
+        // already closest to) with some jitter, and travel far enough that
+        // it actually reads as heading for the edge rather than sitting put.
+        const ox = 3 + Math.random() * 94 // % — random spawn position on screen
+        const oy = 4 + Math.random() * 92
+        const outwardAngle = Math.atan2(oy - 50, ox - 50)
+        const angle = outwardAngle + (Math.random() - 0.5) * (Math.PI / 2) // ±45° jitter
+        const radius = 30 + Math.random() * 34 // vmin travelled from the spawn point
         // The very first poster fades in noticeably faster than the rest — the
         // page needs *something* on screen quickly, before login is even possible.
         const duration = i === 0 ? 7 + Math.random() * 2 : 18 + Math.random() * 10
         return {
           key: `${movie.id}-${i}`,
           posterPath: movie.poster_path,
-          ox: 8 + Math.random() * 84, // % — random spawn position on screen
-          oy: 10 + Math.random() * 80,
+          ox,
+          oy,
           tx: Math.cos(angle) * radius,
           ty: Math.sin(angle) * radius,
           rot: -10 + Math.random() * 20,
@@ -108,19 +116,37 @@ const CAROUSEL_FRAME_CLASS = 'w-[calc(100vw-32px)] max-w-[349px]'
  *  scrolling slowly top-to-bottom behind the (semi-transparent) auth card —
  *  framed like an old film strip, with sprocket-hole rails and a soft
  *  projector flicker over the whole reel. */
+type CarouselEntry =
+  | { type: 'movie'; key: string; posterPath: string | null }
+  | { type: 'logo'; key: string }
+
 function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
-  const ordered = useMemo(
-    () =>
-      movies
-        .map((movie) => ({ movie, sort: Math.random() }))
-        .sort((a, b) => a.sort - b.sort)
-        .map(({ movie }) => movie),
-    [movies]
-  )
+  const entries = useMemo<CarouselEntry[]>(() => {
+    const ordered = movies
+      .map((movie) => ({ movie, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ movie }) => movie)
 
-  if (ordered.length === 0) return null
+    if (ordered.length === 0) return []
 
-  const duration = Math.max(50, ordered.length * 10)
+    // A couple of slots in the reel show the GoodViews logo instead of a
+    // poster, like a blank/leader frame spliced into a real film strip.
+    const logoCount = Math.min(2 + Math.floor(Math.random() * 2), ordered.length)
+    const logoIndices = new Set<number>()
+    while (logoIndices.size < logoCount) {
+      logoIndices.add(Math.floor(Math.random() * ordered.length))
+    }
+
+    return ordered.map((movie, i) =>
+      logoIndices.has(i)
+        ? { type: 'logo', key: `logo-${movie.id}-${i}` }
+        : { type: 'movie', key: `${movie.id}-${i}`, posterPath: movie.poster_path }
+    )
+  }, [movies])
+
+  if (entries.length === 0) return null
+
+  const duration = Math.max(50, entries.length * 10)
 
   return (
     <div
@@ -131,13 +157,19 @@ function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
         className="auth-poster-carousel-track flex flex-col items-center gap-5"
         style={{ '--carousel-duration': `${duration}s` } as React.CSSProperties}
       >
-        {[...ordered, ...ordered].map((movie, i) => (
-          <div key={`${movie.id}-${i}`} className={`film-reel-frame ${CAROUSEL_FRAME_CLASS}`}>
-            <img
-              src={`${TMDB_POSTER}${movie.poster_path}`}
-              alt=""
-              className="film-poster w-full aspect-[2/3] rounded-md object-cover"
-            />
+        {[...entries, ...entries].map((entry, i) => (
+          <div key={`${entry.key}-${i}`} className={`film-reel-frame ${CAROUSEL_FRAME_CLASS}`}>
+            {entry.type === 'movie' ? (
+              <img
+                src={`${TMDB_POSTER}${entry.posterPath}`}
+                alt=""
+                className="film-poster w-full aspect-[2/3] rounded-md object-cover"
+              />
+            ) : (
+              <div className="film-poster auth-logo-card flex w-full aspect-[2/3] items-center justify-center rounded-md">
+                <FilmStripSmall width={48} height={42} />
+              </div>
+            )}
           </div>
         ))}
       </div>
