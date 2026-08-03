@@ -10,6 +10,34 @@ import { useAuthStore } from '../store/authStore'
 import { verifyReauth } from '../utils/mfa'
 import ReauthField from '../components/ReauthField'
 
+function SectionHeading({ icon, tone = 'teal', children }: { icon: React.ReactNode; tone?: 'teal' | 'red'; children: React.ReactNode }) {
+  return (
+    <div className={`mb-4 flex items-center gap-2 ${tone === 'red' ? 'text-red-400' : 'text-teal'}`}>
+      {icon}
+      <h2 className="text-sm font-semibold uppercase tracking-wide">{children}</h2>
+    </div>
+  )
+}
+
+const iconClass = 'h-4 w-4'
+const iconProps = { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 2, className: iconClass } as const
+
+const PrivacyIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+)
+const NotificationsIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+)
+const SecurityIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+)
+const AccountIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+)
+const DangerIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+)
+
 export default function SettingsPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -227,9 +255,11 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings list */}
-      <div className="flex flex-col divide-y divide-white/10">
+      <div className="flex flex-col gap-6 sm:gap-8">
 
-        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Privacy</p>
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<PrivacyIcon />}>Privacy</SectionHeading>
+        <div className="flex flex-col divide-y divide-white/10">
 
         {/* Profile visibility */}
         <div className="flex flex-wrap items-center justify-between gap-3 py-5">
@@ -270,8 +300,12 @@ export default function SettingsPage() {
             <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.hide_recent_movies ? 'translate-x-6' : ''].join(' ')} />
           </button>
         </div>
+        </div>
+      </section>
 
-        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Notifications</p>
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<NotificationsIcon />}>Notifications</SectionHeading>
+        <div className="flex flex-col divide-y divide-white/10">
 
         {/* Mute recommendation alerts */}
         <div className="flex flex-wrap items-center justify-between gap-3 py-5">
@@ -304,8 +338,12 @@ export default function SettingsPage() {
             <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.mute_friend_requests ? 'translate-x-6' : ''].join(' ')} />
           </button>
         </div>
+        </div>
+      </section>
 
-        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Security</p>
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<SecurityIcon />}>Security</SectionHeading>
+        <div className="flex flex-col divide-y divide-white/10">
 
         {/* Two-factor authentication */}
         <div className="flex flex-col gap-3 py-5">
@@ -384,8 +422,12 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+        </div>
+      </section>
 
-        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Account</p>
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<AccountIcon />}>Account</SectionHeading>
+        <div className="flex flex-col divide-y divide-white/10">
 
         {/* Change email */}
         <div className="flex flex-col gap-2 py-5">
@@ -473,9 +515,12 @@ export default function SettingsPage() {
             Logout
           </button>
         </div>
+        </div>
+      </section>
 
-        {/* Delete Account */}
-        <div className="flex items-center py-5">
+      <section className="panel-card border-red-500/20 p-5 sm:p-6">
+        <SectionHeading icon={<DangerIcon />} tone="red">Danger Zone</SectionHeading>
+        <div className="flex items-center">
           <button
             onClick={() => { setDeleteConfirmInput(''); setDeleteReauth(''); setShowDeleteConfirm(true) }}
             className="text-base text-red-400 hover:text-red-300 transition-colors"
@@ -483,6 +528,8 @@ export default function SettingsPage() {
             Delete Account
           </button>
         </div>
+      </section>
+
       </div>
 
       {/* Sign-out confirmation dialog */}
