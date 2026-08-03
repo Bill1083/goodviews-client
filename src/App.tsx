@@ -12,6 +12,7 @@ import ProfilePage from './features/profile/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
+import MfaChallengePage from './pages/MfaChallengePage'
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -73,6 +74,7 @@ function AppRoutes() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/mfa-challenge" element={<MfaChallengePage />} />
         <Route
           path="/"
           element={
@@ -131,21 +133,32 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const { setSession, setLoading } = useAuthStore()
+  const { setSession, setLoading, setAal } = useAuthStore()
 
   useEffect(() => {
+    const refreshAal = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
+      if (!session) {
+        setAal({ current: null, next: null })
+        return
+      }
+      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      setAal({ current: data?.currentLevel ?? null, next: data?.nextLevel ?? null })
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
+      refreshAal(data.session)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
+        refreshAal(session)
       },
     )
 
     return () => listener.subscription.unsubscribe()
-  }, [setSession, setLoading])
+  }, [setSession, setLoading, setAal])
 
   return (
     <BrowserRouter>

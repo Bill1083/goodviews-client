@@ -6,7 +6,7 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children }: Props) {
-  const { user, isLoading } = useAuthStore()
+  const { user, isLoading, aal } = useAuthStore()
 
   if (isLoading) {
     return (
@@ -16,5 +16,12 @@ export default function ProtectedRoute({ children }: Props) {
     )
   }
 
-  return user ? <>{children}</> : <Navigate to="/auth" replace />
+  if (!user) return <Navigate to="/auth" replace />
+
+  // An enrolled MFA factor hasn't been challenged yet this session — finish that first.
+  if (aal.current && aal.next && aal.current !== aal.next) {
+    return <Navigate to="/mfa-challenge" replace />
+  }
+
+  return <>{children}</>
 }

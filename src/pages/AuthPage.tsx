@@ -88,7 +88,9 @@ export default function AuthPage() {
       if (error) {
         setLoginError(error.message)
       } else {
-        navigate('/')
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+        const needsMfa = aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2'
+        navigate(needsMfa ? '/mfa-challenge' : '/')
       }
     } finally {
       setLoginLoading(false)

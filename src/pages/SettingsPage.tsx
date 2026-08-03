@@ -6,24 +6,51 @@ import { supabase } from '../services/supabaseClient'
 import { getProfile, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useAuthStore } from '../store/authStore'
+import { verifyReauth } from '../utils/mfa'
+import ReauthField from '../components/ReauthField'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const userEmail = useAuthStore((s) => s.user?.email) ?? ''
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+  const [deleteReauth, setDeleteReauth] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [emailReauth, setEmailReauth] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordReauth, setPasswordReauth] = useState('')
   const [passwordMismatch, setPasswordMismatch] = useState(false)
 
-  useBodyScrollLock(showSignOutConfirm || showDeleteConfirm)
+  // Two-factor (TOTP) enrollment flow
+  const [enrolling, setEnrolling] = useState(false)
+  const [enrollFactorId, setEnrollFactorId] = useState<string | null>(null)
+  const [enrollQr, setEnrollQr] = useState<string | null>(null)
+  const [enrollSecret, setEnrollSecret] = useState<string | null>(null)
+  const [enrollCode, setEnrollCode] = useState('')
+  const [enrollError, setEnrollError] = useState<string | null>(null)
+  const [showDisableMfaConfirm, setShowDisableMfaConfirm] = useState(false)
+
+  useBodyScrollLock(showSignOutConfirm || showDeleteConfirm || showDisableMfaConfirm)
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: getProfile,
   })
+
+  const { data: mfaFactors } = useQuery({
+    queryKey: ['mfa-factors'],
+    queryFn: async () => {
+      const { data, error } = await supabase.auth.mfa.listFactors()
+      if (error) throw error
+      return data
+    },
+  })
+  const verifiedTotp = mfaFactors?.totp.find((f) => f.status === 'verified')
+  const hasMfa = !!verifiedTotp
 
   const visibilityMutation = useMutation({
     mutationFn: (vis: ProfileData['profile_visibility']) =>
@@ -48,25 +75,33 @@ export default function SettingsPage() {
 
   const emailMutation = useMutation({
     mutationFn: async (email: string) => {
+      const reauthError = await verifyReauth(hasMfa, userEmail, emailReauth)
+      if (reauthError) throw new Error(reauthError)
       const { error } = await supabase.auth.updateUser({ email })
       if (error) throw error
     },
-    onSuccess: () => setNewEmail(''),
+    onSuccess: () => {
+      setNewEmail('')
+      setEmailReauth('')
+    },
   })
 
   const passwordMutation = useMutation({
     mutationFn: async (password: string) => {
+      const reauthError = await verifyReauth(hasMfa, userEmail, passwordReauth)
+      if (reauthError) throw new Error(reauthError)
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
     },
     onSuccess: () => {
       setNewPassword('')
       setConfirmPassword('')
+      setPasswordReauth('')
     },
   })
 
   const handleUpdateEmail = () => {
-    if (!newEmail.trim()) return
+    if (!newEmail.trim() || !emailReauth) return
     emailMutation.mutate(newEmail.trim())
   }
 
@@ -76,9 +111,62 @@ export default function SettingsPage() {
       return
     }
     setPasswordMismatch(false)
-    if (!newPassword) return
+    if (!newPassword || !passwordReauth) return
     passwordMutation.mutate(newPassword)
   }
+
+  const startMfaEnroll = async () => {
+    setEnrollError(null)
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' })
+    if (error) {
+      setEnrollError(error.message)
+      return
+    }
+    setEnrollFactorId(data.id)
+    setEnrollQr(data.totp.qr_code)
+    setEnrollSecret(data.totp.secret)
+    setEnrolling(true)
+  }
+
+  const cancelMfaEnroll = async () => {
+    if (enrollFactorId) {
+      await supabase.auth.mfa.unenroll({ factorId: enrollFactorId }).catch(() => {})
+    }
+    setEnrolling(false)
+    setEnrollFactorId(null)
+    setEnrollQr(null)
+    setEnrollSecret(null)
+    setEnrollCode('')
+    setEnrollError(null)
+  }
+
+  const enrollMutation = useMutation({
+    mutationFn: async () => {
+      if (!enrollFactorId) throw new Error('Enrollment expired — please try again.')
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: enrollFactorId, code: enrollCode })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      setEnrolling(false)
+      setEnrollFactorId(null)
+      setEnrollQr(null)
+      setEnrollSecret(null)
+      setEnrollCode('')
+      qc.invalidateQueries({ queryKey: ['mfa-factors'] })
+    },
+  })
+
+  const disableMfaMutation = useMutation({
+    mutationFn: async () => {
+      if (!verifiedTotp) return
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: verifiedTotp.id })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      setShowDisableMfaConfirm(false)
+      qc.invalidateQueries({ queryKey: ['mfa-factors'] })
+    },
+  })
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -86,7 +174,11 @@ export default function SettingsPage() {
   }
 
   const deleteAccountMutation = useMutation({
-    mutationFn: () => deleteAccount(deleteConfirmInput),
+    mutationFn: async () => {
+      const reauthError = await verifyReauth(hasMfa, userEmail, deleteReauth)
+      if (reauthError) throw new Error(reauthError)
+      await deleteAccount(deleteConfirmInput)
+    },
     onSuccess: async () => {
       await supabase.auth.signOut()
       navigate('/auth')
@@ -213,6 +305,86 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Security</p>
+
+        {/* Two-factor authentication */}
+        <div className="flex flex-col gap-3 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 pr-2">
+              <span className="text-base text-gray-light">Two-Factor Authentication</span>
+              <p className="text-xs text-gray-muted mt-0.5">
+                {hasMfa
+                  ? 'Enabled — an authenticator code is required to sign in and to change sensitive account settings.'
+                  : 'Add an authenticator app as a second sign-in step, for stronger account protection.'}
+              </p>
+            </div>
+            {hasMfa ? (
+              <button
+                onClick={() => setShowDisableMfaConfirm(true)}
+                className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors shrink-0"
+              >
+                Disable
+              </button>
+            ) : !enrolling ? (
+              <button
+                onClick={startMfaEnroll}
+                className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors shrink-0"
+              >
+                Enable
+              </button>
+            ) : null}
+          </div>
+
+          {enrollError && <p className="text-xs text-red-400">{enrollError}</p>}
+
+          {enrolling && enrollQr && (
+            <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-navy-card/40 p-4 sm:flex-row sm:items-start">
+              <img
+                src={enrollQr}
+                alt="Authenticator QR code"
+                className="h-32 w-32 shrink-0 self-center rounded bg-white p-1.5 sm:self-start"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <p className="text-xs text-gray-muted">
+                  Scan this with an authenticator app (Google Authenticator, Authy, 1Password…), or enter the code manually:
+                </p>
+                {enrollSecret && (
+                  <code className="break-all rounded bg-black/30 px-2 py-1 text-xs text-gray-light">{enrollSecret}</code>
+                )}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={enrollCode}
+                    onChange={(e) => setEnrollCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="6-digit code"
+                    className="input-base w-32 text-center tracking-[0.3em]"
+                  />
+                  <button
+                    onClick={() => enrollMutation.mutate()}
+                    disabled={enrollCode.length !== 6 || enrollMutation.isPending}
+                    className="px-5 py-2 rounded-full bg-teal text-navy text-sm font-semibold hover:bg-teal-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {enrollMutation.isPending ? 'Verifying…' : 'Verify & Enable'}
+                  </button>
+                  <button
+                    onClick={cancelMfaEnroll}
+                    className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {enrollMutation.isError && (
+                  <p className="text-xs text-red-400">
+                    {(enrollMutation.error as { message?: string })?.message ?? 'Invalid code. Please try again.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <p className="pt-1 text-xs font-medium text-gray-muted uppercase tracking-wide">Account</p>
 
         {/* Change email */}
@@ -227,9 +399,14 @@ export default function SettingsPage() {
               autoComplete="email"
               className="input-base flex-1 min-w-[200px]"
             />
+          </div>
+          <div className="max-w-xs">
+            <ReauthField hasMfa={hasMfa} value={emailReauth} onChange={setEmailReauth} />
+          </div>
+          <div>
             <button
               onClick={handleUpdateEmail}
-              disabled={!newEmail.trim() || emailMutation.isPending}
+              disabled={!newEmail.trim() || !emailReauth || emailMutation.isPending}
               className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {emailMutation.isPending ? 'Updating…' : 'Update Email'}
@@ -265,9 +442,14 @@ export default function SettingsPage() {
               autoComplete="new-password"
               className="input-base flex-1 min-w-[160px]"
             />
+          </div>
+          <div className="max-w-xs">
+            <ReauthField hasMfa={hasMfa} value={passwordReauth} onChange={setPasswordReauth} />
+          </div>
+          <div>
             <button
               onClick={handleUpdatePassword}
-              disabled={!newPassword || !confirmPassword || passwordMutation.isPending}
+              disabled={!newPassword || !confirmPassword || !passwordReauth || passwordMutation.isPending}
               className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
@@ -295,7 +477,7 @@ export default function SettingsPage() {
         {/* Delete Account */}
         <div className="flex items-center py-5">
           <button
-            onClick={() => { setDeleteConfirmInput(''); setShowDeleteConfirm(true) }}
+            onClick={() => { setDeleteConfirmInput(''); setDeleteReauth(''); setShowDeleteConfirm(true) }}
             className="text-base text-red-400 hover:text-red-300 transition-colors"
           >
             Delete Account
@@ -362,9 +544,12 @@ export default function SettingsPage() {
                 disabled={deleteAccountMutation.isPending}
               />
             </div>
+            <ReauthField hasMfa={hasMfa} value={deleteReauth} onChange={setDeleteReauth} />
             {deleteAccountMutation.isError && (
               <p className="text-xs text-red-400">
-                {(deleteAccountMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Something went wrong. Please try again.'}
+                {(deleteAccountMutation.error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error
+                  ?? (deleteAccountMutation.error as { message?: string })?.message
+                  ?? 'Something went wrong. Please try again.'}
               </p>
             )}
             <div className="flex gap-3 justify-end">
@@ -377,10 +562,51 @@ export default function SettingsPage() {
               </button>
               <button
                 onClick={() => deleteAccountMutation.mutate()}
-                disabled={deleteConfirmInput !== profile?.username || deleteAccountMutation.isPending}
+                disabled={deleteConfirmInput !== profile?.username || !deleteReauth || deleteAccountMutation.isPending}
                 className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-500 text-sm text-white font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disable 2FA confirmation dialog */}
+      {showDisableMfaConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
+          onClick={() => { if (!disableMfaMutation.isPending) setShowDisableMfaConfirm(false) }}
+        >
+          <div
+            className="panel-card dialog-scale-in flex max-w-sm w-full flex-col gap-5 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1.5">
+              <p className="text-base font-semibold text-red-400">Disable Two-Factor Authentication?</p>
+              <p className="text-sm text-gray-muted">
+                Your account will only be protected by your password. You can re-enable it any time.
+              </p>
+            </div>
+            {disableMfaMutation.isError && (
+              <p className="text-xs text-red-400">
+                {(disableMfaMutation.error as { message?: string })?.message ?? 'Something went wrong. Please try again.'}
+              </p>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDisableMfaConfirm(false)}
+                disabled={disableMfaMutation.isPending}
+                className="px-5 py-2 rounded-full border border-white/15 text-sm text-gray-light hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => disableMfaMutation.mutate()}
+                disabled={disableMfaMutation.isPending}
+                className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-500 text-sm text-white font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {disableMfaMutation.isPending ? 'Disabling…' : 'Disable'}
               </button>
             </div>
           </div>
