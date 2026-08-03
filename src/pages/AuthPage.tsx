@@ -8,18 +8,33 @@ import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
 
-/** Decorative posters drifting outward from the centre — some "currently popular"
- *  (trending) titles mixed with "classics" (top-rated), purely ambient/aria-hidden. */
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const mql = window.matchMedia(query)
+    const handler = () => setMatches(mql.matches)
+    handler()
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
+
+/** Desktop: posters fade in from random spawn points and drift further outward,
+ *  one at a time — some "currently popular" (trending) titles mixed with
+ *  "classics" (top-rated), purely ambient/aria-hidden. */
 function AuthPosterField({ movies }: { movies: Movie[] }) {
   const posters = useMemo(
     () =>
       movies.map((movie, i) => {
         const angle = Math.random() * Math.PI * 2
-        const radius = 30 + Math.random() * 22 // vmin travelled from centre
+        const radius = 14 + Math.random() * 16 // vmin travelled from the spawn point
         const duration = 18 + Math.random() * 10
         return {
           key: `${movie.id}-${i}`,
           posterPath: movie.poster_path,
+          ox: 8 + Math.random() * 84, // % — random spawn position on screen
+          oy: 10 + Math.random() * 80,
           tx: Math.cos(angle) * radius,
           ty: Math.sin(angle) * radius,
           rot: -10 + Math.random() * 20,
@@ -52,13 +67,15 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
   }, [maxVisible])
 
   return (
-    <div className="auth-poster-stage pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-      {posters.slice(0, visibleCount).map(({ key, posterPath, tx, ty, rot, size, duration }) => (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+      {posters.slice(0, visibleCount).map(({ key, posterPath, ox, oy, tx, ty, rot, size, duration }) => (
         <div
           key={key}
           className="auth-poster"
           style={
             {
+              left: `${ox}%`,
+              top: `${oy}%`,
               '--tx': `${tx}vmin`,
               '--ty': `${ty}vmin`,
               '--duration': `${duration}s`,
@@ -74,6 +91,44 @@ function AuthPosterField({ movies }: { movies: Movie[] }) {
           />
         </div>
       ))}
+    </div>
+  )
+}
+
+const CAROUSEL_POSTER_WIDTH = 116
+
+/** Phone: a single vertical carousel of uniform-size posters in random order,
+ *  scrolling slowly top-to-bottom behind the (semi-transparent) auth card. */
+function AuthPosterCarousel({ movies }: { movies: Movie[] }) {
+  const ordered = useMemo(
+    () =>
+      movies
+        .map((movie) => ({ movie, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ movie }) => movie),
+    [movies]
+  )
+
+  if (ordered.length === 0) return null
+
+  const duration = Math.max(30, ordered.length * 6)
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="auth-poster-carousel-track flex flex-col items-center gap-4"
+        style={{ '--carousel-duration': `${duration}s` } as React.CSSProperties}
+      >
+        {[...ordered, ...ordered].map((movie, i) => (
+          <img
+            key={`${movie.id}-${i}`}
+            src={`${TMDB_POSTER}${movie.poster_path}`}
+            alt=""
+            className="rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.5)] object-cover"
+            style={{ width: CAROUSEL_POSTER_WIDTH }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -117,6 +172,7 @@ const labelClass = 'text-[15px] text-white leading-none'
 
 export default function AuthPage() {
   const navigate = useNavigate()
+  const isDesktop = useMediaQuery('(min-width: 640px)')
 
   // Background poster field: mix of "currently popular" and "classic" movies
   const { data: trending } = useQuery({
@@ -226,7 +282,7 @@ export default function AuthPage() {
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center px-4 py-8 sm:justify-end sm:px-0 sm:py-0 sm:pr-[5vw]">
 
       {/* ── Ambient popular/classic movie posters ── */}
-      <AuthPosterField movies={bgMovies} />
+      {isDesktop ? <AuthPosterField movies={bgMovies} /> : <AuthPosterCarousel movies={bgMovies} />}
 
       {/* ── Blue glow accent (left side) ── */}
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-brand/15 blur-[160px] pointer-events-none" />

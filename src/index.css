@@ -198,19 +198,10 @@ option.custom-option {
   animation: zoomForward 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* ─── Auth page ambient poster field ─────────────────────────────────────── */
-/* Posters spawn at --origin-x/50% and drift out to a per-poster (--tx, --ty)
-   offset, fading in then out so the loop point (start === end, opacity 0)
-   is invisible. --origin-x shifts left on larger screens to sit in the open
-   space beside the auth card instead of behind it. */
-.auth-poster-stage {
-  --origin-x: 50%;
-}
-@media (min-width: 640px) {
-  .auth-poster-stage {
-    --origin-x: 36%;
-  }
-}
+/* ─── Auth page ambient poster field (desktop) ───────────────────────────── */
+/* Each poster spawns at its own random (left, top) spot, fading in from tiny/
+   invisible and drifting a bit further outward via (--tx, --ty). Fading back
+   out before 100% keeps the loop point (start === end, opacity 0) invisible. */
 @keyframes posterDrift {
   0%   { transform: translate(-50%, -50%) translate(0, 0) scale(0.12); opacity: 0; }
   10%  { opacity: 0.08; }
@@ -220,8 +211,21 @@ option.custom-option {
 }
 .auth-poster {
   position: absolute;
-  left: var(--origin-x);
-  top: 50%;
   animation: posterDrift var(--duration, 20s) ease-out infinite;
   will-change: transform, opacity;
+}
+
+/* ─── Auth page poster carousel (phone) ───────────────────────────────────── */
+/* The track holds the shuffled poster list duplicated twice back-to-back and
+   scrolls down by exactly one copy's height, so the loop point is seamless. */
+.auth-poster-carousel-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+  animation: posterScrollDown var(--carousel-duration, 60s) linear infinite;
+}
+@keyframes posterScrollDown {
+  from { transform: translate(-50%, -50%); }
+  to   { transform: translate(-50%, 0%); }
 }
