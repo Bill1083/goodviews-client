@@ -8,7 +8,7 @@ import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useAuthStore } from '../store/authStore'
 import { verifyReauth } from '../utils/mfa'
-import { PASSWORD_HINT, validatePassword } from '../utils/passwordPolicy'
+import { PASSWORD_HINT, PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 import ReauthField from '../components/ReauthField'
 
 function SectionHeading({ icon, tone = 'teal', children }: { icon: React.ReactNode; tone?: 'teal' | 'red'; children: React.ReactNode }) {
@@ -483,12 +483,14 @@ export default function SettingsPage() {
               onChange={(e) => { setNewPassword(e.target.value); setPasswordMismatch(false); setPasswordPolicyError(null) }}
               placeholder="New password"
               autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
               className="input-base flex-1 min-w-[160px]"
             />
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); setPasswordMismatch(false) }}
+              maxLength={PASSWORD_MAX_LENGTH}
               placeholder="Confirm new password"
               autoComplete="new-password"
               className="input-base flex-1 min-w-[160px]"

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { validatePassword } from '../utils/passwordPolicy'
+import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 
 /** Film strip SVG — large (91 × 73), used for the top-left GV logo */
 function FilmStripLarge() {
@@ -248,6 +248,7 @@ export default function AuthPage() {
               type="password"
               autoComplete="new-password"
               required
+              maxLength={PASSWORD_MAX_LENGTH}
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
               className={authInputClass}
