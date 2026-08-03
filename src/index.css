@@ -245,17 +245,17 @@ option.custom-option {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 16px;
+  width: 20px;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 12px,
-    #38343d 12px,
-    #38343d 24px
+    transparent 15px,
+    #2b2831 15px,
+    #2b2831 28px
   );
 }
-.film-reel-frame::before { left: -16px; }
-.film-reel-frame::after  { right: -16px; }
+.film-reel-frame::before { left: -20px; }
+.film-reel-frame::after  { right: -20px; }
 
 /* Vignette on all four edges of the poster itself (not just left/right),
    faded down a lot so the whole reel reads as quiet background texture
@@ -277,5 +277,5 @@ option.custom-option {
    faded-charcoal tone as the sprocket rails — kept thin (no poster aspect
    ratio), just tall enough to wrap the logo, like a leader frame. */
 .auth-logo-card {
-  background-color: rgba(56, 52, 61, 0.55);
+  background-color: rgba(43, 40, 49, 0.55);
 }
