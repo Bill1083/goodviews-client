@@ -118,9 +118,10 @@ export default function SettingsPage() {
 
   const passwordMutation = useMutation({
     mutationFn: async (password: string) => {
-      const reauthError = await verifyReauth(hasMfa, userEmail, passwordReauth)
-      if (reauthError) throw new Error(reauthError)
-      const { error } = await supabase.auth.updateUser({ password })
+      // GoTrue's own GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD checks the
+      // literal current_password field server-side, independent of MFA/session status —
+      // so this one field is always the actual password, never a TOTP code.
+      const { error } = await supabase.auth.updateUser({ password, current_password: passwordReauth })
       if (error) throw error
     },
     onSuccess: () => {
@@ -498,7 +499,9 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-gray-muted">{PASSWORD_HINT}</p>
           <div className="max-w-xs">
-            <ReauthField hasMfa={hasMfa} value={passwordReauth} onChange={setPasswordReauth} />
+            {/* Always the real password here — GoTrue validates current_password server-side
+                regardless of MFA, so a TOTP code wouldn't satisfy it. */}
+            <ReauthField hasMfa={false} value={passwordReauth} onChange={setPasswordReauth} />
           </div>
           <div>
             <button
