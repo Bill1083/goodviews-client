@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getTrendingMovies, searchMovies, getMovieDetails } from '../services/apiClient'
+import { getTrendingMovies, searchMovies, getMovieImages } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import MovieSearchBar from '../features/movies/MovieSearchBar'
-import type { Movie, CastMember } from '../types'
+import Avatar from './Avatar'
+import type { Movie, MoviePosterImage } from '../types'
 
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w154'
-const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185'
+const TMDB_POSTER_SMALL = 'https://image.tmdb.org/t/p/w154'
+const TMDB_POSTER_AVATAR = 'https://image.tmdb.org/t/p/w185'
+
+const DEFAULT_FOCAL_Y = 22
+const DEFAULT_ZOOM = 1
 
 interface Props {
-  onSelect: (avatarUrl: string) => void
+  onSelect: (avatarUrl: string, focalY: number, zoom: number) => void
   onClose: () => void
 }
 
-/** TMDB has no illustrated "character" art like Disney+/Netflix profile icons — this picks
- *  from real cast photos instead: search a movie, then choose a character from its cast. */
+/** TMDB has no illustrated "character" art the way Disney+/Netflix profile icons do — no
+ *  API returns "an image of just Spider-Man" separate from either an actor's real headshot
+ *  or a full poster. Poster art is the closest fit: search a movie, pick from its poster
+ *  variants (ensembles like the Avengers films often have separate hero-specific posters,
+ *  which is exactly the "pick a character" case this is standing in for), then adjust the
+ *  circular crop since the interesting part of a poster isn't always centered. */
 export default function AvatarPicker({ onSelect, onClose }: Props) {
   // Two states, same split DiscoverPage uses: `rawQuery` tracks every keystroke so the UI can
   // switch away from "trending" the instant something is typed, while `searchQuery` only
@@ -22,18 +30,22 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
   const [rawQuery, setRawQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [movie, setMovie] = useState<Movie | null>(null)
+  const [pickedPoster, setPickedPoster] = useState<MoviePosterImage | null>(null)
+  const [focalY, setFocalY] = useState(DEFAULT_FOCAL_Y)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
 
   useBodyScrollLock(true)
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (movie) setMovie(null)
+      if (pickedPoster) setPickedPoster(null)
+      else if (movie) setMovie(null)
       else onClose()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose, movie])
+  }, [onClose, movie, pickedPoster])
 
   const { data: trending, isLoading: trendingLoading } = useQuery({
     queryKey: ['movies', 'trending'],
@@ -48,9 +60,9 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
     staleTime: 1000 * 60 * 5,
   })
 
-  const { data: details, isLoading: castLoading } = useQuery({
-    queryKey: ['movie-details', movie?.id],
-    queryFn: () => getMovieDetails(movie!.id),
+  const { data: images, isLoading: postersLoading } = useQuery({
+    queryKey: ['movie-images', movie?.id],
+    queryFn: () => getMovieImages(movie!.id),
     enabled: !!movie,
     staleTime: 1000 * 60 * 60,
   })
@@ -58,7 +70,20 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
   const isSearchMode = rawQuery.trim().length >= 2
   const movies = isSearchMode ? searchResults?.results ?? [] : trending?.results ?? []
   const moviesLoading = isSearchMode ? searchLoading : trendingLoading
-  const cast = details?.credits?.cast ?? []
+  const posters = [...(images?.posters ?? [])].sort((a, b) => b.vote_average - a.vote_average)
+
+  function pickPoster(p: MoviePosterImage) {
+    setPickedPoster(p)
+    setFocalY(DEFAULT_FOCAL_Y)
+    setZoom(DEFAULT_ZOOM)
+  }
+
+  const headerTitle = pickedPoster ? 'Adjust Photo' : movie ? movie.title : 'Choose a Character'
+  const headerSubtitle = !movie
+    ? 'Search a movie, then pick from its poster art'
+    : !pickedPoster
+      ? undefined
+      : 'Drag the sliders to frame the crop'
 
   return (
     <div
@@ -72,12 +97,8 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/10 shrink-0">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-gray-lighter truncate">
-              {movie ? movie.title : 'Choose a Character'}
-            </h2>
-            {!movie && (
-              <p className="text-xs text-gray-muted">Pick a movie, then a character from its cast</p>
-            )}
+            <h2 className="text-base font-bold text-gray-lighter truncate">{headerTitle}</h2>
+            {headerSubtitle && <p className="text-xs text-gray-muted">{headerSubtitle}</p>}
           </div>
           <button
             onClick={onClose}
@@ -90,7 +111,62 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-5">
-          {!movie ? (
+          {pickedPoster ? (
+            <div className="flex flex-col items-center gap-6">
+              <button
+                type="button"
+                onClick={() => setPickedPoster(null)}
+                className="self-start flex items-center gap-1 text-xs text-gray-muted hover:text-gray-lighter transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to poster art
+              </button>
+
+              <Avatar
+                username=""
+                avatarUrl={`${TMDB_POSTER_AVATAR}${pickedPoster.file_path}`}
+                focalY={focalY}
+                zoom={zoom}
+                size="2xl"
+                className="border-2 border-white/15 shadow-xl"
+              />
+
+              <div className="flex w-full max-w-xs flex-col gap-4">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-gray-muted">Position (top ↔ bottom)</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={focalY}
+                    onChange={(e) => setFocalY(Number(e.target.value))}
+                    className="w-full accent-magenta"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-gray-muted">Zoom</span>
+                  <input
+                    type="range"
+                    min={100}
+                    max={250}
+                    value={zoom * 100}
+                    onChange={(e) => setZoom(Number(e.target.value) / 100)}
+                    className="w-full accent-magenta"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onSelect(`${TMDB_POSTER_AVATAR}${pickedPoster.file_path}`, focalY, zoom)}
+                className="px-6 py-2.5 rounded-full bg-magenta text-white text-sm font-semibold hover:bg-magenta/90 transition-colors"
+              >
+                Use This Photo
+              </button>
+            </div>
+          ) : !movie ? (
             <div className="flex flex-col gap-4">
               <MovieSearchBar onSearch={setSearchQuery} onTyping={setRawQuery} isLoading={searchLoading} placeholder="Search for a movie…" />
 
@@ -116,7 +192,7 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
                       <div className="aspect-[2/3] w-full overflow-hidden bg-navy-card/60">
                         {m.poster_path ? (
                           <img
-                            src={`${TMDB_POSTER}${m.poster_path}`}
+                            src={`${TMDB_POSTER_SMALL}${m.poster_path}`}
                             alt={m.title}
                             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
                             loading="lazy"
@@ -148,20 +224,18 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
                 Back to movies
               </button>
 
-              {castLoading ? (
+              {postersLoading ? (
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1.5">
-                      <div className="aspect-square w-full animate-pulse rounded-full bg-navy-card/60" />
-                    </div>
+                    <div key={i} className="aspect-[2/3] w-full animate-pulse rounded-lg bg-navy-card/60" />
                   ))}
                 </div>
-              ) : cast.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-muted italic">No cast photos available for this movie.</p>
+              ) : posters.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-muted italic">No poster art available for this movie.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {cast.filter((c) => c.profile_path).slice(0, 24).map((c) => (
-                    <CastPickButton key={c.id} actor={c} onPick={() => onSelect(`${TMDB_PROFILE}${c.profile_path}`)} />
+                  {posters.slice(0, 24).map((p) => (
+                    <PosterPickButton key={p.file_path} poster={p} onPick={() => pickPoster(p)} />
                   ))}
                 </div>
               )}
@@ -173,25 +247,19 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
   )
 }
 
-function CastPickButton({ actor, onPick }: { actor: CastMember; onPick: () => void }) {
+function PosterPickButton({ poster, onPick }: { poster: MoviePosterImage; onPick: () => void }) {
   return (
     <button
       type="button"
       onClick={onPick}
-      className="group flex flex-col items-center gap-1.5 text-center"
+      className="group aspect-[2/3] w-full overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card/60 hover:border-magenta/50 transition-colors"
     >
-      <div className="aspect-square w-full overflow-hidden rounded-full border-2 border-white/10 bg-navy-card/60 group-hover:border-magenta/50 transition-colors">
-        <img
-          src={`${TMDB_PROFILE}${actor.profile_path}`}
-          alt={actor.name}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
-      </div>
-      <p className="w-full line-clamp-1 text-[10px] font-medium text-gray-lighter group-hover:text-magenta transition-colors">
-        {actor.character || actor.name}
-      </p>
-      <p className="w-full line-clamp-1 text-[9px] text-gray-muted">{actor.name}</p>
+      <img
+        src={`${TMDB_POSTER_SMALL}${poster.file_path}`}
+        alt=""
+        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+        loading="lazy"
+      />
     </button>
   )
 }

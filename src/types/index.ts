@@ -70,6 +70,20 @@ export interface MovieSearchResult {
   total_results: number
 }
 
+export interface MoviePosterImage {
+  file_path: string
+  width: number
+  height: number
+  vote_average: number
+  iso_639_1: string | null
+}
+
+export interface MovieImages {
+  posters: MoviePosterImage[]
+  backdrops: MoviePosterImage[]
+  logos: MoviePosterImage[]
+}
+
 export interface Review {
   id: string
   user_id: string
@@ -98,6 +112,8 @@ export interface FriendProfile {
   username: string
   avatar_url: string | null
   avatar_color: string | null
+  avatar_focal_y: number | null
+  avatar_zoom: number | null
 }
 
 export interface FriendGroup {
@@ -115,6 +131,8 @@ export interface UserSearchResult {
   username: string
   avatar_url: string | null
   avatar_color: string | null
+  avatar_focal_y: number | null
+  avatar_zoom: number | null
   is_friend: boolean
   has_pending_request: boolean
 }
@@ -125,6 +143,8 @@ export interface FriendRequest {
   sender_username: string
   sender_avatar_url: string | null
   sender_avatar_color: string | null
+  sender_avatar_focal_y: number | null
+  sender_avatar_zoom: number | null
   created_at: string
 }
 

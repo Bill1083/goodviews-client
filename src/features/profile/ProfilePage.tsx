@@ -180,6 +180,8 @@ export default function ProfilePage() {
   const [editBio, setEditBio] = useState('')
   const [editAvatarColor, setEditAvatarColor] = useState<string | null>(null)
   const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null)
+  const [editAvatarFocalY, setEditAvatarFocalY] = useState(22)
+  const [editAvatarZoom, setEditAvatarZoom] = useState(1)
   const [showAvatarColorPicker, setShowAvatarColorPicker] = useState(false)
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null)
@@ -189,6 +191,8 @@ export default function ProfilePage() {
     setEditBio(profileData?.bio ?? '')
     setEditAvatarColor(profileData?.avatar_color ?? null)
     setEditAvatarUrl(profileData?.avatar_url ?? null)
+    setEditAvatarFocalY(profileData?.avatar_focal_y ?? 22)
+    setEditAvatarZoom(profileData?.avatar_zoom ?? 1)
     setProfileSaveError(null)
     setIsEditingProfile(true)
   }
@@ -200,6 +204,8 @@ export default function ProfilePage() {
         bio: editBio.trim() || null,
         avatar_color: editAvatarColor,
         avatar_url: editAvatarUrl,
+        avatar_focal_y: editAvatarFocalY,
+        avatar_zoom: editAvatarZoom,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['profile'] })
@@ -415,6 +421,8 @@ export default function ProfilePage() {
   const displayBio = profileData?.bio ?? null
   const avatarColor = profileData?.avatar_color ?? '#c5c491'
   const avatarUrl = profileData?.avatar_url ?? null
+  const avatarFocalY = profileData?.avatar_focal_y ?? 22
+  const avatarZoom = profileData?.avatar_zoom ?? 1
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
@@ -424,7 +432,7 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
           {/* Avatar + change-photo button */}
           <div className="relative self-center sm:self-start">
-            <Avatar username={editUsername || displayUsername} avatarUrl={editAvatarUrl} color={editAvatarColor ?? avatarColor} size="xl" />
+            <Avatar username={editUsername || displayUsername} avatarUrl={editAvatarUrl} color={editAvatarColor ?? avatarColor} focalY={editAvatarFocalY} zoom={editAvatarZoom} size="xl" />
             <button
               type="button"
               onClick={() => setShowAvatarPicker(true)}
@@ -525,7 +533,7 @@ export default function ProfilePage() {
       ) : (
         /* ── View mode ── */
         <div className="flex items-center gap-3 sm:gap-5">
-          <Avatar username={displayUsername} avatarUrl={avatarUrl} color={avatarColor} size="lg" />
+          <Avatar username={displayUsername} avatarUrl={avatarUrl} color={avatarColor} focalY={avatarFocalY} zoom={avatarZoom} size="lg" />
           <div className="flex flex-col gap-0.5 min-w-0">
             <h1 className="text-2xl font-bold text-gray-lighter sm:text-3xl">{displayUsername}</h1>
             <p className="text-sm text-gray-muted">{user?.email}</p>
@@ -582,7 +590,7 @@ export default function ProfilePage() {
               <ul className="flex flex-col gap-2">
                 {friendRequests.map((req) => (
                   <li key={req.id} className="flex items-center gap-2">
-                    <Avatar username={req.sender_username} avatarUrl={req.sender_avatar_url} color={req.sender_avatar_color} size="xs" />
+                    <Avatar username={req.sender_username} avatarUrl={req.sender_avatar_url} color={req.sender_avatar_color} focalY={req.sender_avatar_focal_y} zoom={req.sender_avatar_zoom} size="xs" />
                     <span className="flex-1 truncate text-xs text-gray-light">{req.sender_username}</span>
                     <button
                       onClick={() => acceptRequestMutation.mutate(req.id)}
@@ -620,7 +628,7 @@ export default function ProfilePage() {
               <li className="py-2 text-xs text-gray-muted italic">No friends yet.</li>
             ) : filteredFriends.map((f) => (
               <li key={f.id} className="flex items-center gap-2 py-2">
-                <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} size="xs" />
+                <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} focalY={f.avatar_focal_y} zoom={f.avatar_zoom} size="xs" />
                 <span className="flex-1 truncate text-sm text-gray-light">{f.username}</span>
                 <button
                   onClick={() => removeFriendMutation.mutate(f.id)}
@@ -749,7 +757,12 @@ export default function ProfilePage() {
       {/* ── Avatar picker modal ─────────────────────────────────────────────── */}
       {showAvatarPicker && (
         <AvatarPicker
-          onSelect={(url) => { setEditAvatarUrl(url); setShowAvatarPicker(false) }}
+          onSelect={(url, focalY, zoom) => {
+            setEditAvatarUrl(url)
+            setEditAvatarFocalY(focalY)
+            setEditAvatarZoom(zoom)
+            setShowAvatarPicker(false)
+          }}
           onClose={() => setShowAvatarPicker(false)}
         />
       )}
@@ -781,7 +794,7 @@ export default function ProfilePage() {
             <ul className="flex flex-col divide-y divide-white/5">
               {friendSearchResults.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 py-3">
-                  <Avatar username={r.username} avatarUrl={r.avatar_url} color={r.avatar_color} size="sm" />
+                  <Avatar username={r.username} avatarUrl={r.avatar_url} color={r.avatar_color} focalY={r.avatar_focal_y} zoom={r.avatar_zoom} size="sm" />
                   <span className="flex-1 truncate text-sm text-gray-light">{r.username}</span>
                   {r.is_friend ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -967,7 +980,7 @@ export default function ProfilePage() {
                       <ul className="flex flex-col divide-y divide-white/5 max-h-52 overflow-y-auto">
                         {filteredFriendsForGroup.map((f) => (
                           <li key={f.id} className="flex items-center gap-2 py-1.5">
-                            <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} size="xs" />
+                            <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} focalY={f.avatar_focal_y} zoom={f.avatar_zoom} size="xs" />
                             <span className="flex-1 truncate text-xs text-gray-light">{f.username}</span>
                             <button
                               disabled={memberIds.has(f.id) || addMemberMutation.isPending}
@@ -994,7 +1007,7 @@ export default function ProfilePage() {
                           <li className="py-2 text-xs text-gray-muted italic">No members yet.</li>
                         ) : (liveEditingGrp?.members ?? []).map((m) => (
                           <li key={m.id} className="flex items-center gap-2 py-2">
-                            <Avatar username={m.username} avatarUrl={m.avatar_url} color={m.avatar_color} size="xs" />
+                            <Avatar username={m.username} avatarUrl={m.avatar_url} color={m.avatar_color} focalY={m.avatar_focal_y} zoom={m.avatar_zoom} size="xs" />
                             <span className="flex-1 truncate text-sm text-gray-light">{m.username}</span>
                             <button
                               onClick={() => removeMemberMutation.mutate(m.id)}

@@ -18,6 +18,7 @@ import type {
   PersonDetails,
   FavouriteActor,
   FavouriteDirector,
+  MovieImages,
 } from '../types'
 
 const apiClient = axios.create({
@@ -67,6 +68,11 @@ export async function getTopRatedMovies(page = 1, signal?: AbortSignal): Promise
 
 export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
   const { data } = await apiClient.get<MovieDetails>(`/api/movies/${movieId}`)
+  return data
+}
+
+export async function getMovieImages(movieId: number): Promise<MovieImages> {
+  const { data } = await apiClient.get<MovieImages>(`/api/movies/${movieId}/images`)
   return data
 }
 
@@ -262,6 +268,8 @@ export interface ProfileData {
   bio: string | null
   avatar_color: string | null
   avatar_url: string | null
+  avatar_focal_y: number
+  avatar_zoom: number
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
   mute_recommendations: boolean
@@ -278,6 +286,8 @@ export async function updateProfile(payload: Partial<{
   bio: string | null
   avatar_color: string | null
   avatar_url: string | null
+  avatar_focal_y: number
+  avatar_zoom: number
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
   mute_recommendations: boolean
