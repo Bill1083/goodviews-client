@@ -75,7 +75,7 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     }
   }, [n])
 
-  const slotWidth = Math.min(220, Math.max(130, containerWidth / 3.7))
+  const slotWidth = Math.min(242, Math.max(143, containerWidth / 3.7))
   const posterWidth = slotWidth * 0.78
   const posterHeight = posterWidth * 1.5
 

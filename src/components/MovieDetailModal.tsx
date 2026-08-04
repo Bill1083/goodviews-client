@@ -275,7 +275,7 @@ export default function MovieDetailModal({
     >
       <div
         ref={dialogRef}
-        className="modal-zoom-forward relative mx-auto flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-navy-wine shadow-2xl sm:my-8"
+        className="modal-zoom-forward relative mx-auto flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-navy-wine shadow-2xl sm:my-8 2xl:max-w-6xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — floats over whichever corner is on top */}
@@ -397,7 +397,7 @@ export default function MovieDetailModal({
                 )}
 
                 {topCast.length > 0 && (
-                  <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
+                  <div className="flex flex-col gap-2 sm:w-52 sm:shrink-0">
                     <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
                     <div className="flex gap-2">
                       {topCast.map((actor) => (

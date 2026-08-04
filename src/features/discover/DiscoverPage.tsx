@@ -306,9 +306,9 @@ export default function DiscoverPage() {
 
   return (
     <>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto flex w-full flex-col items-center gap-8 px-4 py-8 sm:px-6 sm:py-12">
         {/* Top bar: title / search toggle */}
-        <div className="flex w-full items-center gap-4">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-4">
           {!searchOpen ? (
             <>
               <div className="flex flex-1 items-center gap-3">
@@ -352,9 +352,10 @@ export default function DiscoverPage() {
           )}
         </div>
 
-        {/* Browsing view */}
+        {/* Browsing view — noticeably wider than the rest of the page so the carousels can
+            show more posters at once on desktop; still clamped to max-w-3xl below that. */}
         {!hasTyped && (
-          <div className="flex w-full flex-col gap-10">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 lg:max-w-[80vw] xl:max-w-[76vw]">
             <section className="flex w-full flex-col gap-3">
               <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
               {trendingLoading ? (
@@ -387,7 +388,7 @@ export default function DiscoverPage() {
         {hasTyped && (
           <div
             style={{ opacity: activeIsFetching ? 0.7 : 1, pointerEvents: activeIsFetching ? 'none' : 'auto' }}
-            className="flex w-full flex-col items-center gap-6 sm:gap-8"
+            className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 sm:gap-8"
           >
             {/* Tab switcher */}
             <div className="flex rounded-xl border border-white/10 bg-navy-card/30 p-1 gap-1 self-center">
