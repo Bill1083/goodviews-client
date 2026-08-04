@@ -412,8 +412,8 @@ export default function ProfilePage() {
   const filteredFriends = friends.filter((f) =>
     f.username.toLowerCase().includes(friendsListFilter.toLowerCase()),
   )
-  const filteredFriendsForGroup = friends.filter((f) =>
-    f.username.toLowerCase().includes(friendsFilter.toLowerCase()),
+  const filteredFriendsForGroup = friends.filter(
+    (f) => !memberIds.has(f.id) && f.username.toLowerCase().includes(friendsFilter.toLowerCase()),
   )
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -983,7 +983,7 @@ export default function ProfilePage() {
                             <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} focalY={f.avatar_focal_y} zoom={f.avatar_zoom} size="xs" />
                             <span className="flex-1 truncate text-xs text-gray-light">{f.username}</span>
                             <button
-                              disabled={memberIds.has(f.id) || addMemberMutation.isPending}
+                              disabled={addMemberMutation.isPending}
                               onClick={() => addMemberMutation.mutate(f.id)}
                               className="text-gray-muted hover:text-teal transition-colors disabled:opacity-30"
                               title="Add to group"
@@ -995,7 +995,9 @@ export default function ProfilePage() {
                           </li>
                         ))}
                         {filteredFriendsForGroup.length === 0 && (
-                          <li className="py-2 text-xs text-gray-muted italic">No friends.</li>
+                          <li className="py-2 text-xs text-gray-muted italic">
+                            {friends.length === 0 ? 'No friends.' : 'All friends are in this group.'}
+                          </li>
                         )}
                       </ul>
                     </div>
