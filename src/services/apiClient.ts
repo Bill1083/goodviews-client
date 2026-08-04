@@ -261,6 +261,7 @@ export interface ProfileData {
   username: string
   bio: string | null
   avatar_color: string | null
+  avatar_url: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
   mute_recommendations: boolean
@@ -276,6 +277,7 @@ export async function updateProfile(payload: Partial<{
   username: string
   bio: string | null
   avatar_color: string | null
+  avatar_url: string | null
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
   mute_recommendations: boolean

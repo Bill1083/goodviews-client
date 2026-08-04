@@ -96,6 +96,8 @@ export interface Category {
 export interface FriendProfile {
   id: string
   username: string
+  avatar_url: string | null
+  avatar_color: string | null
 }
 
 export interface FriendGroup {
@@ -111,6 +113,8 @@ export interface FriendGroup {
 export interface UserSearchResult {
   id: string
   username: string
+  avatar_url: string | null
+  avatar_color: string | null
   is_friend: boolean
   has_pending_request: boolean
 }
@@ -119,6 +123,8 @@ export interface FriendRequest {
   id: string
   sender_id: string
   sender_username: string
+  sender_avatar_url: string | null
+  sender_avatar_color: string | null
   created_at: string
 }
 
