@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from './services/supabaseClient'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
@@ -134,6 +135,10 @@ function AppRoutes() {
 
 export default function App() {
   const { setSession, setLoading, setAal } = useAuthStore()
+  const queryClient = useQueryClient()
+  // undefined = not yet initialized (skip the very first callback so we don't
+  // wipe a freshly-created, already-empty cache on initial page load)
+  const prevUserIdRef = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     const refreshAal = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
@@ -146,19 +151,28 @@ export default function App() {
     }
 
     supabase.auth.getSession().then(({ data }) => {
+      prevUserIdRef.current = data.session?.user?.id ?? null
       setSession(data.session)
       refreshAal(data.session)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        const newUserId = session?.user?.id ?? null
+        // Wipe all cached queries (watchlist, reviews, recommendations, etc.)
+        // whenever the signed-in user changes — otherwise the next account to
+        // log in briefly sees the previous account's cached data.
+        if (prevUserIdRef.current !== undefined && newUserId !== prevUserIdRef.current) {
+          queryClient.clear()
+        }
+        prevUserIdRef.current = newUserId
         setSession(session)
         refreshAal(session)
       },
     )
 
     return () => listener.subscription.unsubscribe()
-  }, [setSession, setLoading, setAal])
+  }, [setSession, setLoading, setAal, queryClient])
 
   return (
     <BrowserRouter>
