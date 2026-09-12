@@ -321,6 +321,18 @@ export async function getFriendActivity(): Promise<FriendActivityItem[]> {
   return data
 }
 
+// ─── MFA trusted devices ────────────────────────────────────────────────────
+
+export async function createTrustedDevice(): Promise<{ token: string; expires_at: string }> {
+  const { data } = await apiClient.post<{ token: string; expires_at: string }>('/api/auth/trusted-devices')
+  return data
+}
+
+export async function verifyTrustedDevice(token: string): Promise<boolean> {
+  const { data } = await apiClient.post<{ trusted: boolean }>('/api/auth/trusted-devices/verify', { token })
+  return data.trusted
+}
+
 // ─── People ───────────────────────────────────────────────────────────────────
 
 export async function searchPeople(

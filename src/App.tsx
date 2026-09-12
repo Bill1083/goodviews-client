@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
+import { verifyTrustedDevice } from './services/apiClient'
+import { getStoredTrustedDeviceToken, clearTrustedDeviceToken } from './utils/mfa'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -133,16 +135,42 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const { setSession, setLoading, setAal } = useAuthStore()
+  const { setSession, setLoading, setAal, setTrustedDevice } = useAuthStore()
 
   useEffect(() => {
     const refreshAal = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
       if (!session) {
         setAal({ current: null, next: null })
+        setTrustedDevice(false)
         return
       }
       const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      setAal({ current: data?.currentLevel ?? null, next: data?.nextLevel ?? null })
+      const currentLevel = data?.currentLevel ?? null
+      const nextLevel = data?.nextLevel ?? null
+      setAal({ current: currentLevel, next: nextLevel })
+
+      if (!currentLevel || !nextLevel || currentLevel === nextLevel) {
+        setTrustedDevice(false)
+        return
+      }
+
+      // An MFA challenge is outstanding — mark the check as pending (rather
+      // than leaving stale trust from a previous user/session) before
+      // awaiting the backend, so ProtectedRoute holds on a spinner instead
+      // of bouncing to /mfa-challenge and back.
+      setTrustedDevice(false, false)
+      const token = getStoredTrustedDeviceToken(session.user.id)
+      if (!token) {
+        setTrustedDevice(false)
+        return
+      }
+      try {
+        const trusted = await verifyTrustedDevice(token)
+        if (!trusted) clearTrustedDeviceToken(session.user.id)
+        setTrustedDevice(trusted)
+      } catch {
+        setTrustedDevice(false)
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => {
@@ -158,7 +186,7 @@ export default function App() {
     )
 
     return () => listener.subscription.unsubscribe()
-  }, [setSession, setLoading, setAal])
+  }, [setSession, setLoading, setAal, setTrustedDevice])
 
   return (
     <BrowserRouter>

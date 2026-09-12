@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../services/supabaseClient'
-import { getVerifiedTotpFactorId } from '../utils/mfa'
+import { getVerifiedTotpFactorId, storeTrustedDeviceToken } from '../utils/mfa'
+import { createTrustedDevice } from '../services/apiClient'
 import PrimaryButton from '../components/PrimaryButton'
 
 export default function MfaChallengePage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const setTrustedDevice = useAuthStore((s) => s.setTrustedDevice)
   const [code, setCode] = useState('')
+  const [rememberDevice, setRememberDevice] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -29,6 +32,16 @@ export default function MfaChallengePage() {
       if (verifyError) {
         setError(verifyError.message)
         return
+      }
+      if (rememberDevice) {
+        try {
+          const { token } = await createTrustedDevice()
+          storeTrustedDeviceToken(user.id, token)
+          setTrustedDevice(true)
+        } catch {
+          // Non-fatal — the MFA verify itself already succeeded, so just
+          // fall back to challenging again next time.
+        }
       }
       navigate('/')
     } finally {
@@ -55,6 +68,15 @@ export default function MfaChallengePage() {
           placeholder="123456"
           className="input-base text-center text-lg tracking-[0.3em]"
         />
+        <label className="flex items-center gap-2 text-sm text-gray-muted">
+          <input
+            type="checkbox"
+            checked={rememberDevice}
+            onChange={(e) => setRememberDevice(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-500 accent-teal"
+          />
+          Remember this device for 30 days
+        </label>
         {error && <p className="text-sm text-red-400">{error}</p>}
         <PrimaryButton type="submit" isLoading={loading} disabled={code.length !== 6}>
           Verify

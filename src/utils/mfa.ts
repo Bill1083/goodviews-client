@@ -1,5 +1,34 @@
 import { supabase } from '../services/supabaseClient'
 
+// Keyed per user id (not a single shared key) so switching accounts on the
+// same browser can never read another account's trusted-device token.
+const trustedDeviceKey = (userId: string) => `trusted_device_token:${userId}`
+
+export function getStoredTrustedDeviceToken(userId: string): string | null {
+  try {
+    return localStorage.getItem(trustedDeviceKey(userId))
+  } catch {
+    return null
+  }
+}
+
+export function storeTrustedDeviceToken(userId: string, token: string): void {
+  try {
+    localStorage.setItem(trustedDeviceKey(userId), token)
+  } catch {
+    // Storage unavailable (private browsing etc.) — worst case the user is
+    // re-challenged next time, which is safe to fall back to.
+  }
+}
+
+export function clearTrustedDeviceToken(userId: string): void {
+  try {
+    localStorage.removeItem(trustedDeviceKey(userId))
+  } catch {
+    // no-op
+  }
+}
+
 /** Returns the id of the account's verified TOTP factor, or null if none is enrolled. */
 export async function getVerifiedTotpFactorId(): Promise<string | null> {
   const { data, error } = await supabase.auth.mfa.listFactors()
