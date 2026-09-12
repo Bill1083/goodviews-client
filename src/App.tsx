@@ -16,6 +16,7 @@ import SettingsPage from './pages/SettingsPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
+import AboutPage from './pages/AboutPage'
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -78,6 +79,7 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route
           path="/"
           element={

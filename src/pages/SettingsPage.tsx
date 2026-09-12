@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import '../index.css'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
@@ -533,6 +533,12 @@ export default function SettingsPage() {
         </div>
         </div>
       </section>
+
+      <div className="flex justify-center">
+        <Link to="/about" className="text-sm text-gray-muted hover:text-gray-lighter transition-colors">
+          About GoodViews &amp; TMDB attribution
+        </Link>
+      </div>
 
       <section className="panel-card border-red-500/20 p-5 sm:p-6">
         <SectionHeading icon={<DangerIcon />} tone="red">Danger Zone</SectionHeading>

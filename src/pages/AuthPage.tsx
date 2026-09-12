@@ -472,6 +472,13 @@ export default function AuthPage() {
         </form>
 
       </div>
+
+      <Link
+        to="/about"
+        className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 text-[13px] text-white/40 hover:text-white/70 transition-colors sm:bottom-6 sm:left-8 sm:translate-x-0"
+      >
+        About &amp; TMDB attribution
+      </Link>
     </div>
   )
 }
