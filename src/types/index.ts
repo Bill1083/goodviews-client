@@ -19,6 +19,12 @@ export interface Movie {
   genre_ids?: number[]
 }
 
+/** A movie from the "For You" feed — carries a human-readable reason it was
+ * recommended (e.g. "Because you liked Inception", "Alex rated this highly"). */
+export interface ForYouMovie extends Movie {
+  reason: string
+}
+
 export interface CastMember {
   id: number
   name: string

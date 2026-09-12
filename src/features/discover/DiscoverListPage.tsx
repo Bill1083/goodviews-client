@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getTrendingMovies, getTopRatedMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
+import { getTrendingMovies, getForYouMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
@@ -23,7 +23,7 @@ const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; accent: strin
   },
   'for-you': {
     title: 'For You',
-    subtitle: 'Top-rated picks to get you started — personalized recommendations coming soon.',
+    subtitle: 'Picks based on what you’ve rated, your favourite actors and directors, and what your friends love.',
     accent: 'from-magenta/20 via-navy-purple/5 to-transparent',
     eyebrowColor: 'text-magenta',
   },
@@ -41,10 +41,19 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   const config = KIND_CONFIG[kind]
 
   const { data, isFetching, isError } = useQuery({
-    queryKey: ['movies', kind === 'popular' ? 'trending' : 'top-rated', page],
-    queryFn: () => (kind === 'popular' ? getTrendingMovies(page) : getTopRatedMovies(page)),
+    queryKey: ['movies', kind === 'popular' ? 'trending' : 'for-you', page],
+    queryFn: ({ signal }) => (kind === 'popular' ? getTrendingMovies(page, signal) : getForYouMovies(signal)),
     staleTime: 1000 * 60 * 30,
   })
+  const reasonById = useMemo(() => {
+    const map: Record<number, string> = {}
+    if (kind === 'for-you') {
+      for (const m of data?.results ?? []) {
+        if ('reason' in m) map[m.id] = m.reason as string
+      }
+    }
+    return map
+  }, [data, kind])
 
   const topMovie = page === 1 ? data?.results?.[0] : undefined
   const backdropUrl = topMovie?.backdrop_path ? `${TMDB_BACKDROP}${topMovie.backdrop_path}` : null
@@ -177,6 +186,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           movie={selectedMovie}
           onClose={() => { setSelectedMovie(null); setShowReviewModal(false); setShowSendPanel(false) }}
           onPersonClick={(pid) => setPersonModalId(pid)}
+          forYouReason={reasonById[selectedMovie.id]}
           extraContent={
             showSendPanel ? (
               <SendToFriendsPanel movie={selectedMovie} onCancel={() => setShowSendPanel(false)} onSent={() => setShowSendPanel(false)} />

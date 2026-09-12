@@ -29,6 +29,7 @@ import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { TMDB_GENRES } from '../utils/genres'
 import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
@@ -136,14 +137,6 @@ function SortPanel({
 }
 
 // ─── Filter Panel ─────────────────────────────────────────────────────────────
-const TMDB_GENRES = [
-  { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, { id: 16, name: 'Animation' },
-  { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, { id: 99, name: 'Documentary' },
-  { id: 18, name: 'Drama' }, { id: 10751, name: 'Family' }, { id: 14, name: 'Fantasy' },
-  { id: 36, name: 'History' }, { id: 27, name: 'Horror' }, { id: 10402, name: 'Music' },
-  { id: 9648, name: 'Mystery' }, { id: 10749, name: 'Romance' }, { id: 878, name: 'Sci-Fi' },
-  { id: 53, name: 'Thriller' }, { id: 10752, name: 'War' }, { id: 37, name: 'Western' },
-]
 
 function FilterPanel({
   open, onClose, categories, filterCategoryIds, setFilterCategoryIds,
