@@ -21,10 +21,17 @@ interface AuthState {
    * the backend — ProtectedRoute holds on a spinner during this window
    * rather than redirecting to /mfa-challenge and then bouncing back. */
   trustedDeviceChecked: boolean
+  /** null = not yet known. False routes ProtectedRoute to /onboarding. */
+  hasOnboarded: boolean | null
+  /** False while the profile's onboarding status is still being fetched —
+   * ProtectedRoute holds on a spinner during this window, same pattern as
+   * trustedDeviceChecked. */
+  hasOnboardedChecked: boolean
   setSession: (session: Session | null) => void
   setLoading: (loading: boolean) => void
   setAal: (aal: Aal) => void
   setTrustedDevice: (trustedDevice: boolean, checked?: boolean) => void
+  setHasOnboarded: (hasOnboarded: boolean | null, checked?: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -34,9 +41,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   aal: { current: null, next: null },
   trustedDevice: false,
   trustedDeviceChecked: false,
+  hasOnboarded: null,
+  hasOnboardedChecked: false,
   setSession: (session) =>
     set({ session, user: session?.user ?? null, isLoading: false }),
   setLoading: (isLoading) => set({ isLoading }),
   setAal: (aal) => set({ aal }),
   setTrustedDevice: (trustedDevice, checked = true) => set({ trustedDevice, trustedDeviceChecked: checked }),
+  setHasOnboarded: (hasOnboarded, checked = true) => set({ hasOnboarded, hasOnboardedChecked: checked }),
 }))

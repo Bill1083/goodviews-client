@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getTrendingMovies, getTopRatedMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
+import { getTrendingMovies, getForYouMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
+import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
 import type { Movie } from '../../types'
 
@@ -23,10 +24,28 @@ const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; accent: strin
   },
   'for-you': {
     title: 'For You',
-    subtitle: 'Top-rated picks to get you started — personalized recommendations coming soon.',
+    subtitle: 'Picks based on what you’ve rated, your favourite actors and directors, and what your friends love.',
     accent: 'from-magenta/20 via-navy-purple/5 to-transparent',
     eyebrowColor: 'text-magenta',
   },
+}
+
+function PaginationControls({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number
+  totalPages: number
+  onChange: (page: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-center gap-4">
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
+      <span className="text-sm text-gray-muted">Page {page} of {Math.min(totalPages, 500)}</span>
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+    </div>
+  )
 }
 
 export default function DiscoverListPage({ kind }: { kind: Kind }) {
@@ -41,15 +60,56 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   const config = KIND_CONFIG[kind]
 
   const { data, isFetching, isError } = useQuery({
-    queryKey: ['movies', kind === 'popular' ? 'trending' : 'top-rated', page],
-    queryFn: () => (kind === 'popular' ? getTrendingMovies(page) : getTopRatedMovies(page)),
+    queryKey: ['movies', kind === 'popular' ? 'trending' : 'for-you', page],
+    queryFn: ({ signal }) => (kind === 'popular' ? getTrendingMovies(page, signal) : getForYouMovies(signal)),
     staleTime: 1000 * 60 * 30,
   })
+  const reasonById = useMemo(() => {
+    const map: Record<number, string> = {}
+    if (kind === 'for-you') {
+      for (const m of data?.results ?? []) {
+        if ('reason' in m) map[m.id] = m.reason as string
+      }
+    }
+    return map
+  }, [data, kind])
 
-  const topMovie = page === 1 ? data?.results?.[0] : undefined
+  // Always feature the current page's top result, not just page 1 — a
+  // banner permanently missing its movie on page 2+ read as broken.
+  const topMovie = data?.results?.[0]
   const backdropUrl = topMovie?.backdrop_path ? `${TMDB_BACKDROP}${topMovie.backdrop_path}` : null
   const heroPosterUrl = topMovie?.poster_path ? `${TMDB_POSTER}${topMovie.poster_path}` : null
-  const bannerLoading = !data
+  // Stop showing the loading pulse once the fetch has settled either way —
+  // otherwise a genuine error left the banner pulsing forever instead of
+  // falling back to the generic title.
+  const bannerLoading = !data && !isError
+
+  // Reset scroll on arriving at this page and on every page change —
+  // otherwise it opens wherever the Discover home page (or the previous
+  // page of results) happened to be scrolled to.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [page, kind])
+
+  // Prefetch the next page's data — and its poster images, which is the
+  // slower part in practice — while the user is still browsing the current
+  // page, so clicking "Next" feels instant instead of waiting on TMDB.
+  // For You is always a single page, so this only applies to Popular.
+  useEffect(() => {
+    if (kind !== 'popular' || !data || page >= data.total_pages) return
+    const nextPage = page + 1
+    const key = ['movies', 'trending', nextPage]
+    qc.prefetchQuery({
+      queryKey: key,
+      queryFn: () => getTrendingMovies(nextPage),
+      staleTime: 1000 * 60 * 30,
+    }).then(() => {
+      const prefetched = qc.getQueryData<typeof data>(key)
+      for (const m of prefetched?.results ?? []) {
+        if (m.poster_path) new Image().src = `${TMDB_POSTER}${m.poster_path}`
+      }
+    })
+  }, [kind, data, page, qc])
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -84,11 +144,11 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           className={`group relative h-64 w-full overflow-hidden rounded-card border border-white/10 bg-navy-card sm:h-80 md:h-[26rem]${topMovie ? ' cursor-pointer' : ''}${bannerLoading ? ' animate-pulse' : ''}`}
         >
           {backdropUrl && (
-            <img
+            <RetryImage
               src={backdropUrl}
               alt=""
-              aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              fallback={<></>}
             />
           )}
           <div className={`absolute inset-0 bg-gradient-to-br ${config.accent}`} />
@@ -119,7 +179,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
                 {heroPosterUrl && (
                   <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
                     <div className="aspect-[2/3] w-full">
-                      <img src={heroPosterUrl} alt="" className="h-full w-full object-cover" />
+                      <RetryImage
+                        src={heroPosterUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        fallback={<div className="h-full w-full bg-navy-card" />}
+                      />
                     </div>
                   </div>
                 )}
@@ -144,6 +209,16 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
         <div style={{ opacity: isFetching ? 0.6 : 1 }} className="flex flex-col gap-6 transition-opacity">
           {isError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
 
+          {kind === 'for-you' && bannerLoading && (
+            <p className="text-center text-sm text-gray-muted">
+              Hold tight while we find movies that fit your preferences!
+            </p>
+          )}
+
+          {data && data.total_pages > 1 && (
+            <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
+          )}
+
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
             {(data?.results ?? []).map((movie, i) => (
               <div
@@ -163,10 +238,8 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           </div>
 
           {data && data.total_pages > 1 && (
-            <div className="flex items-center justify-center gap-4 pt-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
-              <span className="text-sm text-gray-muted">Page {page} of {Math.min(data.total_pages, 500)}</span>
-              <button onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))} disabled={page === data.total_pages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+            <div className="pt-2">
+              <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
             </div>
           )}
         </div>
@@ -177,6 +250,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           movie={selectedMovie}
           onClose={() => { setSelectedMovie(null); setShowReviewModal(false); setShowSendPanel(false) }}
           onPersonClick={(pid) => setPersonModalId(pid)}
+          forYouReason={reasonById[selectedMovie.id]}
           extraContent={
             showSendPanel ? (
               <SendToFriendsPanel movie={selectedMovie} onCancel={() => setShowSendPanel(false)} onSent={() => setShowSendPanel(false)} />

@@ -6,11 +6,12 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children }: Props) {
-  const { user, isLoading, aal, trustedDevice, trustedDeviceChecked } = useAuthStore()
+  const { user, isLoading, aal, trustedDevice, trustedDeviceChecked, hasOnboarded, hasOnboardedChecked } =
+    useAuthStore()
 
   const mfaOutstanding = Boolean(aal.current && aal.next && aal.current !== aal.next)
 
-  if (isLoading || (mfaOutstanding && !trustedDeviceChecked)) {
+  if (isLoading || (mfaOutstanding && !trustedDeviceChecked) || !hasOnboardedChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <span className="h-8 w-8 animate-spin rounded-full border-2 border-teal border-t-transparent" />
@@ -24,6 +25,12 @@ export default function ProtectedRoute({ children }: Props) {
   // that first, unless this browser was already remembered as trusted.
   if (mfaOutstanding && !trustedDevice) {
     return <Navigate to="/mfa-challenge" replace />
+  }
+
+  // First-run onboarding hasn't been completed — For You has nothing to
+  // work with until it is.
+  if (hasOnboarded === false) {
+    return <Navigate to="/onboarding" replace />
   }
 
   return <>{children}</>

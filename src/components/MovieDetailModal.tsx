@@ -6,13 +6,13 @@ import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
+import RetryImage from './RetryImage'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185'
 const TMDB_PROVIDER_LOGO = 'https://image.tmdb.org/t/p/w92'
-const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 // Only Australia for now — TMDB's watch/providers response includes every country in one
 // payload, so supporting more regions later is just reading a different key here.
 const REGION = 'AU'
@@ -54,6 +54,10 @@ interface Props {
   /** Extra content rendered directly below the action buttons — used for inline expandable
    *  panels such as "Send to Friends". */
   extraContent?: ReactNode
+
+  /** Shown as a small banner at the top of the details section when this movie was opened
+   *  from the "For You" page — e.g. "Because you liked Inception" or "Alex rated this highly". */
+  forYouReason?: string | null
 
   /** Action buttons (write review, watchlist, send to friends, etc.), rendered left to right
    *  above the reviews list. */
@@ -182,7 +186,13 @@ function CastAvatar({
     >
       <div className={[dimension, 'shrink-0 overflow-hidden rounded-full border bg-navy-card/60 transition-colors', onPersonClick ? 'border-white/10 group-hover:border-magenta/50' : 'border-white/10'].join(' ')}>
         {actor.profile_path ? (
-          <img src={`${TMDB_PROFILE}${actor.profile_path}`} alt={actor.name} className="h-full w-full object-cover" loading="lazy" />
+          <RetryImage
+            src={`${TMDB_PROFILE}${actor.profile_path}`}
+            alt={actor.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            fallback={<div className="flex h-full w-full items-center justify-center text-xs text-gray-muted">?</div>}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-gray-muted">?</div>
         )}
@@ -209,8 +219,9 @@ export default function MovieDetailModal({
   pinnedMetaText,
   extraContent,
   actions,
+  forYouReason,
 }: Props) {
-  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
+  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -294,12 +305,21 @@ export default function MovieDetailModal({
           <BannerSkeleton />
         ) : backdropUrl ? (
           <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
-            <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+            <RetryImage src={backdropUrl} alt="" className="absolute inset-0 h-full w-full object-cover" fallback={<></>} />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
               <div className="w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:w-24 md:w-28">
                 <div className="aspect-[2/3] w-full">
-                  <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                  {posterUrl ? (
+                    <RetryImage
+                      src={posterUrl}
+                      alt={`${movie.title} poster`}
+                      className="h-full w-full object-contain"
+                      fallback={<div className="h-full w-full bg-navy-card" />}
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-navy-card" />
+                  )}
                 </div>
               </div>
               <div className="min-w-0 flex-1 pb-1">
@@ -312,7 +332,16 @@ export default function MovieDetailModal({
           <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
             <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
               <div className="aspect-[2/3] w-full">
-                <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                {posterUrl ? (
+                  <RetryImage
+                    src={posterUrl}
+                    alt={`${movie.title} poster`}
+                    className="h-full w-full object-contain"
+                    fallback={<div className="h-full w-full bg-navy-card" />}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-navy-card" />
+                )}
               </div>
             </div>
             <div className="min-w-0 flex-1 pb-1">
@@ -323,6 +352,14 @@ export default function MovieDetailModal({
 
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
+          {forYouReason && (
+            <div className="flex w-fit items-center gap-1.5 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-medium text-teal-light">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.539-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+              {forYouReason}
+            </div>
+          )}
           {isLoading ? (
             <DetailSkeleton />
           ) : (

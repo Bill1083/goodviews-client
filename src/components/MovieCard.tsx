@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { Movie } from '../types'
+import RetryImage from './RetryImage'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
-const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 // ─── Watchlist icon SVGs (from design — use original viewBox coords) ──────────
 const PlusSVG = () => (
@@ -59,7 +59,7 @@ export default function MovieCard({
   const [iconHovered, setIconHovered] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
 
-  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
+  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const hasWatchlist = !!(onWatchlistAdd || onWatchlistRemove || watchlistRemoveOnly)
 
   // Determine overlay content
@@ -99,14 +99,28 @@ export default function MovieCard({
       }}
     >
       <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative bg-navy-card/60">
-        {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
-        <img
-          src={posterUrl}
-          alt={`${movie.title} poster`}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-        />
+        {posterUrl ? (
+          <>
+            {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
+            <RetryImage
+              src={posterUrl}
+              alt={`${movie.title} poster`}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              onFail={() => setImgLoaded(true)}
+              className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              fallback={
+                <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+                  {movie.title}
+                </div>
+              }
+            />
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+            {movie.title}
+          </div>
+        )}
         {/* Watchlist overlay — visible on card hover */}
         {hasWatchlist && cardHovered && (
           <div

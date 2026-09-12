@@ -19,6 +19,12 @@ export interface Movie {
   genre_ids?: number[]
 }
 
+/** A movie from the "For You" feed — carries a human-readable reason it was
+ * recommended (e.g. "Because you liked Inception", "Alex rated this highly"). */
+export interface ForYouMovie extends Movie {
+  reason: string
+}
+
 export interface CastMember {
   id: number
   name: string
@@ -160,6 +166,9 @@ export interface CreateReviewPayload {
   category_ids?: string[]
   group_ids?: string[]
   friend_ids?: string[]
+  /** True for reviews created via the onboarding "quick ratings" step —
+   * excluded from the friend recent-activity feed. */
+  is_onboarding?: boolean
 }
 
 export interface PaginatedReviews {

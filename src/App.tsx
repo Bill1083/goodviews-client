@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from './services/supabaseClient'
-import { verifyTrustedDevice } from './services/apiClient'
+import { verifyTrustedDevice, getProfile } from './services/apiClient'
 import { getStoredTrustedDeviceToken, clearTrustedDeviceToken } from './utils/mfa'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
@@ -17,6 +17,7 @@ import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
 import AboutPage from './pages/AboutPage'
+import OnboardingPage from './pages/OnboardingPage'
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -87,6 +88,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route
           path="/"
           element={
@@ -145,13 +147,29 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const { setSession, setLoading, setAal, setTrustedDevice } = useAuthStore()
+  const { setSession, setLoading, setAal, setTrustedDevice, setHasOnboarded } = useAuthStore()
   const queryClient = useQueryClient()
   // undefined = not yet initialized (skip the very first callback so we don't
   // wipe a freshly-created, already-empty cache on initial page load)
   const prevUserIdRef = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
+    const refreshOnboarding = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
+      if (!session) {
+        setHasOnboarded(null, true)
+        return
+      }
+      setHasOnboarded(null, false)
+      try {
+        const profile = await getProfile()
+        setHasOnboarded(profile.has_onboarded)
+      } catch {
+        // Fail open on a transient error — don't trap someone in a redirect
+        // loop just because the profile fetch hiccuped.
+        setHasOnboarded(true)
+      }
+    }
+
     const refreshAal = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
       if (!session) {
         setAal({ current: null, next: null })
@@ -187,14 +205,17 @@ export default function App() {
       }
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      prevUserIdRef.current = data.session?.user?.id ?? null
-      setSession(data.session)
-      refreshAal(data.session)
-    })
-
+    // Supabase always fires onAuthStateChange once immediately on subscribe
+    // (an INITIAL_SESSION event with the current session) — a separate
+    // explicit getSession() call here as well made refreshAal's
+    // trusted-device verification run twice, concurrently, on every page
+    // load. Since any single "not trusted" result wipes the stored token
+    // (see refreshAal below), that race could and did spuriously clear a
+    // perfectly valid token if either racing call had so much as a transient
+    // hiccup — relying solely on onAuthStateChange's guaranteed initial
+    // firing avoids the duplicate call entirely.
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         const newUserId = session?.user?.id ?? null
         // Wipe all cached queries (watchlist, reviews, recommendations, etc.)
         // whenever the signed-in user changes — otherwise the next account to
@@ -204,12 +225,19 @@ export default function App() {
         }
         prevUserIdRef.current = newUserId
         setSession(session)
+        // A routine background token refresh doesn't change aal or
+        // onboarding status — skip re-running (and re-verifying the
+        // trusted-device token) for it. This isn't just an optimization:
+        // every re-verification is another chance for a single transient
+        // failure to wipe an otherwise-valid stored token.
+        if (event === 'TOKEN_REFRESHED') return
         refreshAal(session)
+        refreshOnboarding(session)
       },
     )
 
     return () => listener.subscription.unsubscribe()
-  }, [setSession, setLoading, setAal, setTrustedDevice, queryClient])
+  }, [setSession, setLoading, setAal, setTrustedDevice, setHasOnboarded, queryClient])
 
   return (
     <BrowserRouter>

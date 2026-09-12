@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getTrendingMovies,
-  getTopRatedMovies,
+  getForYouMovies,
   searchMovies,
   searchPeople,
   getWatchlist,
@@ -16,12 +16,11 @@ import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
+import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import type { Movie, PersonSearchResult } from '../../types'
+import type { Movie } from '../../types'
 
 type SearchTab = 'movies' | 'people'
-
-const TMDB_PROFILE_IMG = 'https://image.tmdb.org/t/p/w185'
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 function CompassIcon() {
@@ -76,47 +75,20 @@ function SectionHeader({ title, onViewAll }: { title: string; onViewAll: () => v
   )
 }
 
-function CarouselSkeleton() {
+function CarouselSkeleton({ caption }: { caption?: string }) {
   return (
-    <div className="flex h-48 w-full items-center justify-center gap-4">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="aspect-[2/3] h-40 animate-pulse rounded-card bg-navy-card/60"
-          style={{ opacity: i === 1 ? 1 : 0.5 }}
-        />
-      ))}
+    <div className="flex w-full flex-col items-center justify-center gap-3">
+      <div className="flex h-48 w-full items-center justify-center gap-4">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="aspect-[2/3] h-40 animate-pulse rounded-card bg-navy-card/60"
+            style={{ opacity: i === 1 ? 1 : 0.5 }}
+          />
+        ))}
+      </div>
+      {caption && <p className="text-sm text-gray-muted">{caption}</p>}
     </div>
-  )
-}
-
-// ─── People search result card ────────────────────────────────────────────
-function PersonCard({ person, onClick }: { person: PersonSearchResult; onClick: () => void }) {
-  const profileUrl = person.profile_path ? `${TMDB_PROFILE_IMG}${person.profile_path}` : null
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 hover:border-magenta/40 hover:bg-navy-card/70 transition-all text-center"
-    >
-      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-white/10 bg-navy-card/60 group-hover:border-magenta/40 transition-colors">
-        {profileUrl ? (
-          <img src={profileUrl} alt={person.name} className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-            {person.name.charAt(0)}
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-0.5 w-full">
-        <p className="text-xs font-semibold text-gray-lighter leading-tight line-clamp-2 group-hover:text-magenta transition-colors">
-          {person.name}
-        </p>
-        {person.known_for_department && (
-          <p className="text-[10px] text-gray-muted">{person.known_for_department}</p>
-        )}
-      </div>
-    </button>
   )
 }
 
@@ -128,6 +100,7 @@ function SearchMovieModal({
   onAddWatchlist,
   onRemoveWatchlist,
   onPersonClick,
+  forYouReason,
 }: {
   movie: Movie
   onClose: () => void
@@ -135,6 +108,7 @@ function SearchMovieModal({
   onAddWatchlist: () => void
   onRemoveWatchlist: () => void
   onPersonClick: (personId: number, name: string, type: 'actor' | 'director') => void
+  forYouReason?: string | null
 }) {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [showSendPanel, setShowSendPanel] = useState(false)
@@ -145,6 +119,7 @@ function SearchMovieModal({
         movie={movie}
         onClose={onClose}
         onPersonClick={onPersonClick}
+        forYouReason={forYouReason}
         extraContent={
           showSendPanel ? (
             <SendToFriendsPanel movie={movie} onCancel={() => setShowSendPanel(false)} onSent={() => setShowSendPanel(false)} />
@@ -210,11 +185,16 @@ export default function DiscoverPage() {
     queryFn: () => getTrendingMovies(1),
     staleTime: 1000 * 60 * 30,
   })
-  const { data: topRated, isLoading: topRatedLoading } = useQuery({
-    queryKey: ['movies', 'top-rated'],
-    queryFn: () => getTopRatedMovies(1),
+  const { data: forYou, isLoading: forYouLoading } = useQuery({
+    queryKey: ['movies', 'for-you'],
+    queryFn: ({ signal }) => getForYouMovies(signal),
     staleTime: 1000 * 60 * 30,
   })
+  const forYouReasonById = useMemo(() => {
+    const map: Record<number, string> = {}
+    for (const m of forYou?.results ?? []) map[m.id] = m.reason
+    return map
+  }, [forYou])
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false)
@@ -370,11 +350,11 @@ export default function DiscoverPage() {
 
             <section className="flex w-full flex-col gap-3">
               <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
-              {topRatedLoading ? (
-                <CarouselSkeleton />
+              {forYouLoading ? (
+                <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
               ) : (
                 <MovieCarousel
-                  movies={topRated?.results ?? []}
+                  movies={forYou?.results ?? []}
                   onOpenAll={() => navigate('/discover/for-you')}
                   onSelectMovie={setSelectedMovie}
                 />
@@ -485,6 +465,7 @@ export default function DiscoverPage() {
           onAddWatchlist={() => watchlistAddMutation.mutate(selectedMovie)}
           onRemoveWatchlist={() => watchlistRemoveMutation.mutate(selectedMovie)}
           onPersonClick={(pid) => setPersonModalId(pid)}
+          forYouReason={forYouReasonById[selectedMovie.id]}
         />
       )}
 

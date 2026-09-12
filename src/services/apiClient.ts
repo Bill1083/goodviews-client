@@ -4,6 +4,8 @@ import { getStoredTrustedDeviceToken } from '../utils/mfa'
 import type {
   CreateReviewPayload,
   MovieSearchResult,
+  ForYouMovie,
+  Movie,
   MovieDetails,
   PaginatedReviews,
   Category,
@@ -72,6 +74,13 @@ export async function getTopRatedMovies(page = 1, signal?: AbortSignal): Promise
     params: { page },
     signal,
   })
+  return data
+}
+
+export async function getForYouMovies(
+  signal?: AbortSignal,
+): Promise<{ page: number; results: ForYouMovie[]; total_pages: number; total_results: number }> {
+  const { data } = await apiClient.get('/api/movies/for-you', { signal })
   return data
 }
 
@@ -283,6 +292,8 @@ export interface ProfileData {
   hide_recent_movies: boolean
   mute_recommendations: boolean
   mute_friend_requests: boolean
+  has_onboarded: boolean
+  onboarding_genre_ids: number[]
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -301,6 +312,8 @@ export async function updateProfile(payload: Partial<{
   hide_recent_movies: boolean
   mute_recommendations: boolean
   mute_friend_requests: boolean
+  has_onboarded: boolean
+  onboarding_genre_ids: number[]
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data
@@ -392,4 +405,28 @@ export async function addFavouriteDirector(payload: {
 
 export async function removeFavouriteDirector(personId: number): Promise<void> {
   await apiClient.delete(`/api/favourites/directors/${personId}`)
+}
+
+// ─── Onboarding ────────────────────────────────────────────────────────────────
+
+export async function getCuratedOnboardingMovies(): Promise<Movie[]> {
+  const { data } = await apiClient.get<Movie[]>('/api/onboarding/curated-movies')
+  return data
+}
+
+export interface CuratedPerson {
+  id: number
+  name: string
+  profile_path: string | null
+  type: 'actor' | 'director'
+}
+
+export async function getCuratedOnboardingPeople(
+  genreIds: number[],
+  movieIds: number[],
+): Promise<CuratedPerson[]> {
+  const { data } = await apiClient.get<CuratedPerson[]>('/api/onboarding/curated-people', {
+    params: { genre_ids: genreIds.join(','), movie_ids: movieIds.join(',') },
+  })
+  return data
 }
