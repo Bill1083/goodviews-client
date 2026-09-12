@@ -39,6 +39,7 @@ export default function GenreStep({ selectedGenreIds, onChange, onNext }: Props)
           )
         })}
       </div>
+      <p className="text-center text-xs text-gray-muted">You can always change your genres later.</p>
       <div className="flex justify-end">
         <PrimaryButton onClick={onNext} disabled={selectedGenreIds.length < MIN_GENRES}>
           Next

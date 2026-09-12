@@ -153,6 +153,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
         <div style={{ opacity: isFetching ? 0.6 : 1 }} className="flex flex-col gap-6 transition-opacity">
           {isError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
 
+          {kind === 'for-you' && bannerLoading && (
+            <p className="text-center text-sm text-gray-muted">
+              Hold tight while we find movies that fit your preferences!
+            </p>
+          )}
+
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
             {(data?.results ?? []).map((movie, i) => (
               <div

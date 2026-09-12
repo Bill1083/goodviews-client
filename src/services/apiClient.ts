@@ -413,3 +413,20 @@ export async function getCuratedOnboardingMovies(): Promise<Movie[]> {
   const { data } = await apiClient.get<Movie[]>('/api/onboarding/curated-movies')
   return data
 }
+
+export interface CuratedPerson {
+  id: number
+  name: string
+  profile_path: string | null
+  type: 'actor' | 'director'
+}
+
+export async function getCuratedOnboardingPeople(
+  genreIds: number[],
+  movieIds: number[],
+): Promise<CuratedPerson[]> {
+  const { data } = await apiClient.get<CuratedPerson[]>('/api/onboarding/curated-people', {
+    params: { genre_ids: genreIds.join(','), movie_ids: movieIds.join(',') },
+  })
+  return data
+}

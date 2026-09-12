@@ -1,8 +1,13 @@
-import type { PersonSearchResult } from '../types'
-
 const TMDB_PROFILE_IMG = 'https://image.tmdb.org/t/p/w185'
 
-export default function PersonCard({ person, onClick }: { person: PersonSearchResult; onClick: () => void }) {
+export interface PersonCardPerson {
+  id: number
+  name: string
+  profile_path: string | null
+  known_for_department?: string
+}
+
+export default function PersonCard({ person, onClick }: { person: PersonCardPerson; onClick: () => void }) {
   const profileUrl = person.profile_path ? `${TMDB_PROFILE_IMG}${person.profile_path}` : null
   return (
     <button

@@ -14,6 +14,7 @@ export default function OnboardingPage() {
   const setHasOnboarded = useAuthStore((s) => s.setHasOnboarded)
   const [step, setStep] = useState(0)
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([])
+  const [lovedMovieIds, setLovedMovieIds] = useState<number[]>([])
   const [finishing, setFinishing] = useState(false)
 
   // Someone with no session at all shouldn't land here — send them to log in properly.
@@ -49,8 +50,24 @@ export default function OnboardingPage() {
         {step === 0 && (
           <GenreStep selectedGenreIds={selectedGenreIds} onChange={setSelectedGenreIds} onNext={() => setStep(1)} />
         )}
-        {step === 1 && <RateMoviesStep onBack={() => setStep(0)} onNext={() => setStep(2)} />}
-        {step === 2 && <FavouritesStep onBack={() => setStep(1)} onFinish={finish} finishing={finishing} />}
+        {step === 1 && (
+          <RateMoviesStep
+            onBack={() => setStep(0)}
+            onNext={(loved) => {
+              setLovedMovieIds(loved)
+              setStep(2)
+            }}
+          />
+        )}
+        {step === 2 && (
+          <FavouritesStep
+            genreIds={selectedGenreIds}
+            movieIds={lovedMovieIds}
+            onBack={() => setStep(1)}
+            onFinish={finish}
+            finishing={finishing}
+          />
+        )}
       </div>
     </div>
   )

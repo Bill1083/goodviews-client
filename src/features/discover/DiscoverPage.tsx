@@ -75,16 +75,19 @@ function SectionHeader({ title, onViewAll }: { title: string; onViewAll: () => v
   )
 }
 
-function CarouselSkeleton() {
+function CarouselSkeleton({ caption }: { caption?: string }) {
   return (
-    <div className="flex h-48 w-full items-center justify-center gap-4">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="aspect-[2/3] h-40 animate-pulse rounded-card bg-navy-card/60"
-          style={{ opacity: i === 1 ? 1 : 0.5 }}
-        />
-      ))}
+    <div className="flex w-full flex-col items-center justify-center gap-3">
+      <div className="flex h-48 w-full items-center justify-center gap-4">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="aspect-[2/3] h-40 animate-pulse rounded-card bg-navy-card/60"
+            style={{ opacity: i === 1 ? 1 : 0.5 }}
+          />
+        ))}
+      </div>
+      {caption && <p className="text-sm text-gray-muted">{caption}</p>}
     </div>
   )
 }
@@ -348,7 +351,7 @@ export default function DiscoverPage() {
             <section className="flex w-full flex-col gap-3">
               <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
               {forYouLoading ? (
-                <CarouselSkeleton />
+                <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
               ) : (
                 <MovieCarousel
                   movies={forYou?.results ?? []}
