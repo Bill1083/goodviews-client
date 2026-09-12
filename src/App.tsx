@@ -66,6 +66,13 @@ function AppRoutes() {
     prevPath.current = location.pathname
   }, [location.pathname])
 
+  // Every page should open at the top — otherwise it opens wherever the
+  // previous page happened to be scrolled to (e.g. About opening
+  // mid-scroll after following a link partway down another page).
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [location.pathname])
+
   return (
     <div
       className={transitionClass || undefined}
