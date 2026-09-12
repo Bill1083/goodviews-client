@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
-import { getTrendingMovies, getTopRatedMovies } from '../services/apiClient'
+import { getTrendingMovies, getTopRatedMovies, verifyTrustedDevice } from '../services/apiClient'
 import type { Movie } from '../types'
 import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
+import { getStoredTrustedDeviceToken, clearTrustedDeviceToken } from '../utils/mfa'
+import { useAuthStore } from '../store/authStore'
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
 
@@ -216,6 +218,7 @@ const labelClass = 'text-[15px] text-white leading-none'
 
 export default function AuthPage() {
   const navigate = useNavigate()
+  const setTrustedDevice = useAuthStore((s) => s.setTrustedDevice)
   const isDesktop = useMediaQuery('(min-width: 640px)')
 
   // Background poster field: mix of "currently popular" and "classic" movies
@@ -288,7 +291,29 @@ export default function AuthPage() {
       } else {
         const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
         const needsMfa = aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2'
-        navigate(needsMfa ? '/mfa-challenge' : '/')
+        if (needsMfa) {
+          // This device may already be remembered from a previous MFA verify
+          // — check before forcing the challenge again. Mirrors the same
+          // check App.tsx's refreshAal does for an already-loaded session;
+          // needed here too since this navigate() fires before that effect
+          // would otherwise get a chance to run.
+          const { data: userData } = await supabase.auth.getUser()
+          const userId = userData.user?.id
+          const token = userId ? getStoredTrustedDeviceToken(userId) : null
+          let trusted = false
+          if (token && userId) {
+            try {
+              trusted = await verifyTrustedDevice(token)
+              if (!trusted) clearTrustedDeviceToken(userId)
+            } catch {
+              trusted = false
+            }
+          }
+          setTrustedDevice(trusted)
+          navigate(trusted ? '/' : '/mfa-challenge')
+        } else {
+          navigate('/')
+        }
       }
     } finally {
       setLoginLoading(false)
