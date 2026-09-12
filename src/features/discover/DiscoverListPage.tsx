@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTrendingMovies, getForYouMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
@@ -6,6 +6,7 @@ import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
+import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
 import type { Movie } from '../../types'
 
@@ -55,10 +56,22 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
     return map
   }, [data, kind])
 
-  const topMovie = page === 1 ? data?.results?.[0] : undefined
+  // Always feature the current page's top result, not just page 1 — a
+  // banner permanently missing its movie on page 2+ read as broken.
+  const topMovie = data?.results?.[0]
   const backdropUrl = topMovie?.backdrop_path ? `${TMDB_BACKDROP}${topMovie.backdrop_path}` : null
   const heroPosterUrl = topMovie?.poster_path ? `${TMDB_POSTER}${topMovie.poster_path}` : null
-  const bannerLoading = !data
+  // Stop showing the loading pulse once the fetch has settled either way —
+  // otherwise a genuine error left the banner pulsing forever instead of
+  // falling back to the generic title.
+  const bannerLoading = !data && !isError
+
+  // Reset scroll on arriving at this page and on every page change —
+  // otherwise it opens wherever the Discover home page (or the previous
+  // page of results) happened to be scrolled to.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [page, kind])
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -93,11 +106,11 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           className={`group relative h-64 w-full overflow-hidden rounded-card border border-white/10 bg-navy-card sm:h-80 md:h-[26rem]${topMovie ? ' cursor-pointer' : ''}${bannerLoading ? ' animate-pulse' : ''}`}
         >
           {backdropUrl && (
-            <img
+            <RetryImage
               src={backdropUrl}
               alt=""
-              aria-hidden="true"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              fallback={<></>}
             />
           )}
           <div className={`absolute inset-0 bg-gradient-to-br ${config.accent}`} />
@@ -128,7 +141,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
                 {heroPosterUrl && (
                   <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
                     <div className="aspect-[2/3] w-full">
-                      <img src={heroPosterUrl} alt="" className="h-full w-full object-cover" />
+                      <RetryImage
+                        src={heroPosterUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        fallback={<div className="h-full w-full bg-navy-card" />}
+                      />
                     </div>
                   </div>
                 )}

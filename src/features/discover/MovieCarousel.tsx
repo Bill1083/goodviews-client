@@ -1,25 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Movie } from '../../types'
+import RetryImage from '../../components/RetryImage'
 
-function CarouselPosterImg({ src, alt }: { src: string; alt: string }) {
+function CarouselPosterImg({ posterPath, title }: { posterPath: string | null; title: string }) {
   const [loaded, setLoaded] = useState(false)
+  const fallback = (
+    <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+      {title}
+    </div>
+  )
+  if (!posterPath) return fallback
   return (
     <>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
-      <img
-        src={src}
-        alt={alt}
+      <RetryImage
+        src={`${TMDB_IMG}${posterPath}`}
+        alt={title}
         className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         draggable={false}
         loading="lazy"
         onLoad={() => setLoaded(true)}
+        onFail={() => setLoaded(true)}
+        fallback={fallback}
       />
     </>
   )
 }
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
-const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 const DRIFT_SPEED = 1 / 7 // slots per second — slow, continuous auto-scroll
 const RESUME_DELAY_MS = 1200 // pause auto-drift briefly after the user lets go
@@ -162,7 +170,6 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
         const scale = absPos <= 1 ? 1.15 - 0.2 * absPos : 0.95 - 0.45 * Math.min(1, absPos - 1)
         const opacity = absPos <= 1 ? 1 : Math.max(0, 1 - (absPos - 1))
         const left = containerWidth / 2 + position * slotWidth
-        const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
 
         return (
           <div
@@ -178,7 +185,7 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
             }}
           >
             <div className="relative h-full w-full overflow-hidden rounded-card shadow-lg shadow-black/40 border border-white/10 bg-navy-card/40">
-              <CarouselPosterImg src={posterUrl} alt={movie.title} />
+              <CarouselPosterImg posterPath={movie.poster_path} title={movie.title} />
               {absPos < 0.6 && (
                 <div
                   className="absolute inset-x-0 bottom-0 px-2 py-1.5"

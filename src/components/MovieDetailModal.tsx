@@ -6,13 +6,13 @@ import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
+import RetryImage from './RetryImage'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185'
 const TMDB_PROVIDER_LOGO = 'https://image.tmdb.org/t/p/w92'
-const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 // Only Australia for now — TMDB's watch/providers response includes every country in one
 // payload, so supporting more regions later is just reading a different key here.
 const REGION = 'AU'
@@ -186,7 +186,13 @@ function CastAvatar({
     >
       <div className={[dimension, 'shrink-0 overflow-hidden rounded-full border bg-navy-card/60 transition-colors', onPersonClick ? 'border-white/10 group-hover:border-magenta/50' : 'border-white/10'].join(' ')}>
         {actor.profile_path ? (
-          <img src={`${TMDB_PROFILE}${actor.profile_path}`} alt={actor.name} className="h-full w-full object-cover" loading="lazy" />
+          <RetryImage
+            src={`${TMDB_PROFILE}${actor.profile_path}`}
+            alt={actor.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            fallback={<div className="flex h-full w-full items-center justify-center text-xs text-gray-muted">?</div>}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-gray-muted">?</div>
         )}
@@ -215,7 +221,7 @@ export default function MovieDetailModal({
   actions,
   forYouReason,
 }: Props) {
-  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
+  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -299,12 +305,21 @@ export default function MovieDetailModal({
           <BannerSkeleton />
         ) : backdropUrl ? (
           <div className="relative h-40 w-full shrink-0 overflow-hidden bg-navy-card sm:h-44 md:h-52 lg:h-56">
-            <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+            <RetryImage src={backdropUrl} alt="" className="absolute inset-0 h-full w-full object-cover" fallback={<></>} />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-wine via-navy-wine/60 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-5 pb-4 sm:gap-4 sm:px-6 sm:pb-5">
               <div className="w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:w-24 md:w-28">
                 <div className="aspect-[2/3] w-full">
-                  <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                  {posterUrl ? (
+                    <RetryImage
+                      src={posterUrl}
+                      alt={`${movie.title} poster`}
+                      className="h-full w-full object-contain"
+                      fallback={<div className="h-full w-full bg-navy-card" />}
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-navy-card" />
+                  )}
                 </div>
               </div>
               <div className="min-w-0 flex-1 pb-1">
@@ -317,7 +332,16 @@ export default function MovieDetailModal({
           <div className="flex shrink-0 items-center gap-3 px-5 pt-4 sm:gap-4 sm:px-6 sm:pt-5">
             <div className="w-16 shrink-0 overflow-hidden rounded-lg border-2 border-navy-wine bg-navy-card shadow-lg sm:w-20 md:w-24">
               <div className="aspect-[2/3] w-full">
-                <img src={posterUrl} alt={`${movie.title} poster`} className="h-full w-full object-contain" />
+                {posterUrl ? (
+                  <RetryImage
+                    src={posterUrl}
+                    alt={`${movie.title} poster`}
+                    className="h-full w-full object-contain"
+                    fallback={<div className="h-full w-full bg-navy-card" />}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-navy-card" />
+                )}
               </div>
             </div>
             <div className="min-w-0 flex-1 pb-1">

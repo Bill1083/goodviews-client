@@ -28,6 +28,7 @@ import PersonModal from '../components/PersonModal'
 import RecommendationsSection from '../features/movies/RecommendationsSection'
 import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
+import RetryImage from '../components/RetryImage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { TMDB_GENRES } from '../utils/genres'
 import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews } from '../types'
@@ -597,15 +598,30 @@ function FriendsActivitySection({
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
               {friend.reviews.map((review) => {
                 const m = review.movies
-                const posterUrl = m.poster_path ? `${TMDB_IMG}${m.poster_path}` : 'https://via.placeholder.com/342x513?text=No+Poster'
+                const posterUrl = m.poster_path ? `${TMDB_IMG}${m.poster_path}` : null
                 return (
                   <button
                     key={review.id}
                     onClick={() => setSelectedReview({ friendName: friend.username, review })}
                     className="group flex flex-col gap-1 text-left"
                   >
-                    <div className="aspect-[2/3] w-full overflow-hidden rounded-card relative">
-                      <img src={posterUrl} alt={m.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="aspect-[2/3] w-full overflow-hidden rounded-card relative bg-navy-card/60">
+                      {posterUrl ? (
+                        <RetryImage
+                          src={posterUrl}
+                          alt={m.title}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          fallback={
+                            <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+                              {m.title}
+                            </div>
+                          }
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+                          {m.title}
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-gray-lighter leading-snug line-clamp-2">{m.title}</p>
                   </button>
@@ -1221,7 +1237,16 @@ export default function MyMoviesPage() {
                       >
                         <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
                           {profileUrl ? (
-                            <img src={profileUrl} alt={actor.actor_name ?? ''} className="h-full w-full object-cover" />
+                            <RetryImage
+                              src={profileUrl}
+                              alt={actor.actor_name ?? ''}
+                              className="h-full w-full object-cover"
+                              fallback={
+                                <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                                  {(actor.actor_name ?? '?').charAt(0)}
+                                </div>
+                              }
+                            />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
                               {(actor.actor_name ?? '?').charAt(0)}
@@ -1281,7 +1306,16 @@ export default function MyMoviesPage() {
                       >
                         <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
                           {profileUrl ? (
-                            <img src={profileUrl} alt={director.director_name ?? ''} className="h-full w-full object-cover" />
+                            <RetryImage
+                              src={profileUrl}
+                              alt={director.director_name ?? ''}
+                              className="h-full w-full object-cover"
+                              fallback={
+                                <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                                  {(director.director_name ?? '?').charAt(0)}
+                                </div>
+                              }
+                            />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
                               {(director.director_name ?? '?').charAt(0)}

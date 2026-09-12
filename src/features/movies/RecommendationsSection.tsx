@@ -12,10 +12,10 @@ import {
 } from '../../services/apiClient'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import PersonModal from '../../components/PersonModal'
+import RetryImage from '../../components/RetryImage'
 import type { Recommendation, Movie, MovieReviewsData } from '../../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
-const FALLBACK_IMG = 'https://via.placeholder.com/342x513?text=No+Poster'
 
 // ─── Bell SVG ────────────────────────────────────────────────────────────────
 function BellIcon({ hasUnread }: { hasUnread: boolean }) {
@@ -145,7 +145,7 @@ function RecMovieCard({
 }) {
   const [hovered, setHovered] = useState(false)
   const movie = rec.movies as Movie
-  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : FALLBACK_IMG
+  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
 
   return (
     <article
@@ -158,13 +158,24 @@ function RecMovieCard({
       onClick={onOpen}
       style={{ cursor: 'pointer' }}
     >
-      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative">
-        <img
-          src={posterUrl}
-          alt={`${movie.title} poster`}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative bg-navy-card/60">
+        {posterUrl ? (
+          <RetryImage
+            src={posterUrl}
+            alt={`${movie.title} poster`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+            fallback={
+              <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+                {movie.title}
+              </div>
+            }
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
+            {movie.title}
+          </div>
+        )}
 
         {/* Hover overlay */}
         {hovered && (

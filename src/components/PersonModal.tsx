@@ -15,12 +15,12 @@ import {
 } from '../services/apiClient'
 import MovieDescriptionPanel from './MovieDescriptionPanel'
 import ReviewModal from '../features/reviews/ReviewModal'
+import RetryImage from './RetryImage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { FilmographyEntry, Movie } from '../types'
 
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w342'
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
-const FALLBACK_POSTER = 'https://via.placeholder.com/185x278?text=No+Poster'
 
 interface Props {
   personId: number
@@ -77,7 +77,7 @@ function FilmographyMovieView({
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
   })
 
-  const posterUrl = entry.poster_path ? `${TMDB_POSTER}${entry.poster_path}` : FALLBACK_POSTER
+  const posterUrl = entry.poster_path ? `${TMDB_POSTER}${entry.poster_path}` : null
 
   return (
     <>
@@ -94,8 +94,17 @@ function FilmographyMovieView({
 
         <div className="flex gap-4">
           <div className="w-24 shrink-0">
-            <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
-              <img src={posterUrl} alt={entry.title} className="h-full w-full object-cover" />
+            <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-navy-card">
+              {posterUrl ? (
+                <RetryImage
+                  src={posterUrl}
+                  alt={entry.title}
+                  className="h-full w-full object-cover"
+                  fallback={<div className="h-full w-full bg-navy-card" />}
+                />
+              ) : (
+                <div className="h-full w-full bg-navy-card" />
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-0">
@@ -376,10 +385,15 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
               <div className="flex gap-4">
                 <div className="shrink-0">
                   {profileUrl ? (
-                    <img
+                    <RetryImage
                       src={profileUrl}
                       alt={person.name}
                       className="w-24 h-36 sm:w-32 sm:h-48 object-cover rounded-xl border border-white/10"
+                      fallback={
+                        <div className="w-24 h-36 sm:w-32 sm:h-48 rounded-xl bg-navy-card/60 border border-white/10 flex items-center justify-center">
+                          <span className="text-2xl text-gray-muted">{person.name.charAt(0)}</span>
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="w-24 h-36 sm:w-32 sm:h-48 rounded-xl bg-navy-card/60 border border-white/10 flex items-center justify-center">
@@ -521,11 +535,16 @@ function FilmographySection({
           >
             <div className="w-full aspect-[2/3] overflow-hidden bg-navy-card/60">
               {entry.poster_path ? (
-                <img
+                <RetryImage
                   src={`${TMDB_POSTER}${entry.poster_path}`}
                   alt={entry.title}
                   className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
                   loading="lazy"
+                  fallback={
+                    <div className="h-full w-full flex items-center justify-center text-gray-muted text-[10px] px-1 text-center leading-tight">
+                      {entry.title}
+                    </div>
+                  }
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-gray-muted text-[10px] px-1 text-center leading-tight">
@@ -617,7 +636,16 @@ function InnerPersonView({
     <div className="flex flex-col gap-4">
       <div className="flex gap-3">
         {profileUrl ? (
-          <img src={profileUrl} alt={person.name} className="w-16 h-24 object-cover rounded-lg border border-white/10 shrink-0" />
+          <RetryImage
+            src={profileUrl}
+            alt={person.name}
+            className="w-16 h-24 object-cover rounded-lg border border-white/10 shrink-0"
+            fallback={
+              <div className="w-16 h-24 rounded-lg bg-navy-card/60 border border-white/10 flex items-center justify-center shrink-0">
+                <span className="text-lg text-gray-muted">{person.name.charAt(0)}</span>
+              </div>
+            }
+          />
         ) : (
           <div className="w-16 h-24 rounded-lg bg-navy-card/60 border border-white/10 flex items-center justify-center shrink-0">
             <span className="text-lg text-gray-muted">{person.name.charAt(0)}</span>
