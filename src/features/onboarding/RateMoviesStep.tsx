@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getCuratedOnboardingMovies, createReview } from '../../services/apiClient'
 import RatingSlider from '../../components/RatingSlider'
+import RetryImage from '../../components/RetryImage'
 import PrimaryButton from '../../components/PrimaryButton'
 
 const MIN_REACTIONS = 5
@@ -92,10 +93,11 @@ export default function RateMoviesStep({ onBack, onNext }: Props) {
           <div className="w-32 overflow-hidden rounded-lg border border-white/10 shadow-lg sm:w-36">
             <div className="aspect-[2/3] w-full bg-navy-card">
               {movie.poster_path && (
-                <img
+                <RetryImage
                   src={`${TMDB_IMG}${movie.poster_path}`}
                   alt={movie.title}
                   className="h-full w-full object-cover"
+                  fallback={<div className="h-full w-full bg-navy-card" />}
                 />
               )}
             </div>
