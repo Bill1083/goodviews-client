@@ -41,10 +41,22 @@ export default function OnboardingPage() {
               <div key={label} className={['h-1.5 flex-1 rounded-full transition-colors', i <= step ? 'bg-teal' : 'bg-white/10'].join(' ')} />
             ))}
           </div>
-          <h1 className="text-lg font-semibold text-gray-lighter">Welcome to GoodViews</h1>
-          <p className="mt-1 text-sm text-gray-muted">
-            A few quick steps so "For You" can start recommending movies you'll actually like.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold text-gray-lighter">Welcome to GoodViews</h1>
+              <p className="mt-1 text-sm text-gray-muted">
+                A few quick steps so "For You" can start recommending movies you'll actually like.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={finish}
+              disabled={finishing}
+              className="shrink-0 whitespace-nowrap text-xs text-gray-muted underline decoration-white/25 underline-offset-2 transition-colors hover:text-gray-lighter disabled:opacity-50"
+            >
+              Skip for now
+            </button>
+          </div>
         </div>
 
         {step === 0 && (
