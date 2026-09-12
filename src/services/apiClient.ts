@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { supabase } from './supabaseClient'
+import { getStoredTrustedDeviceToken } from '../utils/mfa'
 import type {
   CreateReviewPayload,
   MovieSearchResult,
@@ -26,12 +27,20 @@ const apiClient = axios.create({
   timeout: 15_000,
 })
 
-// Attach the Supabase JWT to every backend request
+// Attach the Supabase JWT (and, if this device was remembered, the
+// trusted-device token) to every backend request. The backend independently
+// re-checks the trusted-device token on each call — see require_auth in
+// server/app/utils/auth.py — so this isn't just a client-side UI shortcut.
 apiClient.interceptors.request.use(async (config) => {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  const userId = data.session?.user?.id
+  const trustedToken = userId ? getStoredTrustedDeviceToken(userId) : null
+  if (trustedToken) {
+    config.headers['X-Trusted-Device-Token'] = trustedToken
   }
   return config
 })
