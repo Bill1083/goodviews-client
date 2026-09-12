@@ -51,6 +51,7 @@ export default function RateMoviesStep({ onBack, onNext }: Props) {
         vote_average: movie.vote_average,
         rating: sliderValue,
         review_text: '',
+        is_onboarding: true,
       })
       setReactionCount((c) => c + 1)
       if (sliderValue >= 4) setLovedMovieIds((ids) => [...ids, movie.id])

@@ -166,6 +166,9 @@ export interface CreateReviewPayload {
   category_ids?: string[]
   group_ids?: string[]
   friend_ids?: string[]
+  /** True for reviews created via the onboarding "quick ratings" step —
+   * excluded from the friend recent-activity feed. */
+  is_onboarding?: boolean
 }
 
 export interface PaginatedReviews {

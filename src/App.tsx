@@ -196,15 +196,17 @@ export default function App() {
       }
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      prevUserIdRef.current = data.session?.user?.id ?? null
-      setSession(data.session)
-      refreshAal(data.session)
-      refreshOnboarding(data.session)
-    })
-
+    // Supabase always fires onAuthStateChange once immediately on subscribe
+    // (an INITIAL_SESSION event with the current session) — a separate
+    // explicit getSession() call here as well made refreshAal's
+    // trusted-device verification run twice, concurrently, on every page
+    // load. Since any single "not trusted" result wipes the stored token
+    // (see refreshAal below), that race could and did spuriously clear a
+    // perfectly valid token if either racing call had so much as a transient
+    // hiccup — relying solely on onAuthStateChange's guaranteed initial
+    // firing avoids the duplicate call entirely.
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         const newUserId = session?.user?.id ?? null
         // Wipe all cached queries (watchlist, reviews, recommendations, etc.)
         // whenever the signed-in user changes — otherwise the next account to
@@ -214,6 +216,12 @@ export default function App() {
         }
         prevUserIdRef.current = newUserId
         setSession(session)
+        // A routine background token refresh doesn't change aal or
+        // onboarding status — skip re-running (and re-verifying the
+        // trusted-device token) for it. This isn't just an optimization:
+        // every re-verification is another chance for a single transient
+        // failure to wipe an otherwise-valid stored token.
+        if (event === 'TOKEN_REFRESHED') return
         refreshAal(session)
         refreshOnboarding(session)
       },
