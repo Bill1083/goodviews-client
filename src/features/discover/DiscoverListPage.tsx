@@ -30,6 +30,24 @@ const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; accent: strin
   },
 }
 
+function PaginationControls({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number
+  totalPages: number
+  onChange: (page: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-center gap-4">
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
+      <span className="text-sm text-gray-muted">Page {page} of {Math.min(totalPages, 500)}</span>
+      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+    </div>
+  )
+}
+
 export default function DiscoverListPage({ kind }: { kind: Kind }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -72,6 +90,26 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [page, kind])
+
+  // Prefetch the next page's data — and its poster images, which is the
+  // slower part in practice — while the user is still browsing the current
+  // page, so clicking "Next" feels instant instead of waiting on TMDB.
+  // For You is always a single page, so this only applies to Popular.
+  useEffect(() => {
+    if (kind !== 'popular' || !data || page >= data.total_pages) return
+    const nextPage = page + 1
+    const key = ['movies', 'trending', nextPage]
+    qc.prefetchQuery({
+      queryKey: key,
+      queryFn: () => getTrendingMovies(nextPage),
+      staleTime: 1000 * 60 * 30,
+    }).then(() => {
+      const prefetched = qc.getQueryData<typeof data>(key)
+      for (const m of prefetched?.results ?? []) {
+        if (m.poster_path) new Image().src = `${TMDB_POSTER}${m.poster_path}`
+      }
+    })
+  }, [kind, data, page, qc])
 
   const { data: watchlist = [] } = useQuery({
     queryKey: ['watchlist'],
@@ -177,6 +215,10 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
             </p>
           )}
 
+          {data && data.total_pages > 1 && (
+            <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
+          )}
+
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
             {(data?.results ?? []).map((movie, i) => (
               <div
@@ -196,10 +238,8 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
           </div>
 
           {data && data.total_pages > 1 && (
-            <div className="flex items-center justify-center gap-4 pt-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
-              <span className="text-sm text-gray-muted">Page {page} of {Math.min(data.total_pages, 500)}</span>
-              <button onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))} disabled={page === data.total_pages} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">Next →</button>
+            <div className="pt-2">
+              <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
             </div>
           )}
         </div>
