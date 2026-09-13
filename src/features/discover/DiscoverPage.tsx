@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getTrendingMovies,
   getForYouMovies,
+  getPicksOfTheWeek,
+  markNotInterested,
   searchMovies,
   searchPeople,
   getWatchlist,
@@ -12,13 +14,14 @@ import {
 } from '../../services/apiClient'
 import MovieSearchBar from '../movies/MovieSearchBar'
 import MovieCarousel from './MovieCarousel'
+import PicksOfTheWeek from './PicksOfTheWeek'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import type { Movie } from '../../types'
+import type { Movie, ForYouMovie } from '../../types'
 
 type SearchTab = 'movies' | 'people'
 
@@ -101,6 +104,7 @@ function SearchMovieModal({
   onRemoveWatchlist,
   onPersonClick,
   forYouReason,
+  onNotInterested,
 }: {
   movie: Movie
   onClose: () => void
@@ -109,6 +113,7 @@ function SearchMovieModal({
   onRemoveWatchlist: () => void
   onPersonClick: (personId: number, name: string, type: 'actor' | 'director') => void
   forYouReason?: string | null
+  onNotInterested?: () => void
 }) {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [showSendPanel, setShowSendPanel] = useState(false)
@@ -164,6 +169,21 @@ function SearchMovieModal({
             ),
             onClick: () => setShowSendPanel((v) => !v),
           },
+          ...(onNotInterested
+            ? [
+                {
+                  key: 'not-interested',
+                  label: 'Not Interested',
+                  variant: 'danger' as const,
+                  icon: (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 105.636 5.636a9 9 0 0012.728 12.728zM6 6l12 12" />
+                    </svg>
+                  ),
+                  onClick: onNotInterested,
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -195,6 +215,35 @@ export default function DiscoverPage() {
     for (const m of forYou?.results ?? []) map[m.id] = m.reason
     return map
   }, [forYou])
+
+  const { data: picks, isLoading: picksLoading } = useQuery({
+    queryKey: ['movies', 'picks-of-the-week'],
+    queryFn: ({ signal }) => getPicksOfTheWeek(signal),
+    staleTime: 1000 * 60 * 60, // server-side TTL is 7 days; this is just the client cache
+  })
+  const picksReasonById = useMemo(() => {
+    const map: Record<number, string> = {}
+    for (const m of picks?.results ?? []) map[m.id] = m.reason
+    return map
+  }, [picks])
+
+  const notInterestedMutation = useMutation({
+    mutationFn: (movieId: number) => markNotInterested(movieId),
+    onSuccess: (data, movieId) => {
+      const splice = (old?: { results: ForYouMovie[] } & Record<string, unknown>) => {
+        if (!old) return old
+        const idx = old.results.findIndex((m) => m.id === movieId)
+        if (idx === -1) return old
+        const results = [...old.results]
+        if (data.replacement) results.splice(idx, 1, data.replacement)
+        else results.splice(idx, 1)
+        return { ...old, results, total_results: results.length }
+      }
+      qc.setQueryData(['movies', 'for-you'], splice)
+      qc.setQueryData(['movies', 'for-you', 1], splice) // DiscoverListPage's key — for-you is always page 1
+      setSelectedMovie(null)
+    },
+  })
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false)
@@ -335,6 +384,8 @@ export default function DiscoverPage() {
         {/* Browsing view */}
         {!hasTyped && (
           <div className="flex w-full flex-col gap-10">
+            <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
+
             <section className="flex w-full flex-col gap-3">
               <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
               {trendingLoading ? (
@@ -465,7 +516,13 @@ export default function DiscoverPage() {
           onAddWatchlist={() => watchlistAddMutation.mutate(selectedMovie)}
           onRemoveWatchlist={() => watchlistRemoveMutation.mutate(selectedMovie)}
           onPersonClick={(pid) => setPersonModalId(pid)}
-          forYouReason={forYouReasonById[selectedMovie.id]}
+          forYouReason={
+            forYouReasonById[selectedMovie.id] ??
+            (picksReasonById[selectedMovie.id] ? `Pick of the Week — ${picksReasonById[selectedMovie.id]}` : undefined)
+          }
+          onNotInterested={
+            forYouReasonById[selectedMovie.id] ? () => notInterestedMutation.mutate(selectedMovie.id) : undefined
+          }
         />
       )}
 

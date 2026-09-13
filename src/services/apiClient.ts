@@ -84,6 +84,18 @@ export async function getForYouMovies(
   return data
 }
 
+export async function getPicksOfTheWeek(
+  signal?: AbortSignal,
+): Promise<{ page: number; results: ForYouMovie[]; total_pages: number; total_results: number }> {
+  const { data } = await apiClient.get('/api/movies/picks-of-the-week', { signal })
+  return data
+}
+
+export async function markNotInterested(movieId: number): Promise<{ replacement: ForYouMovie | null }> {
+  const { data } = await apiClient.post('/api/movies/not-interested', { movie_id: movieId })
+  return data
+}
+
 export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
   const { data } = await apiClient.get<MovieDetails>(`/api/movies/${movieId}`)
   return data

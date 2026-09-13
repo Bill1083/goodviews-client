@@ -88,6 +88,14 @@ export default function ReviewModal({
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
+      // The backend invalidates its own For You/Picks-of-the-Week caches as
+      // a side effect of creating a review — refetch here so the UI actually
+      // reflects that instead of staying pinned to the pre-review data.
+      // invalidateQueries prefix-matches by default, so this one call covers
+      // both DiscoverPage's ['movies','for-you'] and DiscoverListPage's
+      // ['movies','for-you',1].
+      queryClient.invalidateQueries({ queryKey: ['movies', 'for-you'] })
+      queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
       onSaved?.()
       onClose()
     },

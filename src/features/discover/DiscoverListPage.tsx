@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getTrendingMovies, getForYouMovies, getWatchlist, addToWatchlist, removeFromWatchlist } from '../../services/apiClient'
+import {
+  getTrendingMovies,
+  getForYouMovies,
+  markNotInterested,
+  getWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+} from '../../services/apiClient'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
-import type { Movie } from '../../types'
+import type { Movie, ForYouMovie } from '../../types'
 
 type Kind = 'popular' | 'for-you'
 
@@ -128,6 +135,24 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
         vote_average: movie.vote_average,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+  })
+
+  const notInterestedMutation = useMutation({
+    mutationFn: (movieId: number) => markNotInterested(movieId),
+    onSuccess: (result, movieId) => {
+      const splice = (old?: { results: ForYouMovie[] } & Record<string, unknown>) => {
+        if (!old) return old
+        const idx = old.results.findIndex((m) => m.id === movieId)
+        if (idx === -1) return old
+        const results = [...old.results]
+        if (result.replacement) results.splice(idx, 1, result.replacement)
+        else results.splice(idx, 1)
+        return { ...old, results, total_results: results.length }
+      }
+      qc.setQueryData(['movies', 'for-you'], splice)
+      qc.setQueryData(['movies', 'for-you', 1], splice)
+      setSelectedMovie(null)
+    },
   })
 
   const watchlistRemoveMutation = useMutation({
@@ -298,6 +323,21 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
               ),
               onClick: () => setShowSendPanel((v) => !v),
             },
+            ...(kind === 'for-you'
+              ? [
+                  {
+                    key: 'not-interested',
+                    label: 'Not Interested',
+                    variant: 'danger' as const,
+                    icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 105.636 5.636a9 9 0 0012.728 12.728zM6 6l12 12" />
+                      </svg>
+                    ),
+                    onClick: () => notInterestedMutation.mutate(selectedMovie.id),
+                  },
+                ]
+              : []),
           ]}
         />
       )}
