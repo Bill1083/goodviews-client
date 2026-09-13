@@ -5,6 +5,8 @@ import { supabase } from '../services/supabaseClient'
 import { getTrendingMovies, getTopRatedMovies } from '../services/apiClient'
 import type { Movie } from '../types'
 import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
+import { useAuthStore } from '../store/authStore'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
 
@@ -217,6 +219,21 @@ const labelClass = 'text-[15px] text-white leading-none'
 export default function AuthPage() {
   const navigate = useNavigate()
   const isDesktop = useMediaQuery('(min-width: 640px)')
+  const { user } = useAuthStore()
+
+  // This page is never allowed to scroll (see useBodyScrollLock below), so if
+  // a session appears while it's mounted — e.g. a confirmation-email link
+  // landed here after supabase-js silently picked up the tokens from the URL
+  // hash — the user would otherwise be stuck staring at an unchanged login
+  // form with no indication they're actually signed in. Bounce them on.
+  useEffect(() => {
+    if (user) navigate('/', { replace: true })
+  }, [user, navigate])
+
+  // Fixed, non-scrolling screen (matches the app's other auth-adjacent
+  // screens) — the floating panel below scrolls internally if its own
+  // content ever exceeds the available height instead.
+  useBodyScrollLock(true)
 
   // Background poster field: mix of "currently popular" and "classic" movies
   const { data: trending } = useQuery({
@@ -252,6 +269,7 @@ export default function AuthPage() {
   const [regPassword, setRegPassword] = useState('')
   const [regError, setRegError] = useState<string | null>(null)
   const [regLoading, setRegLoading] = useState(false)
+  const [regConfirmationSent, setRegConfirmationSent] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -314,21 +332,34 @@ export default function AuthPage() {
       return
     }
     setRegLoading(true)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: regEmail.trim(),
       password: regPassword,
-      options: { data: { username: trimmed } },
+      options: {
+        data: { username: trimmed },
+        emailRedirectTo: `${window.location.origin}/auth`,
+      },
     })
     setRegLoading(false)
     if (error) {
       setRegError(error.message)
-    } else {
+    } else if (data.session) {
+      // Email confirmation is off (or this address was already confirmed) —
+      // signUp returned an active session directly, so there's nothing to
+      // wait on.
       navigate('/')
+    } else {
+      // The account was created but needs email confirmation before a
+      // session exists — navigating to '/' here would just bounce straight
+      // back to this page via ProtectedRoute with no explanation. Tell the
+      // user to check their inbox instead; clicking the emailed link lands
+      // back on this page and the effect above will pick up the new session.
+      setRegConfirmationSent(true)
     }
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center px-4 py-8 sm:justify-end sm:px-0 sm:py-0 sm:pr-[5vw]">
+    <div className="relative h-dvh w-full overflow-hidden flex items-center justify-center px-4 py-8 sm:justify-end sm:px-0 sm:py-0 sm:pr-[5vw]">
 
       {/* ── Ambient popular/classic movie posters ── */}
       {isDesktop ? <AuthPosterField movies={bgMovies} /> : <AuthPosterCarousel movies={bgMovies} />}
@@ -355,7 +386,7 @@ export default function AuthPage() {
       <div
         className="relative z-10 flex w-full max-w-[349px] flex-col items-center justify-center overflow-y-auto rounded-xl px-6 py-6 sm:px-9 sm:py-[22px]"
         style={{
-          maxHeight: '90vh',
+          maxHeight: '100%',
           background: 'linear-gradient(to bottom, rgba(9,29,91,0.85) 0%, rgba(0,10,41,0.9) 50%, rgba(32,10,50,0.85) 100%)',
           boxShadow: '4px 4px 20px 0px rgba(0,0,0,0.55)',
         }}
@@ -420,61 +451,78 @@ export default function AuthPage() {
         </div>
 
         {/* ── Sign Up form ── */}
-        <form onSubmit={handleRegister} className="w-full flex flex-col gap-[8px]">
-          <div className="flex flex-col gap-[5px]">
-            <label className={labelClass}>Username</label>
-            <input
-              type="text"
-              autoComplete="username"
-              required
-              value={regUsername}
-              onChange={(e) => setRegUsername(e.target.value)}
-              className={authInputClass}
-              style={authInputStyle}
-              placeholder="filmbuff42"
-              maxLength={50}
-            />
-          </div>
-          <div className="flex flex-col gap-[5px]">
-            <label className={labelClass}>Email Address</label>
-            <input
-              type="email"
-              autoComplete="email"
-              required
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              className={authInputClass}
-              style={authInputStyle}
-            />
-          </div>
-          <div className="flex flex-col gap-[5px]">
-            <label className={labelClass}>Password</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              required
-              maxLength={PASSWORD_MAX_LENGTH}
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              className={authInputClass}
-              style={authInputStyle}
-              placeholder="Min. 10 chars, 1 number, 1 symbol"
-            />
-          </div>
-          {regError && (
-            <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
-              {regError}
+        {regConfirmationSent ? (
+          <div className="flex w-full flex-col items-center gap-2 text-center">
+            <p className="text-[15px] font-medium text-white">Check your email</p>
+            <p className="text-[13px] text-white/60 leading-relaxed">
+              We sent a confirmation link to <span className="text-white/90">{regEmail.trim()}</span>.
+              Open it to finish creating your account — this page will pick it up automatically.
             </p>
-          )}
-          <button
-            type="submit"
-            disabled={regLoading}
-            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-magenta-dark hover:brightness-110"
-            style={{ height: 32 }}
-          >
-            {regLoading ? 'Creating account…' : 'Sign Up'}
-          </button>
-        </form>
+            <button
+              type="button"
+              onClick={() => setRegConfirmationSent(false)}
+              className="mt-1 text-[13px] text-white/50 hover:text-white/80 transition-colors"
+            >
+              Used the wrong email? Go back
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleRegister} className="w-full flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[5px]">
+              <label className={labelClass}>Username</label>
+              <input
+                type="text"
+                autoComplete="username"
+                required
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                className={authInputClass}
+                style={authInputStyle}
+                placeholder="filmbuff42"
+                maxLength={50}
+              />
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <label className={labelClass}>Email Address</label>
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                className={authInputClass}
+                style={authInputStyle}
+              />
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <label className={labelClass}>Password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                required
+                maxLength={PASSWORD_MAX_LENGTH}
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                className={authInputClass}
+                style={authInputStyle}
+                placeholder="Min. 10 chars, 1 number, 1 symbol"
+              />
+            </div>
+            {regError && (
+              <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
+                {regError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={regLoading}
+              className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-magenta-dark hover:brightness-110"
+              style={{ height: 32 }}
+            >
+              {regLoading ? 'Creating account…' : 'Sign Up'}
+            </button>
+          </form>
+        )}
 
       </div>
 

@@ -163,6 +163,12 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
+  // Fixed, non-scrolling screen — the <main> below is height-capped to the
+  // viewport (minus the navbar), so no matter how many friends/categories/
+  // groups exist the page itself never grows past the viewport. The friends
+  // list and category/group panel scroll internally instead.
+  useBodyScrollLock(true)
+
   const username =
     (user?.user_metadata?.['username'] as string | undefined) ??
     user?.email?.split('@')[0] ??
@@ -425,11 +431,11 @@ export default function ProfilePage() {
   const avatarZoom = profileData?.avatar_zoom ?? 1
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
+    <main className="mx-auto flex h-[calc(100dvh-49px)] md:h-[calc(100dvh-67px)] max-w-4xl flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
       {/* ── Profile Header ─────────────────────────────────────────────────── */}
       {isEditingProfile ? (
         /* ── Edit mode ── */
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+        <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
           {/* Avatar + change-photo button */}
           <div className="relative self-center sm:self-start">
             <Avatar username={editUsername || displayUsername} avatarUrl={editAvatarUrl} color={editAvatarColor ?? avatarColor} focalY={editAvatarFocalY} zoom={editAvatarZoom} size="xl" />
@@ -532,7 +538,7 @@ export default function ProfilePage() {
         </div>
       ) : (
         /* ── View mode ── */
-        <div className="flex items-center gap-3 sm:gap-5">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           <Avatar username={displayUsername} avatarUrl={avatarUrl} color={avatarColor} focalY={avatarFocalY} zoom={avatarZoom} size="lg" />
           <div className="flex flex-col gap-0.5 min-w-0">
             <h1 className="text-2xl font-bold text-gray-lighter sm:text-3xl">{displayUsername}</h1>
@@ -557,9 +563,13 @@ export default function ProfilePage() {
       )}
 
       {/* ── Friends panel + accordions ──────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+      {/* flex-1/min-h-0 makes this row fill whatever's left of the fixed-height
+          <main> above; overflow-y-auto is a safety-net scroll for this region
+          only (never the page) in case both children's own internal scroll
+          areas still aren't enough on a very short viewport. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:gap-6">
         {/* Friends list panel */}
-        <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:w-64">
+        <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 max-h-[45vh] sm:h-full sm:max-h-none sm:w-64">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-lighter">Friends List</h2>
@@ -621,7 +631,7 @@ export default function ProfilePage() {
             value={friendsListFilter}
             onChange={(e) => setFriendsListFilter(e.target.value)}
           />
-          <ul className="flex flex-col divide-y divide-white/5 overflow-y-auto max-h-64">
+          <ul className="flex min-h-0 flex-1 flex-col divide-y divide-white/5 overflow-y-auto">
             {friendsLoading ? (
               <li className="py-2 text-xs text-gray-muted italic">Loading…</li>
             ) : filteredFriends.length === 0 ? (
@@ -645,7 +655,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right: accordions */}
-        <div className="flex flex-1 flex-col gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
           {/* My Movie Categories */}
           <div className="rounded-xl border border-white/10 bg-navy-card/60 overflow-hidden">
             <button
@@ -740,19 +750,19 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Settings cog ────────────────────────────────────────────────────── */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => navigate('/settings')}
-          className="rounded-full p-2 text-gray-muted hover:bg-white/5 hover:text-gray-lighter transition-colors"
-          title="Settings"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-      </div>
+      {/* ── Settings cog ─────────────────────────────────────────────────────
+          Fixed to the viewport corner (not part of page flow) so it's always
+          reachable regardless of how much content is above it. */}
+      <button
+        onClick={() => navigate('/settings')}
+        className="fixed bottom-5 right-5 z-30 rounded-full border border-white/10 bg-navy-card/80 p-2 text-gray-muted shadow-lg backdrop-blur-sm transition-colors hover:bg-white/5 hover:text-gray-lighter sm:bottom-8 sm:right-8"
+        title="Settings"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
 
       {/* ── Avatar picker modal ─────────────────────────────────────────────── */}
       {showAvatarPicker && (
