@@ -90,7 +90,13 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
         <p className="text-sm text-gray-muted">Your top matches, refreshed every week</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:grid-rows-2 md:[grid-auto-rows:1fr]">
+      {/* md:h-[26rem] gives the grid a real height to distribute between its
+          two 1fr rows — without it, "md:h-full" on each Tile has nothing to
+          resolve against (the grid container's own height is otherwise just
+          "auto", sized by content, which is circular for a fr-based row) and
+          every tile collapses to a sliver. Matches DiscoverListPage's own
+          hero height for visual consistency between the two. */}
+      <div className="grid grid-cols-1 gap-4 md:h-[26rem] md:grid-cols-3 md:grid-rows-2">
         {isLoading ? (
           <>
             <TileSkeleton size="hero" />
