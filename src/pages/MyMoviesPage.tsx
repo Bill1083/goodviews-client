@@ -175,6 +175,110 @@ function DidYouMeanPeople({
   )
 }
 
+// ─── Favourite actor/director row — the point of favouriting someone is to
+//     see what they've been in, not to look at a grid of faces, so each
+//     favourite is a shelf: who they are, then their movies right there. ──
+function PersonFilmographyRow({
+  personId, name, profilePath, type, onOpenPerson, onRemove, removing, onSelectMovie,
+}: {
+  personId: number
+  name: string
+  profilePath: string | null
+  type: 'actor' | 'director'
+  onOpenPerson: () => void
+  onRemove: () => void
+  removing: boolean
+  onSelectMovie: (movie: Movie) => void
+}) {
+  const { data: details, isLoading } = useQuery({
+    queryKey: ['person-details', personId],
+    queryFn: () => getPersonDetails(personId),
+    staleTime: 1000 * 60 * 30,
+  })
+
+  const credits = type === 'actor'
+    ? (details?.movie_credits?.cast ?? [])
+    : (details?.movie_credits?.crew ?? []).filter((c) => c.job === 'Director')
+  const films = [...credits].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)).slice(0, 12)
+
+  const profileUrl = profilePath ? `https://image.tmdb.org/t/p/w185${profilePath}` : null
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/40 p-4">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onOpenPerson}
+          className="flex min-w-0 items-center gap-2.5 hover:opacity-80 transition-opacity"
+        >
+          <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+            {profileUrl ? (
+              <RetryImage
+                src={profileUrl}
+                alt={name}
+                className="h-full w-full object-cover"
+                fallback={<div className="h-full w-full flex items-center justify-center text-gray-muted text-sm font-semibold">{name.charAt(0)}</div>}
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-gray-muted text-sm font-semibold">{name.charAt(0)}</div>
+            )}
+          </div>
+          <span className="text-sm font-semibold text-gray-lighter truncate">{name}</span>
+        </button>
+        <button
+          onClick={onRemove}
+          disabled={removing}
+          className="ml-auto shrink-0 text-[11px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
+          title="Remove from favourites"
+        >
+          Remove
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-lg bg-navy-card/60" />
+          ))}
+        </div>
+      ) : films.length === 0 ? (
+        <p className="text-xs text-gray-muted italic">No known movie credits.</p>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {films.map((film) => {
+            const posterUrl = film.poster_path ? `https://image.tmdb.org/t/p/w185${film.poster_path}` : null
+            return (
+              <button
+                key={film.id}
+                type="button"
+                onClick={() => onSelectMovie({
+                  id: film.id, title: film.title, poster_path: film.poster_path,
+                  release_date: film.release_date ?? null, vote_average: film.vote_average, genre_ids: film.genre_ids,
+                })}
+                className="group flex w-24 shrink-0 flex-col gap-1.5 text-left"
+              >
+                <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-navy-card/60">
+                  {posterUrl ? (
+                    <RetryImage
+                      src={posterUrl}
+                      alt={film.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      fallback={<div className="flex h-full w-full items-center justify-center p-1 text-center text-[9px] text-gray-muted">{film.title}</div>}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center p-1 text-center text-[9px] text-gray-muted">{film.title}</div>
+                  )}
+                </div>
+                <p className="text-[11px] leading-snug text-gray-lighter line-clamp-2">{film.title}</p>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Sort Panel ───────────────────────────────────────────────────────────────
 function SortPanel({
   open, onClose, sortBy, setSortBy, showRating,
@@ -745,7 +849,7 @@ function FriendsActivitySection({
               <span className="text-teal-light">{friend.username}</span> recently watched
             </h3>
               {/* Refactored for mobile: 2 cols on mobile for friends activity grid */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
               {friend.reviews.map((review) => {
                 const m = review.movies
                 const posterUrl = m.poster_path ? `${TMDB_IMG}${m.poster_path}` : null
@@ -967,10 +1071,17 @@ export default function MyMoviesPage() {
     staleTime: 1000 * 60 * 5,
   })
 
+  // Whether a movie is already watched/watchlisted is needed outside the
+  // 'watched'/'want-to-watch' tabs too — the "Did you mean…" suggested-movie
+  // modal needs it for its watchlist toggle, and clicking a movie in a
+  // favourite actor/director's filmography needs it to open the *right*
+  // modal (already-watched vs. already-watchlisted vs. neither).
+  const needsWatchedWatchlistData = ['watched', 'want-to-watch', 'favourite-actors', 'favourite-directors'].includes(activeSection)
+
   const { data: initialReviewsData, isLoading } = useQuery({
     queryKey: ['my-reviews', 'initial'],
     queryFn: () => getMyReviews(1, 30),
-    enabled: activeSection === 'watched',
+    enabled: needsWatchedWatchlistData,
     staleTime: 1000 * 60 * 5,
   })
 
@@ -980,7 +1091,7 @@ export default function MyMoviesPage() {
   const { data: fullReviewsData, isFetching: isLoadingMoreReviews } = useQuery({
     queryKey: ['my-reviews', 'full'],
     queryFn: () => getMyReviews(1, 500),
-    enabled: activeSection === 'watched' && mayHaveMoreReviews,
+    enabled: needsWatchedWatchlistData && mayHaveMoreReviews,
     staleTime: 1000 * 60 * 5,
   })
 
@@ -989,9 +1100,7 @@ export default function MyMoviesPage() {
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery({
     queryKey: ['watchlist'],
     queryFn: getWatchlist,
-    // Also needed on 'watched' for the "Did you mean…" suggested-movie
-    // modal there, so its watchlist toggle knows the right starting state.
-    enabled: activeSection === 'want-to-watch' || activeSection === 'watched',
+    enabled: needsWatchedWatchlistData,
   })
 
   const { data: recommendations = [] } = useQuery({
@@ -1237,6 +1346,18 @@ export default function MyMoviesPage() {
   const filteredFavActors = favActors.filter((a) => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase()))
   const filteredFavDirectors = favDirectors.filter((d) => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase()))
 
+  // A movie clicked from a favourite actor/director's filmography strip —
+  // route it to whichever modal actually fits: already watched (show the
+  // review), already watchlisted, or neither (the "did you mean" modal,
+  // which offers both).
+  const handleFilmographyMovieSelect = (movie: Movie) => {
+    const watchedPair = movieReviewPairs.find((p) => p.movie.id === movie.id)
+    if (watchedPair) { setWatchedDetail(watchedPair); return }
+    const watchlistItem = watchlistData.find((w) => w.movies.id === movie.id)
+    if (watchlistItem) { setWatchlistDetail(watchlistItem.movies as Movie); return }
+    setSuggestedMovieDetail(movie)
+  }
+
   const showSortFilter = activeSection !== 'Recommendations' && activeSection !== 'favourite-actors' && activeSection !== 'favourite-directors' && activeSection !== 'Friends'
   const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterGenreIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActorId ? 'x' : null, filterDirectorId ? 'x' : null].filter(Boolean).length
 
@@ -1467,47 +1588,20 @@ export default function MyMoviesPage() {
             ) : (
               <>
                 {filteredFavActors.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
-                    {filteredFavActors.map((actor) => {
-                      const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
-                      return (
-                        <div key={actor.actor_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setPersonModalId(actor.actor_id)}
-                            className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
-                          >
-                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
-                              {profileUrl ? (
-                                <RetryImage
-                                  src={profileUrl}
-                                  alt={actor.actor_name ?? ''}
-                                  className="h-full w-full object-cover"
-                                  fallback={
-                                    <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                                      {(actor.actor_name ?? '?').charAt(0)}
-                                    </div>
-                                  }
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                                  {(actor.actor_name ?? '?').charAt(0)}
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{actor.actor_name}</p>
-                          </button>
-                          <button
-                            onClick={() => removeActorMutation.mutate(actor.actor_id)}
-                            disabled={removeActorMutation.isPending}
-                            className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
-                            title="Remove from favourites"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )
-                    })}
+                  <div className="flex flex-col gap-4">
+                    {filteredFavActors.map((actor) => (
+                      <PersonFilmographyRow
+                        key={actor.actor_id}
+                        personId={actor.actor_id}
+                        name={actor.actor_name}
+                        profilePath={actor.profile_path}
+                        type="actor"
+                        onOpenPerson={() => setPersonModalId(actor.actor_id)}
+                        onRemove={() => removeActorMutation.mutate(actor.actor_id)}
+                        removing={removeActorMutation.isPending}
+                        onSelectMovie={handleFilmographyMovieSelect}
+                      />
+                    ))}
                   </div>
                 )}
                 <DidYouMeanPeople
@@ -1542,47 +1636,20 @@ export default function MyMoviesPage() {
             ) : (
               <>
                 {filteredFavDirectors.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
-                    {filteredFavDirectors.map((director) => {
-                      const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
-                      return (
-                        <div key={director.director_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setPersonModalId(director.director_id)}
-                            className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
-                          >
-                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
-                              {profileUrl ? (
-                                <RetryImage
-                                  src={profileUrl}
-                                  alt={director.director_name ?? ''}
-                                  className="h-full w-full object-cover"
-                                  fallback={
-                                    <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                                      {(director.director_name ?? '?').charAt(0)}
-                                    </div>
-                                  }
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                                  {(director.director_name ?? '?').charAt(0)}
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{director.director_name}</p>
-                          </button>
-                          <button
-                            onClick={() => removeDirectorMutation.mutate(director.director_id)}
-                            disabled={removeDirectorMutation.isPending}
-                            className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
-                            title="Remove from favourites"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )
-                    })}
+                  <div className="flex flex-col gap-4">
+                    {filteredFavDirectors.map((director) => (
+                      <PersonFilmographyRow
+                        key={director.director_id}
+                        personId={director.director_id}
+                        name={director.director_name}
+                        profilePath={director.profile_path}
+                        type="director"
+                        onOpenPerson={() => setPersonModalId(director.director_id)}
+                        onRemove={() => removeDirectorMutation.mutate(director.director_id)}
+                        removing={removeDirectorMutation.isPending}
+                        onSelectMovie={handleFilmographyMovieSelect}
+                      />
+                    ))}
                   </div>
                 )}
                 <DidYouMeanPeople

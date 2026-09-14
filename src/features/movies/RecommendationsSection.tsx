@@ -369,7 +369,7 @@ export default function RecommendationsSection() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2">
               <div className="aspect-[2/3] w-full animate-pulse rounded-card bg-navy-card/60" />
@@ -388,7 +388,7 @@ export default function RecommendationsSection() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-10 overflow-y-auto pr-1" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+        <div className="flex flex-col gap-10">
           {senderGroups.map((group) => {
             const sender = group[0].sender
             return (
@@ -396,7 +396,7 @@ export default function RecommendationsSection() {
                 <p className="mb-3 text-sm font-semibold text-gray-lighter">
                   {sender?.username ?? 'Someone'} Recommends:
                 </p>
-                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5 my-2">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                   {group.map((rec) => (
                     <RecMovieCard
                       key={rec.id}
