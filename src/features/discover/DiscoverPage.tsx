@@ -95,32 +95,6 @@ function CarouselSkeleton({ caption }: { caption?: string }) {
   )
 }
 
-// ─── Measures its own (flex-allotted) height and hands it down, so a
-//     MovieCarousel inside can size itself to fit rather than run past a
-//     fixed-height row — see the wide-screen (xl:) split layout below. Below
-//     xl:, nothing above this actually constrains its height, so flex-1
-//     just ends up sized to the carousel's own natural (width-only) height
-//     and this is a no-op. ────────────────────────────────────────────────
-function CarouselHeightFit({ children }: { children: (maxHeight: number | undefined) => React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    setHeight(el.getBoundingClientRect().height)
-    const ro = new ResizeObserver((entries) => setHeight(entries[0].contentRect.height))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  return (
-    <div ref={ref} className="flex w-full min-h-0 flex-1 items-center xl:min-h-0">
-      {children(height)}
-    </div>
-  )
-}
-
 // ─── Selected movie overlay (search result opened) ─────────────────────────
 function SearchMovieModal({
   movie,
@@ -408,15 +382,16 @@ export default function DiscoverPage() {
         </div>
 
         {/* Browsing view — one full-width column below xl:. From xl: up,
-            Picks and the carousels split the page evenly and the whole
-            thing is height-capped to the viewport, so it reads as a single
-            screen rather than the two columns running past the fold by
-            different amounts. Picks fits itself into its half via flex
-            fractions (see PicksOfTheWeek); each carousel fits into its half
-            by measuring its own allotted height (CarouselHeightFit) and
-            handing it to MovieCarousel as a cap. */}
+            Picks and the carousels split the page evenly, with the row
+            given a *minimum* height matching the viewport (Picks fills its
+            half exactly via flex fractions — see PicksOfTheWeek). Carousels
+            still size their own posters off width alone (capped at a
+            handful visible, not a skinny strip of many), so on a generous
+            screen everything just fits the floor exactly, while a shorter
+            one lets their natural height grow the row past it — a small
+            scroll rather than squeezing the posters down to fit. */}
         {!hasTyped && (
-          <div className="grid w-full grid-cols-1 gap-10 xl:h-[calc(100dvh-240px)] xl:grid-cols-2 xl:items-start xl:gap-8">
+          <div className="grid w-full grid-cols-1 gap-10 xl:min-h-[calc(100dvh-240px)] xl:grid-cols-2 xl:items-start xl:gap-8">
             <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
 
             <div className="flex w-full flex-col gap-10 xl:h-full xl:min-h-0">
@@ -425,16 +400,11 @@ export default function DiscoverPage() {
                 {trendingLoading ? (
                   <CarouselSkeleton />
                 ) : (
-                  <CarouselHeightFit>
-                    {(maxHeight) => (
-                      <MovieCarousel
-                        movies={trending?.results ?? []}
-                        onOpenAll={() => navigate('/discover/popular')}
-                        onSelectMovie={setSelectedMovie}
-                        maxHeight={maxHeight}
-                      />
-                    )}
-                  </CarouselHeightFit>
+                  <MovieCarousel
+                    movies={trending?.results ?? []}
+                    onOpenAll={() => navigate('/discover/popular')}
+                    onSelectMovie={setSelectedMovie}
+                  />
                 )}
               </section>
 
@@ -443,16 +413,11 @@ export default function DiscoverPage() {
                 {forYouLoading ? (
                   <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
                 ) : (
-                  <CarouselHeightFit>
-                    {(maxHeight) => (
-                      <MovieCarousel
-                        movies={forYou?.results ?? []}
-                        onOpenAll={() => navigate('/discover/for-you')}
-                        onSelectMovie={setSelectedMovie}
-                        maxHeight={maxHeight}
-                      />
-                    )}
-                  </CarouselHeightFit>
+                  <MovieCarousel
+                    movies={forYou?.results ?? []}
+                    onOpenAll={() => navigate('/discover/for-you')}
+                    onSelectMovie={setSelectedMovie}
+                  />
                 )}
               </section>
             </div>
