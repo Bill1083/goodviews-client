@@ -335,7 +335,7 @@ export default function DiscoverPage() {
 
   return (
     <>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 xl:max-w-6xl 2xl:max-w-[1600px]">
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 xl:max-w-6xl xl:gap-3 xl:pt-6 xl:pb-4 2xl:max-w-[1600px]">
         {/* Top bar: title / search toggle */}
         <div className="flex w-full items-center gap-4">
           {!searchOpen ? (
@@ -391,7 +391,7 @@ export default function DiscoverPage() {
             one lets their natural height grow the row past it — a small
             scroll rather than squeezing the posters down to fit. */}
         {!hasTyped && (
-          <div className="grid w-full grid-cols-1 gap-10 xl:min-h-[calc(100dvh-240px)] xl:grid-cols-2 xl:items-start xl:gap-8">
+          <div className="grid w-full grid-cols-1 gap-10 xl:min-h-[calc(100dvh-164px)] xl:grid-cols-2 xl:items-start xl:gap-8">
             <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
 
             <div className="flex w-full flex-col gap-10 xl:h-full xl:min-h-0">
