@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import { getFriendRequests, getProfile } from '../services/apiClient'
+import SettingsDrawer from './SettingsDrawer'
 
 const NAV_TABS = [
   { label: 'Discover', path: '/' },
@@ -33,10 +35,20 @@ function NavLogo() {
   )
 }
 
+function SettingsGearIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )
+}
+
 export default function Navbar() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const { data: friendRequests = [] } = useQuery({
     queryKey: ['friend-requests'],
@@ -55,6 +67,7 @@ export default function Navbar() {
   if (!user) return null
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-navy/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-end px-3 pt-3 gap-3 md:justify-between md:px-6 md:pt-4 md:gap-0">
         {/* Logo */}
@@ -102,15 +115,27 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Username — desktop only, mirrors the logo's width so the tabs stay centered */}
-        <div className="hidden md:flex w-20 items-center justify-end pb-2">
+        {/* Username + settings — desktop only for the username, gear shows at
+            every width so settings is reachable from any screen/page. */}
+        <div className="flex shrink-0 items-center gap-3 pb-2 md:min-w-20 md:justify-end">
           {profile?.username && (
-            <span className="truncate text-sm font-medium text-gray-muted" title={profile.username}>
+            <span className="hidden truncate text-sm font-medium text-gray-muted md:inline" title={profile.username}>
               {profile.username}
             </span>
           )}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="text-gray-medium hover:text-gray-lighter transition-colors"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <SettingsGearIcon className="h-6 w-6 md:h-7 md:w-7" />
+          </button>
         </div>
       </div>
     </header>
+
+    <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
   )
 }
