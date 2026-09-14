@@ -29,7 +29,7 @@ function Tile({
     <div
       onClick={() => onSelect(movie)}
       className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${
-        isHero ? 'h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]' : 'h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72'
+        isHero ? 'h-64 sm:h-80 md:h-full xl:h-[28rem] 2xl:h-[32rem]' : 'h-40 sm:h-48 md:h-full xl:h-64 2xl:h-72'
       } ${className}`}
     >
       {backdropUrl && (
@@ -72,7 +72,7 @@ function TileSkeleton({ size }: { size: 'hero' | 'small' }) {
   return (
     <div
       className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${
-        size === 'hero' ? 'h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]' : 'h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72'
+        size === 'hero' ? 'h-64 sm:h-80 md:h-full xl:h-[28rem] 2xl:h-[32rem]' : 'h-40 sm:h-48 md:h-full xl:h-64 2xl:h-72'
       }`}
     />
   )
@@ -90,23 +90,30 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
         <p className="text-sm text-gray-muted">Your top matches, refreshed every week</p>
       </div>
 
-      {/* Hero on top, the next two picks in a row below it — the same stack
-          at every width (rather than moving the pair beside the hero from
-          md: up) so the hero reads as a real hero at any size and the
-          section keeps growing downward instead of just sideways. */}
-      <div className="flex flex-col gap-4">
+      {/* Three tiers, purely by viewport width (later breakpoints override
+          earlier ones for the same property, so these just stack in the
+          Tailwind-generated stylesheet):
+           - phone (default): hero on top, the pair below it — stacked
+             because there's no room for anything else.
+           - md–lg: pair moves beside the hero (the classic 2/3 + 1/3 grid)
+             now that a single full-width page column has room to spare.
+           - xl+: DiscoverPage splits into two page-level columns here, so
+             this section is back to roughly half the screen — stacked
+             again, just bigger, rather than squeezing the side-by-side
+             version into a narrower column. */}
+      <div className="flex flex-col gap-4 md:grid md:h-[26rem] md:grid-cols-3 md:grid-rows-2 xl:flex xl:h-auto xl:flex-col">
         {isLoading ? (
           <>
             <TileSkeleton size="hero" />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:contents xl:grid">
               <TileSkeleton size="small" />
               <TileSkeleton size="small" />
             </div>
           </>
         ) : (
           <>
-            <Tile movie={movies[0]} onSelect={onSelect} size="hero" />
-            <div className="grid grid-cols-2 gap-4">
+            <Tile movie={movies[0]} onSelect={onSelect} size="hero" className="md:col-span-2 md:row-span-2" />
+            <div className="grid grid-cols-2 gap-4 md:contents xl:grid">
               {movies[1] && <Tile movie={movies[1]} onSelect={onSelect} size="small" />}
               {movies[2] && <Tile movie={movies[2]} onSelect={onSelect} size="small" />}
             </div>
