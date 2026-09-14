@@ -15,9 +15,12 @@ import {
   getMovieReviews,
   getMyFriends,
   getPersonDetails,
+  searchMovies,
   searchPeople,
   getFavouriteActors,
   getFavouriteDirectors,
+  addFavouriteActor,
+  addFavouriteDirector,
   removeFavouriteActor,
   removeFavouriteDirector,
 } from '../services/apiClient'
@@ -30,8 +33,9 @@ import ReviewModal from '../features/reviews/ReviewModal'
 import StarRating from '../components/StarRating'
 import RetryImage from '../components/RetryImage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { TMDB_GENRES } from '../utils/genres'
-import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews } from '../types'
+import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews, PersonSearchResult } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
 type SortKey = 'date-desc' | 'date-asc' | 'release-asc' | 'release-desc' | 'rating-high' | 'rating-low' | 'rating-friends-high' | 'rating-friends-low' | 'rating-public-high' | 'rating-public-low' | 'alpha-az' | 'alpha-za'
@@ -65,6 +69,108 @@ function MovieGridSkeleton({ count = 10 }: { count?: number }) {
           <div className="mx-auto h-3 w-3/4 animate-pulse rounded bg-navy-card/60" />
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── "Did you mean…" — shown when a text search comes up empty or thin (≤3
+//     local matches) in a My Movies list, offering up to 10 real results
+//     from the full catalog that aren't already in that list. ────────────
+function DidYouMeanMovies({
+  query, localCount, suggestions, isFetching, onSelect,
+}: {
+  query: string
+  localCount: number
+  suggestions: Movie[]
+  isFetching: boolean
+  onSelect: (movie: Movie) => void
+}) {
+  if (query.trim().length < 2 || localCount > 3) return null
+  if (!isFetching && suggestions.length === 0) return null
+
+  return (
+    <div className={localCount > 0 ? 'mt-8 flex flex-col gap-3 border-t border-white/10 pt-6' : 'flex flex-col gap-3'}>
+      {localCount === 0 && <p className="text-gray-300">Oops, I can't seem to find that movie here</p>}
+      <p className="text-sm font-medium text-gray-lighter">Did you mean…</p>
+      {isFetching ? (
+        <MovieGridSkeleton count={5} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+          {suggestions.map((movie) => (
+            <MovieCard key={movie.id} movie={movie} onSelect={onSelect} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DidYouMeanPeople({
+  kind, query, localCount, suggestions, isFetching, onSelect, onAdd, addingId,
+}: {
+  kind: 'actor' | 'director'
+  query: string
+  localCount: number
+  suggestions: PersonSearchResult[]
+  isFetching: boolean
+  onSelect: (personId: number) => void
+  onAdd: (person: PersonSearchResult) => void
+  addingId: number | null
+}) {
+  if (query.trim().length < 2 || localCount > 3) return null
+  if (!isFetching && suggestions.length === 0) return null
+
+  return (
+    <div className={localCount > 0 ? 'mt-8 flex flex-col gap-3 border-t border-white/10 pt-6' : 'flex flex-col gap-3'}>
+      {localCount === 0 && <p className="text-gray-300">Oops, I can't seem to find that {kind} here</p>}
+      <p className="text-sm font-medium text-gray-lighter">Did you mean…</p>
+      {isFetching ? (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <div className="h-16 w-16 animate-pulse rounded-full bg-navy-card/60" />
+              <div className="h-3 w-3/4 animate-pulse rounded bg-navy-card/60" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+          {suggestions.map((person) => {
+            const profileUrl = person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : null
+            return (
+              <div key={person.id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => onSelect(person.id)}
+                  className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+                    {profileUrl ? (
+                      <RetryImage
+                        src={profileUrl}
+                        alt={person.name}
+                        className="h-full w-full object-cover"
+                        fallback={<div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">{person.name.charAt(0)}</div>}
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">{person.name.charAt(0)}</div>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{person.name}</p>
+                </button>
+                <button
+                  onClick={() => onAdd(person)}
+                  disabled={addingId === person.id}
+                  className="text-[10px] text-gray-muted hover:text-teal transition-colors disabled:opacity-40"
+                  title={`Add as favourite ${kind}`}
+                >
+                  {addingId === person.id ? 'Adding…' : '+ Add'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -547,6 +653,50 @@ function WatchlistMovieModal({ movie, onClose, onRemove, onWriteReview, onPerson
   )
 }
 
+// ─── Suggested Movie Detail Modal — a "Did you mean…" pick, not yet in
+//     either list, so both watchlist and review are live options. ─────────
+function SuggestedMovieModal({ movie, onClose, isInWatchlist, onAddWatchlist, onRemoveWatchlist, onWriteReview, onPersonClick }: {
+  movie: Movie; onClose: () => void; isInWatchlist: boolean
+  onAddWatchlist: () => void; onRemoveWatchlist: () => void; onWriteReview: () => void
+  onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
+}) {
+  return (
+    <MovieDetailModal
+      movie={movie}
+      onClose={onClose}
+      onPersonClick={onPersonClick}
+      actions={[
+        {
+          key: 'watchlist',
+          label: isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist',
+          variant: isInWatchlist ? 'teal' : 'outline',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {isInWatchlist ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              )}
+            </svg>
+          ),
+          onClick: () => (isInWatchlist ? onRemoveWatchlist() : onAddWatchlist()),
+        },
+        {
+          key: 'write-review',
+          label: 'Write a Review',
+          variant: 'primary',
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          ),
+          onClick: onWriteReview,
+        },
+      ]}
+    />
+  )
+}
+
 // ─── Friends Activity Section ─────────────────────────────────────────────────
 function FriendsActivitySection({
   friendActivity, myFriendsCount, onNavigateToProfile, onPersonClick,
@@ -787,7 +937,35 @@ export default function MyMoviesPage() {
 
   const [watchedDetail, setWatchedDetail] = useState<{ movie: Movie; review: Review } | null>(null)
   const [watchlistDetail, setWatchlistDetail] = useState<Movie | null>(null)
+  const [suggestedMovieDetail, setSuggestedMovieDetail] = useState<Movie | null>(null)
   const [reviewModal, setReviewModal] = useState<ReviewModalConfig | null>(null)
+
+  // "Did you mean…" suggestions — debounced so a thin/empty local result
+  // doesn't fire a catalog search on every keystroke, only once typing pauses.
+  const debouncedSearchQ = useDebouncedValue(searchQ, 400)
+  const debouncedFavActorQ = useDebouncedValue(favActorQ, 400)
+  const debouncedFavDirectorQ = useDebouncedValue(favDirectorQ, 400)
+
+  const { data: movieSuggestionsData, isFetching: movieSuggestionsFetching } = useQuery({
+    queryKey: ['movies', 'search', 'suggestions', debouncedSearchQ],
+    queryFn: ({ signal }) => searchMovies(debouncedSearchQ.trim(), 1, signal),
+    enabled: (activeSection === 'watched' || activeSection === 'want-to-watch') && debouncedSearchQ.trim().length >= 2,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: actorSuggestionsData, isFetching: actorSuggestionsFetching } = useQuery({
+    queryKey: ['people', 'search', 'suggestions-actor', debouncedFavActorQ],
+    queryFn: ({ signal }) => searchPeople(debouncedFavActorQ.trim(), 1, signal),
+    enabled: activeSection === 'favourite-actors' && debouncedFavActorQ.trim().length >= 2,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: directorSuggestionsData, isFetching: directorSuggestionsFetching } = useQuery({
+    queryKey: ['people', 'search', 'suggestions-director', debouncedFavDirectorQ],
+    queryFn: ({ signal }) => searchPeople(debouncedFavDirectorQ.trim(), 1, signal),
+    enabled: activeSection === 'favourite-directors' && debouncedFavDirectorQ.trim().length >= 2,
+    staleTime: 1000 * 60 * 5,
+  })
 
   const { data: initialReviewsData, isLoading } = useQuery({
     queryKey: ['my-reviews', 'initial'],
@@ -811,7 +989,9 @@ export default function MyMoviesPage() {
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery({
     queryKey: ['watchlist'],
     queryFn: getWatchlist,
-    enabled: activeSection === 'want-to-watch',
+    // Also needed on 'watched' for the "Did you mean…" suggested-movie
+    // modal there, so its watchlist toggle knows the right starting state.
+    enabled: activeSection === 'want-to-watch' || activeSection === 'watched',
   })
 
   const { data: recommendations = [] } = useQuery({
@@ -832,6 +1012,19 @@ export default function MyMoviesPage() {
       qc.invalidateQueries({ queryKey: ['watchlist'] })
       setWatchlistDetail(null)
     },
+  })
+
+  const addToWatchlistMutation = useMutation({
+    mutationFn: (movie: Movie) =>
+      addToWatchlist({
+        movie_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        release_date: movie.release_date,
+        genre_ids: movie.genre_ids,
+        vote_average: movie.vote_average,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
   })
 
   const incrementRewatchMutation = useMutation({
@@ -902,6 +1095,20 @@ export default function MyMoviesPage() {
     mutationFn: (directorId: number) => removeFavouriteDirector(directorId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
   })
+
+  const addActorMutation = useMutation({
+    mutationFn: (person: PersonSearchResult) =>
+      addFavouriteActor({ person_id: person.id, name: person.name, profile_path: person.profile_path }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+  })
+  const addingActorId = addActorMutation.isPending ? addActorMutation.variables?.id ?? null : null
+
+  const addDirectorMutation = useMutation({
+    mutationFn: (person: PersonSearchResult) =>
+      addFavouriteDirector({ person_id: person.id, name: person.name, profile_path: person.profile_path }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+  })
+  const addingDirectorId = addDirectorMutation.isPending ? addDirectorMutation.variables?.id ?? null : null
 
   const { data: filterActorDetails } = useQuery({
     queryKey: ['person-details', filterActorId],
@@ -1011,6 +1218,25 @@ export default function MyMoviesPage() {
     return true
   })
 
+  // "Did you mean…" candidate pools — the full-catalog/full-people search
+  // results, minus whatever's already in the relevant list, capped at 10.
+  const watchedMovieIds = new Set(movieReviewPairs.map(({ movie }) => movie.id))
+  const watchlistMovieIds = new Set(watchlistData.map((w) => w.movies.id))
+  const favActorIds = new Set(favActors.map((a) => a.actor_id))
+  const favDirectorIds = new Set(favDirectors.map((d) => d.director_id))
+
+  const watchedSuggestions = (movieSuggestionsData?.results ?? []).filter((m) => !watchedMovieIds.has(m.id)).slice(0, 10)
+  const watchlistSuggestions = (movieSuggestionsData?.results ?? []).filter((m) => !watchlistMovieIds.has(m.id)).slice(0, 10)
+  const actorSuggestions = (actorSuggestionsData?.results ?? [])
+    .filter((p) => p.known_for_department === 'Acting' && !favActorIds.has(p.id))
+    .slice(0, 10)
+  const directorSuggestions = (directorSuggestionsData?.results ?? [])
+    .filter((p) => p.known_for_department === 'Directing' && !favDirectorIds.has(p.id))
+    .slice(0, 10)
+
+  const filteredFavActors = favActors.filter((a) => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase()))
+  const filteredFavDirectors = favDirectors.filter((d) => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase()))
+
   const showSortFilter = activeSection !== 'Recommendations' && activeSection !== 'favourite-actors' && activeSection !== 'favourite-directors' && activeSection !== 'Friends'
   const activeFiltersCount = [filterCategoryIds.length > 0 ? 'x' : null, filterGenreIds.length > 0 ? 'x' : null, filterYearFrom, filterYearTo, filterActorId ? 'x' : null, filterDirectorId ? 'x' : null].filter(Boolean).length
 
@@ -1035,7 +1261,7 @@ export default function MyMoviesPage() {
   const mobileTabs = getMobileTabOrder()
 
   const resetSectionState = () => {
-    setWatchedDetail(null); setWatchlistDetail(null)
+    setWatchedDetail(null); setWatchlistDetail(null); setSuggestedMovieDetail(null)
     setSortBy(null); setFilterCategoryIds([]); setFilterGenreIds([])
     setFilterYearFrom(''); setFilterYearTo('')
     setFilterActor(''); setFilterActorId(null); setFilterDirector(''); setFilterDirectorId(null)
@@ -1152,22 +1378,33 @@ export default function MyMoviesPage() {
           <>
             {isLoading ? (
               <MovieGridSkeleton />
-            ) : movieReviewPairs.length === 0 ? (
+            ) : movieReviewPairs.length === 0 && !searchQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
                 <p className="text-gray-300">No movies reviewed yet.</p>
                 <p className="text-xs text-gray-400">Head to <strong className="text-teal-500">Make Review</strong> to add your first one.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
-                {filteredWatched.map(({ movie, review }) => (
-                  <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
-                ))}
-                {!searchQ.trim() && filterCategoryIds.length === 0 && !filterYearFrom && !filterYearTo && !isLoadingMoreReviews && (
-                  <button onClick={() => navigate('/')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                  </button>
+              <>
+                {filteredWatched.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
+                    {filteredWatched.map(({ movie, review }) => (
+                      <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
+                    ))}
+                    {!searchQ.trim() && filterCategoryIds.length === 0 && !filterYearFrom && !filterYearTo && !isLoadingMoreReviews && (
+                      <button onClick={() => navigate('/')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+                <DidYouMeanMovies
+                  query={searchQ}
+                  localCount={filteredWatched.length}
+                  suggestions={watchedSuggestions}
+                  isFetching={movieSuggestionsFetching}
+                  onSelect={setSuggestedMovieDetail}
+                />
+              </>
               )}
               {isLoadingMoreReviews && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-muted">
@@ -1182,160 +1419,183 @@ export default function MyMoviesPage() {
           <>
             {watchlistLoading ? (
               <MovieGridSkeleton />
-            ) : watchlistData.length === 0 ? (
+            ) : watchlistData.length === 0 && !searchQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
                 <p className="text-gray-300">Your watchlist is empty.</p>
                 <p className="text-xs text-gray-400">Search for movies and click the <strong>+</strong> icon to add them here.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
-                {filteredWatchlist.map((w) => (
-                  <MovieCard key={w.movie_id} movie={w.movies as Movie} onSelect={(m) => setWatchlistDetail(m)} />
-                ))}
-                {!searchQ.trim() && !filterYearFrom && !filterYearTo && (
-                  <button onClick={() => navigate('/')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                  </button>
+              <>
+                {filteredWatchlist.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
+                    {filteredWatchlist.map((w) => (
+                      <MovieCard key={w.movie_id} movie={w.movies as Movie} onSelect={(m) => setWatchlistDetail(m)} />
+                    ))}
+                    {!searchQ.trim() && !filterYearFrom && !filterYearTo && (
+                      <button onClick={() => navigate('/')} className="flex aspect-[2/3] w-full flex-col items-center justify-center rounded-card border-2 border-dashed border-white/20 bg-navy-card/30 text-gray-muted hover:border-white/40 hover:text-gray-lighter transition-colors" title="Add a movie">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+                <DidYouMeanMovies
+                  query={searchQ}
+                  localCount={filteredWatchlist.length}
+                  suggestions={watchlistSuggestions}
+                  isFetching={movieSuggestionsFetching}
+                  onSelect={setSuggestedMovieDetail}
+                />
+              </>
             )}
           </>
         )}
 
         {activeSection === 'favourite-actors' && (
           <div className="flex flex-col gap-4">
-            {favActors.length > 0 && (
-              <input
-                type="text"
-                placeholder="Search actors…"
-                value={favActorQ}
-                onChange={(e) => setFavActorQ(e.target.value)}
-                className="input-base text-sm"
-              />
-            )}
-            {favActors.filter(a => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase())).length === 0 ? (
+            <input
+              type="text"
+              placeholder="Search actors…"
+              value={favActorQ}
+              onChange={(e) => setFavActorQ(e.target.value)}
+              className="input-base text-sm"
+            />
+            {favActors.length === 0 && !favActorQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                {favActors.length === 0 ? (
-                  <>
-                    <p className="text-gray-300">No favourite actors saved yet.</p>
-                    <p className="text-xs text-gray-400">Find an actor in the Search tab and add them to your favourites.</p>
-                  </>
-                ) : (
-                  <p className="text-gray-300">No actors match your search.</p>
-                )}
+                <p className="text-gray-300">No favourite actors saved yet.</p>
+                <p className="text-xs text-gray-400">Find an actor in the Search tab and add them to your favourites.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
-                {favActors.filter(a => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase())).map((actor) => {
-                  const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
-                  return (
-                    <div key={actor.actor_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setPersonModalId(actor.actor_id)}
-                        className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
-                      >
-                        <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
-                          {profileUrl ? (
-                            <RetryImage
-                              src={profileUrl}
-                              alt={actor.actor_name ?? ''}
-                              className="h-full w-full object-cover"
-                              fallback={
+              <>
+                {filteredFavActors.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+                    {filteredFavActors.map((actor) => {
+                      const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
+                      return (
+                        <div key={actor.actor_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setPersonModalId(actor.actor_id)}
+                            className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+                          >
+                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+                              {profileUrl ? (
+                                <RetryImage
+                                  src={profileUrl}
+                                  alt={actor.actor_name ?? ''}
+                                  className="h-full w-full object-cover"
+                                  fallback={
+                                    <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                                      {(actor.actor_name ?? '?').charAt(0)}
+                                    </div>
+                                  }
+                                />
+                              ) : (
                                 <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
                                   {(actor.actor_name ?? '?').charAt(0)}
                                 </div>
-                              }
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                              {(actor.actor_name ?? '?').charAt(0)}
+                              )}
                             </div>
-                          )}
+                            <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{actor.actor_name}</p>
+                          </button>
+                          <button
+                            onClick={() => removeActorMutation.mutate(actor.actor_id)}
+                            disabled={removeActorMutation.isPending}
+                            className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
+                            title="Remove from favourites"
+                          >
+                            Remove
+                          </button>
                         </div>
-                        <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{actor.actor_name}</p>
-                      </button>
-                      <button
-                        onClick={() => removeActorMutation.mutate(actor.actor_id)}
-                        disabled={removeActorMutation.isPending}
-                        className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
-                        title="Remove from favourites"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                      )
+                    })}
+                  </div>
+                )}
+                <DidYouMeanPeople
+                  kind="actor"
+                  query={favActorQ}
+                  localCount={filteredFavActors.length}
+                  suggestions={actorSuggestions}
+                  isFetching={actorSuggestionsFetching}
+                  onSelect={setPersonModalId}
+                  onAdd={(p) => addActorMutation.mutate(p)}
+                  addingId={addingActorId}
+                />
+              </>
             )}
           </div>
         )}
 
         {activeSection === 'favourite-directors' && (
           <div className="flex flex-col gap-4">
-            {favDirectors.length > 0 && (
-              <input
-                type="text"
-                placeholder="Search directors…"
-                value={favDirectorQ}
-                onChange={(e) => setFavDirectorQ(e.target.value)}
-                className="input-base text-sm"
-              />
-            )}
-            {favDirectors.filter(d => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase())).length === 0 ? (
+            <input
+              type="text"
+              placeholder="Search directors…"
+              value={favDirectorQ}
+              onChange={(e) => setFavDirectorQ(e.target.value)}
+              className="input-base text-sm"
+            />
+            {favDirectors.length === 0 && !favDirectorQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                {favDirectors.length === 0 ? (
-                  <>
-                    <p className="text-gray-300">No favourite directors saved yet.</p>
-                    <p className="text-xs text-gray-400">Find a director in the Search tab and add them to your favourites.</p>
-                  </>
-                ) : (
-                  <p className="text-gray-300">No directors match your search.</p>
-                )}
+                <p className="text-gray-300">No favourite directors saved yet.</p>
+                <p className="text-xs text-gray-400">Find a director in the Search tab and add them to your favourites.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
-                {favDirectors.filter(d => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase())).map((director) => {
-                  const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
-                  return (
-                    <div key={director.director_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setPersonModalId(director.director_id)}
-                        className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
-                      >
-                        <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
-                          {profileUrl ? (
-                            <RetryImage
-                              src={profileUrl}
-                              alt={director.director_name ?? ''}
-                              className="h-full w-full object-cover"
-                              fallback={
+              <>
+                {filteredFavDirectors.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+                    {filteredFavDirectors.map((director) => {
+                      const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
+                      return (
+                        <div key={director.director_id} className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-navy-card/40 p-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setPersonModalId(director.director_id)}
+                            className="w-full flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+                          >
+                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-navy-card/60">
+                              {profileUrl ? (
+                                <RetryImage
+                                  src={profileUrl}
+                                  alt={director.director_name ?? ''}
+                                  className="h-full w-full object-cover"
+                                  fallback={
+                                    <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
+                                      {(director.director_name ?? '?').charAt(0)}
+                                    </div>
+                                  }
+                                />
+                              ) : (
                                 <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
                                   {(director.director_name ?? '?').charAt(0)}
                                 </div>
-                              }
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-gray-muted text-lg font-semibold">
-                              {(director.director_name ?? '?').charAt(0)}
+                              )}
                             </div>
-                          )}
+                            <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{director.director_name}</p>
+                          </button>
+                          <button
+                            onClick={() => removeDirectorMutation.mutate(director.director_id)}
+                            disabled={removeDirectorMutation.isPending}
+                            className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
+                            title="Remove from favourites"
+                          >
+                            Remove
+                          </button>
                         </div>
-                        <p className="text-xs font-medium text-gray-lighter leading-tight line-clamp-2">{director.director_name}</p>
-                      </button>
-                      <button
-                        onClick={() => removeDirectorMutation.mutate(director.director_id)}
-                        disabled={removeDirectorMutation.isPending}
-                        className="text-[10px] text-gray-muted hover:text-pink-brand transition-colors disabled:opacity-40"
-                        title="Remove from favourites"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                      )
+                    })}
+                  </div>
+                )}
+                <DidYouMeanPeople
+                  kind="director"
+                  query={favDirectorQ}
+                  localCount={filteredFavDirectors.length}
+                  suggestions={directorSuggestions}
+                  isFetching={directorSuggestionsFetching}
+                  onSelect={setPersonModalId}
+                  onAdd={(p) => addDirectorMutation.mutate(p)}
+                  addingId={addingDirectorId}
+                />
+              </>
             )}
           </div>
         )}
@@ -1397,6 +1657,21 @@ export default function MyMoviesPage() {
           onWriteReview={() => setReviewModal({
             mode: 'create', movie: watchlistDetail,
             onSaved: () => { removeFromWatchlistMutation.mutate(watchlistDetail.id); setWatchlistDetail(null) },
+          })}
+          onPersonClick={(pid) => setPersonModalId(pid)}
+        />
+      )}
+
+      {suggestedMovieDetail && !reviewModal && (
+        <SuggestedMovieModal
+          movie={suggestedMovieDetail}
+          onClose={() => setSuggestedMovieDetail(null)}
+          isInWatchlist={watchlistMovieIds.has(suggestedMovieDetail.id)}
+          onAddWatchlist={() => addToWatchlistMutation.mutate(suggestedMovieDetail)}
+          onRemoveWatchlist={() => removeFromWatchlistMutation.mutate(suggestedMovieDetail.id)}
+          onWriteReview={() => setReviewModal({
+            mode: 'create', movie: suggestedMovieDetail,
+            onSaved: () => setSuggestedMovieDetail(null),
           })}
           onPersonClick={(pid) => setPersonModalId(pid)}
         />
