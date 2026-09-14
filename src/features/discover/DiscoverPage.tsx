@@ -56,19 +56,19 @@ function CloseIcon() {
 }
 
 // ─── Section header ("View All" link) ──────────────────────────────────────
-function SectionHeader({ title, onViewAll }: { title: string; onViewAll: () => void }) {
+function SectionHeader({ title, subtitle, onViewAll }: { title: string; subtitle: string; onViewAll: () => void }) {
   return (
     <button
       onClick={onViewAll}
-      className="group flex w-full items-center justify-between gap-2 text-left"
+      className="group flex w-full items-start justify-between gap-2 text-left"
     >
-      <span
-        style={{ fontFamily: '"Source Sans 3", sans-serif' }}
-        className="text-xl font-medium text-gray-lighter sm:text-2xl"
-      >
-        {title}
-      </span>
-      <span className="flex items-center gap-1 text-xs font-medium text-teal opacity-80 transition-opacity group-hover:opacity-100">
+      <div>
+        <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
+          {title}
+        </h2>
+        <p className="text-sm text-gray-muted">{subtitle}</p>
+      </div>
+      <span className="mt-1 flex shrink-0 items-center gap-1 text-xs font-medium text-teal opacity-80 transition-opacity group-hover:opacity-100">
         View All
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -396,7 +396,7 @@ export default function DiscoverPage() {
 
             <div className="flex w-full flex-col gap-10 xl:h-full xl:min-h-0">
               <section className="flex w-full flex-col gap-3 xl:min-h-0 xl:flex-1">
-                <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
+                <SectionHeader title="Most Popular This Week" subtitle="What everyone's watching right now" onViewAll={() => navigate('/discover/popular')} />
                 {trendingLoading ? (
                   <CarouselSkeleton />
                 ) : (
@@ -409,7 +409,7 @@ export default function DiscoverPage() {
               </section>
 
               <section className="flex w-full flex-col gap-3 xl:min-h-0 xl:flex-1">
-                <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
+                <SectionHeader title="For You" subtitle="Picks based on your taste and friends" onViewAll={() => navigate('/discover/for-you')} />
                 {forYouLoading ? (
                   <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
                 ) : (
