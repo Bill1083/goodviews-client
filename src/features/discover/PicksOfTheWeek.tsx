@@ -29,7 +29,7 @@ function Tile({
     <div
       onClick={() => onSelect(movie)}
       className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${
-        isHero ? 'h-64 sm:h-80 md:h-full' : 'h-40 sm:h-48 md:h-full'
+        isHero ? 'h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]' : 'h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72'
       } ${className}`}
     >
       {backdropUrl && (
@@ -72,7 +72,7 @@ function TileSkeleton({ size }: { size: 'hero' | 'small' }) {
   return (
     <div
       className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${
-        size === 'hero' ? 'h-64 sm:h-80 md:h-full' : 'h-40 sm:h-48 md:h-full'
+        size === 'hero' ? 'h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]' : 'h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72'
       }`}
     />
   )
@@ -90,25 +90,23 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
         <p className="text-sm text-gray-muted">Your top matches, refreshed every week</p>
       </div>
 
-      {/* md:h-[26rem] gives the grid a real height to distribute between its
-          two 1fr rows — without it, "md:h-full" on each Tile has nothing to
-          resolve against (the grid container's own height is otherwise just
-          "auto", sized by content, which is circular for a fr-based row) and
-          every tile collapses to a sliver. Matches DiscoverListPage's own
-          hero height for visual consistency between the two. */}
-      <div className="grid grid-cols-1 gap-4 md:h-[26rem] md:grid-cols-3 md:grid-rows-2">
+      {/* Hero on top, the next two picks in a row below it — the same stack
+          at every width (rather than moving the pair beside the hero from
+          md: up) so the hero reads as a real hero at any size and the
+          section keeps growing downward instead of just sideways. */}
+      <div className="flex flex-col gap-4">
         {isLoading ? (
           <>
             <TileSkeleton size="hero" />
-            <div className="grid grid-cols-2 gap-4 md:contents">
+            <div className="grid grid-cols-2 gap-4">
               <TileSkeleton size="small" />
               <TileSkeleton size="small" />
             </div>
           </>
         ) : (
           <>
-            <Tile movie={movies[0]} onSelect={onSelect} size="hero" className="md:col-span-2 md:row-span-2" />
-            <div className="grid grid-cols-2 gap-4 md:contents">
+            <Tile movie={movies[0]} onSelect={onSelect} size="hero" />
+            <div className="grid grid-cols-2 gap-4">
               {movies[1] && <Tile movie={movies[1]} onSelect={onSelect} size="small" />}
               {movies[2] && <Tile movie={movies[2]} onSelect={onSelect} size="small" />}
             </div>

@@ -381,43 +381,40 @@ export default function DiscoverPage() {
           )}
         </div>
 
-        {/* Browsing view — a plain stack below xl:, but wide enough screens have
-            real room to spare next to the Picks hero (which has its own fixed
-            height at md:+), so from xl: up the two carousels move into a
-            second column alongside it instead of trailing further down the
-            page. Pure CSS grid reflow — same component instances either way,
-            nothing duplicated/remounted at the breakpoint. */}
+        {/* Browsing view — one full-width column at every size. On a wide
+            screen the wider <main> above already gives each section more
+            room; Picks' hero/tile heights and MovieCarousel's visible-item
+            count both scale up with the extra width themselves, so the page
+            fills out rather than just growing a side column. */}
         {!hasTyped && (
-          <div className="grid w-full grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start xl:gap-8">
+          <div className="flex w-full flex-col gap-10">
             <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
 
-            <div className="flex w-full flex-col gap-10">
-              <section className="flex w-full flex-col gap-3">
-                <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
-                {trendingLoading ? (
-                  <CarouselSkeleton />
-                ) : (
-                  <MovieCarousel
-                    movies={trending?.results ?? []}
-                    onOpenAll={() => navigate('/discover/popular')}
-                    onSelectMovie={setSelectedMovie}
-                  />
-                )}
-              </section>
+            <section className="flex w-full flex-col gap-3">
+              <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
+              {trendingLoading ? (
+                <CarouselSkeleton />
+              ) : (
+                <MovieCarousel
+                  movies={trending?.results ?? []}
+                  onOpenAll={() => navigate('/discover/popular')}
+                  onSelectMovie={setSelectedMovie}
+                />
+              )}
+            </section>
 
-              <section className="flex w-full flex-col gap-3">
-                <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
-                {forYouLoading ? (
-                  <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
-                ) : (
-                  <MovieCarousel
-                    movies={forYou?.results ?? []}
-                    onOpenAll={() => navigate('/discover/for-you')}
-                    onSelectMovie={setSelectedMovie}
-                  />
-                )}
-              </section>
-            </div>
+            <section className="flex w-full flex-col gap-3">
+              <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
+              {forYouLoading ? (
+                <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
+              ) : (
+                <MovieCarousel
+                  movies={forYou?.results ?? []}
+                  onOpenAll={() => navigate('/discover/for-you')}
+                  onSelectMovie={setSelectedMovie}
+                />
+              )}
+            </section>
           </div>
         )}
 

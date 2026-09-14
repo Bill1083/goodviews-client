@@ -86,6 +86,11 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
   const slotWidth = Math.min(220, Math.max(130, containerWidth / 3.7))
   const posterWidth = slotWidth * 0.78
   const posterHeight = posterWidth * 1.5
+  // How many slots fit to each side of center — on a narrow container this
+  // is just the original fixed 2, but a wide one (e.g. a full-width row on
+  // a big monitor) gets more posters actually filling it instead of the
+  // same ~5-poster cluster floating in a sea of blank gutter.
+  const visibleHalf = Math.max(2, containerWidth / slotWidth / 2)
 
   const handlePointerDown = (e: React.PointerEvent) => {
     draggingRef.current = true
@@ -143,12 +148,12 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     return <div ref={containerRef} className="h-40 w-full" />
   }
 
-  const rangeStart = Math.floor(offset - 2)
-  const rangeEnd = Math.ceil(offset + 2)
+  const rangeStart = Math.floor(offset - visibleHalf)
+  const rangeEnd = Math.ceil(offset + visibleHalf)
   const items: { key: number; movie: Movie; position: number }[] = []
   for (let i = rangeStart; i <= rangeEnd; i++) {
     const position = i - offset
-    if (Math.abs(position) > 2.1) continue
+    if (Math.abs(position) > visibleHalf + 0.1) continue
     const idx = ((i % n) + n) % n
     items.push({ key: i, movie: movies[idx], position })
   }
@@ -167,8 +172,15 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     >
       {items.map(({ key, movie, position }) => {
         const absPos = Math.abs(position)
-        const scale = absPos <= 1 ? 1.15 - 0.2 * absPos : 0.95 - 0.45 * Math.min(1, absPos - 1)
-        const opacity = absPos <= 1 ? 1 : Math.max(0, 1 - (absPos - 1))
+        // Falloff progress from "just past the focal item" (0) to "at the
+        // edge of what's visible" (1) — spread across the whole visible
+        // range instead of a fixed 2 slots, so a wide carousel with many
+        // more visible posters still fades its outermost ones out instead
+        // of cutting them off sharply. Identical to the original fixed-2
+        // falloff whenever visibleHalf is at its floor of 2.
+        const falloff = Math.min(1, (absPos - 1) / (visibleHalf - 1))
+        const scale = absPos <= 1 ? 1.15 - 0.2 * absPos : 0.95 - 0.45 * falloff
+        const opacity = absPos <= 1 ? 1 : Math.max(0, 1 - falloff)
         const left = containerWidth / 2 + position * slotWidth
 
         return (
