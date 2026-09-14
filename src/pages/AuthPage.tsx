@@ -7,20 +7,9 @@ import type { Movie } from '../types'
 import { PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 import { useAuthStore } from '../store/authStore'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185'
-
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
-  useEffect(() => {
-    const mql = window.matchMedia(query)
-    const handler = () => setMatches(mql.matches)
-    handler()
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [query])
-  return matches
-}
 
 /** Desktop: posters fade in from random spawn points and drift further outward,
  *  one at a time — some "currently popular" (trending) titles mixed with

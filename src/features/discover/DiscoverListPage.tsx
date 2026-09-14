@@ -162,7 +162,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
 
   return (
     <>
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 2xl:max-w-[1600px]">
         {/* Hero — features the #1 movie in this list as a big banner */}
         <div
           onClick={() => topMovie && setSelectedMovie(topMovie)}
@@ -244,7 +244,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
             <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
           )}
 
-          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
             {(data?.results ?? []).map((movie, i) => (
               <div
                 key={movie.id}

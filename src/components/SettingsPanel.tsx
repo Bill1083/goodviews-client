@@ -39,10 +39,13 @@ const DangerIcon = () => (
 )
 
 /** The full settings UI — shared between the full-page /settings route (for
- *  direct links/bookmarks) and the SettingsDrawer opened from the navbar on
- *  every other page. `onClose` is "I'm done here": it navigates back on the
- *  page, or just closes the drawer. */
-export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClose: () => void; closeLabel?: string }) {
+ *  direct links/bookmarks), the SettingsDrawer opened from the navbar on
+ *  every other page, and an always-visible inline column on Profile at wide
+ *  viewports. `onClose` is "I'm done here": it navigates back on the page,
+ *  or closes the drawer — omit it (as the inline column does) for a
+ *  persistent, non-dismissible instance, which also drops the close button
+ *  and shrinks the header to fit a narrower column. */
+export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClose?: () => void; closeLabel?: string }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const userEmail = useAuthStore((s) => s.user?.email) ?? ''
@@ -230,11 +233,14 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
   return (
     <>
-      {/* Header */}
+      {/* Header — the icon/heading only scale up to the desktop size when
+          there's a close button making the page/drawer's case (a narrow
+          inline column is still viewed on a wide screen, so sm: alone
+          can't tell those two apart). */}
       <div className="flex flex-wrap items-center gap-4 sm:gap-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-12 w-12 text-gray-lighter shrink-0 sm:h-20 sm:w-20"
+          className={`text-gray-lighter shrink-0 ${onClose ? 'h-12 w-12 sm:h-20 sm:w-20' : 'h-10 w-10'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -247,24 +253,26 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
           />
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <h1 className="text-2xl font-bold text-gray-lighter flex-1 min-w-[140px] sm:text-4xl">Settings</h1>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-colors sm:px-5 sm:py-2.5"
-          style={{ backgroundColor: '#7c1e4e' }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+        <h1 className={`font-bold text-gray-lighter flex-1 min-w-[140px] ${onClose ? 'text-2xl sm:text-4xl' : 'text-xl'}`}>Settings</h1>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-colors sm:px-5 sm:py-2.5"
+            style={{ backgroundColor: '#7c1e4e' }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          {closeLabel}
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {closeLabel}
+          </button>
+        )}
       </div>
 
       {/* Settings list */}

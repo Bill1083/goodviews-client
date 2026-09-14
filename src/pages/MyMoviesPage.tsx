@@ -58,7 +58,7 @@ const SIDEBAR_LINKS: { id: SidebarSection; label: string }[] = [
 // ─── Grid loading skeleton (watched / want-to-watch) ──────────────────────────
 function MovieGridSkeleton({ count = 10 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <div className="aspect-[2/3] w-full animate-pulse rounded-card bg-navy-card/60" />
@@ -1046,7 +1046,7 @@ export default function MyMoviesPage() {
 
   return (
     // Refactored for mobile: flex-col on mobile stacks sidebar below content; switches to row on md+
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8 2xl:max-w-[1600px]">
       {/* Refactored for mobile: sidebar hidden on small screens, shown md+ */}
       <aside className="hidden md:block w-60 shrink-0 self-start sticky top-20">
         <ul className="flex flex-col gap-8">
@@ -1158,7 +1158,7 @@ export default function MyMoviesPage() {
                 <p className="text-xs text-gray-400">Head to <strong className="text-teal-500">Make Review</strong> to add your first one.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5"> {/* Refactored for mobile: 2 cols on mobile */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
                 {filteredWatched.map(({ movie, review }) => (
                   <MovieCard key={movie.id} movie={movie} onSelect={() => setWatchedDetail({ movie, review })} />
                 ))}
@@ -1188,7 +1188,7 @@ export default function MyMoviesPage() {
                 <p className="text-xs text-gray-400">Search for movies and click the <strong>+</strong> icon to add them here.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5"> {/* Refactored for mobile: 2 cols on mobile */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"> {/* Refactored for mobile: 2 cols on mobile */}
                 {filteredWatchlist.map((w) => (
                   <MovieCard key={w.movie_id} movie={w.movies as Movie} onSelect={(m) => setWatchlistDetail(m)} />
                 ))}
@@ -1225,7 +1225,7 @@ export default function MyMoviesPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
                 {favActors.filter(a => !favActorQ.trim() || (a.actor_name ?? '').toLowerCase().includes(favActorQ.toLowerCase())).map((actor) => {
                   const profileUrl = actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
                   return (
@@ -1294,7 +1294,7 @@ export default function MyMoviesPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
                 {favDirectors.filter(d => !favDirectorQ.trim() || (d.director_name ?? '').toLowerCase().includes(favDirectorQ.toLowerCase())).map((director) => {
                   const profileUrl = director.profile_path ? `https://image.tmdb.org/t/p/w185${director.profile_path}` : null
                   return (

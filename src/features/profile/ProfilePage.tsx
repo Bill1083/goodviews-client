@@ -4,7 +4,9 @@ import { useAuthStore } from '../../store/authStore'
 import ColorPicker from '../../components/ColorPicker'
 import Avatar from '../../components/Avatar'
 import AvatarPicker from '../../components/AvatarPicker'
+import SettingsPanel from '../../components/SettingsPanel'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import type { Category, FriendGroup, UserSearchResult } from '../../types'
 import type { FriendRequest } from '../../types'
 import {
@@ -166,6 +168,10 @@ export default function ProfilePage() {
   // groups exist the page itself never grows past the viewport. The friends
   // list and category/group panel scroll internally instead.
   useBodyScrollLock(true)
+
+  // Wide enough to comfortably fit a third column — settings is shown inline
+  // instead of making it another click away behind the navbar drawer.
+  const showInlineSettings = useMediaQuery('(min-width: 1280px)')
 
   const username =
     (user?.user_metadata?.['username'] as string | undefined) ??
@@ -429,7 +435,7 @@ export default function ProfilePage() {
   const avatarZoom = profileData?.avatar_zoom ?? 1
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-49px)] md:h-[calc(100dvh-67px)] max-w-4xl flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
+    <main className="mx-auto flex h-[calc(100dvh-49px)] md:h-[calc(100dvh-67px)] max-w-4xl flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-10 xl:max-w-[1400px]">
       {/* ── Profile Header ─────────────────────────────────────────────────── */}
       {isEditingProfile ? (
         /* ── Edit mode ── */
@@ -746,6 +752,16 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Settings — inline on screens wide enough to give it real room,
+            instead of only being reachable via the navbar drawer. Its own
+            scroll region, same as the two columns to its left, so it can
+            never grow the fixed-height page. */}
+        {showInlineSettings && (
+          <div className="flex h-full w-[420px] shrink-0 flex-col gap-6 overflow-y-auto rounded-2xl border border-white/10 bg-navy-card/60 p-5">
+            <SettingsPanel />
+          </div>
+        )}
       </div>
 
       {/* ── Avatar picker modal ─────────────────────────────────────────────── */}

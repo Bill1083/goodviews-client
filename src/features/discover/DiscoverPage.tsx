@@ -335,7 +335,7 @@ export default function DiscoverPage() {
 
   return (
     <>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 xl:max-w-6xl 2xl:max-w-[1600px]">
         {/* Top bar: title / search toggle */}
         <div className="flex w-full items-center gap-4">
           {!searchOpen ? (
@@ -381,36 +381,43 @@ export default function DiscoverPage() {
           )}
         </div>
 
-        {/* Browsing view */}
+        {/* Browsing view — a plain stack below xl:, but wide enough screens have
+            real room to spare next to the Picks hero (which has its own fixed
+            height at md:+), so from xl: up the two carousels move into a
+            second column alongside it instead of trailing further down the
+            page. Pure CSS grid reflow — same component instances either way,
+            nothing duplicated/remounted at the breakpoint. */}
         {!hasTyped && (
-          <div className="flex w-full flex-col gap-10">
+          <div className="grid w-full grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start xl:gap-8">
             <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
 
-            <section className="flex w-full flex-col gap-3">
-              <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
-              {trendingLoading ? (
-                <CarouselSkeleton />
-              ) : (
-                <MovieCarousel
-                  movies={trending?.results ?? []}
-                  onOpenAll={() => navigate('/discover/popular')}
-                  onSelectMovie={setSelectedMovie}
-                />
-              )}
-            </section>
+            <div className="flex w-full flex-col gap-10">
+              <section className="flex w-full flex-col gap-3">
+                <SectionHeader title="Most Popular This Week" onViewAll={() => navigate('/discover/popular')} />
+                {trendingLoading ? (
+                  <CarouselSkeleton />
+                ) : (
+                  <MovieCarousel
+                    movies={trending?.results ?? []}
+                    onOpenAll={() => navigate('/discover/popular')}
+                    onSelectMovie={setSelectedMovie}
+                  />
+                )}
+              </section>
 
-            <section className="flex w-full flex-col gap-3">
-              <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
-              {forYouLoading ? (
-                <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
-              ) : (
-                <MovieCarousel
-                  movies={forYou?.results ?? []}
-                  onOpenAll={() => navigate('/discover/for-you')}
-                  onSelectMovie={setSelectedMovie}
-                />
-              )}
-            </section>
+              <section className="flex w-full flex-col gap-3">
+                <SectionHeader title="For You" onViewAll={() => navigate('/discover/for-you')} />
+                {forYouLoading ? (
+                  <CarouselSkeleton caption="Hold tight while we find movies that fit your preferences!" />
+                ) : (
+                  <MovieCarousel
+                    movies={forYou?.results ?? []}
+                    onOpenAll={() => navigate('/discover/for-you')}
+                    onSelectMovie={setSelectedMovie}
+                  />
+                )}
+              </section>
+            </div>
           </div>
         )}
 
@@ -443,7 +450,7 @@ export default function DiscoverPage() {
 
                 {data && data.results.length > 0 && (
                   <>
-                    <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
+                    <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                       {data.results.map((movie) => (
                         <MovieCard
                           key={movie.id}
@@ -479,7 +486,7 @@ export default function DiscoverPage() {
 
                 {peopleData && peopleData.results.length > 0 && (
                   <>
-                    <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                    <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
                       {peopleData.results.map((person) => (
                         <PersonCard
                           key={person.id}
