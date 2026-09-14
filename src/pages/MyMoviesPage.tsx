@@ -125,7 +125,7 @@ function DidYouMeanPeople({
       {localCount === 0 && <p className="text-gray-300">Oops, I can't seem to find that {kind} here</p>}
       <p className="text-sm font-medium text-gray-lighter">Did you mean…</p>
       {isFetching ? (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-2">
               <div className="h-16 w-16 animate-pulse rounded-full bg-navy-card/60" />
@@ -134,7 +134,7 @@ function DidYouMeanPeople({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
           {suggestions.map((person) => {
             const profileUrl = person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : null
             return (
@@ -1609,7 +1609,7 @@ export default function MyMoviesPage() {
         )}
 
         {activeSection === 'favourite-actors' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex max-w-4xl flex-col gap-4">
             <input
               type="text"
               placeholder="Search actors…"
@@ -1659,7 +1659,7 @@ export default function MyMoviesPage() {
         )}
 
         {activeSection === 'favourite-directors' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex max-w-4xl flex-col gap-4">
             <input
               type="text"
               placeholder="Search directors…"
