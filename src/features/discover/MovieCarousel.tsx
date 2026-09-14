@@ -38,9 +38,15 @@ interface Props {
   movies: Movie[]
   onOpenAll: () => void
   onSelectMovie: (movie: Movie) => void
+  /** Caps poster (and so carousel) height to fit a fixed-height parent
+   *  instead of only ever sizing off width — e.g. Discover's wide-screen
+   *  layout, where this carousel shares a fixed-height row with its
+   *  section header and needs to not run past it. Omit for the normal
+   *  width-only sizing. */
+  maxHeight?: number
 }
 
-export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Props) {
+export default function MovieCarousel({ movies, onOpenAll, onSelectMovie, maxHeight }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -83,9 +89,14 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
     }
   }, [n])
 
-  const slotWidth = Math.min(220, Math.max(130, containerWidth / 3.7))
-  const posterWidth = slotWidth * 0.78
-  const posterHeight = posterWidth * 1.5
+  const widthDerivedSlotWidth = Math.min(220, Math.max(130, containerWidth / 3.7))
+  const widthDerivedPosterHeight = widthDerivedSlotWidth * 0.78 * 1.5
+  // If a maxHeight was given, shrink everything (poster, and so slot width
+  // too) down to whatever fits it — the two are always kept in the same
+  // ratio, so this never distorts the posters, just scales them.
+  const posterHeight = maxHeight ? Math.min(widthDerivedPosterHeight, maxHeight / 1.25) : widthDerivedPosterHeight
+  const posterWidth = posterHeight / 1.5
+  const slotWidth = posterWidth / 0.78
   // How many slots fit to each side of center — on a narrow container this
   // is just the original fixed 2, but a wide one (e.g. a full-width row on
   // a big monitor) gets more posters actually filling it instead of the

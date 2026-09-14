@@ -29,7 +29,7 @@ function Tile({
     <div
       onClick={() => onSelect(movie)}
       className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${
-        isHero ? 'h-64 sm:h-80 md:h-full xl:h-[28rem] 2xl:h-[32rem]' : 'h-40 sm:h-48 md:h-full xl:h-64 2xl:h-72'
+        isHero ? 'h-64 sm:h-80 md:h-full xl:h-auto' : 'h-40 sm:h-48 md:h-full xl:h-auto'
       } ${className}`}
     >
       {backdropUrl && (
@@ -72,7 +72,7 @@ function TileSkeleton({ size }: { size: 'hero' | 'small' }) {
   return (
     <div
       className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${
-        size === 'hero' ? 'h-64 sm:h-80 md:h-full xl:h-[28rem] 2xl:h-[32rem]' : 'h-40 sm:h-48 md:h-full xl:h-64 2xl:h-72'
+        size === 'hero' ? 'h-64 sm:h-80 md:h-full xl:h-auto' : 'h-40 sm:h-48 md:h-full xl:h-auto'
       }`}
     />
   )
@@ -82,8 +82,8 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
   if (!isLoading && movies.length === 0) return null
 
   return (
-    <section className="flex w-full flex-col gap-3">
-      <div>
+    <section className="flex w-full flex-col gap-3 xl:h-full xl:min-h-0">
+      <div className="xl:shrink-0">
         <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
           Movie Picks of the Week
         </h2>
@@ -97,23 +97,24 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
              because there's no room for anything else.
            - md–lg: pair moves beside the hero (the classic 2/3 + 1/3 grid)
              now that a single full-width page column has room to spare.
-           - xl+: DiscoverPage splits into two page-level columns here, so
-             this section is back to roughly half the screen — stacked
-             again, just bigger, rather than squeezing the side-by-side
-             version into a narrower column. */}
-      <div className="flex flex-col gap-4 md:grid md:h-[26rem] md:grid-cols-3 md:grid-rows-2 xl:flex xl:h-auto xl:flex-col">
+           - xl+: DiscoverPage splits into two page-level columns and
+             height-caps the whole row to the viewport here, so this section
+             gets a fixed height to fill — stacked again (bigger), with the
+             hero/pair sized by flex fraction (2:1) instead of a fixed rem
+             value, so they always exactly fill it with no overflow. */}
+      <div className="flex flex-col gap-4 md:grid md:h-[26rem] md:grid-cols-3 md:grid-rows-2 xl:flex xl:h-auto xl:min-h-0 xl:flex-1 xl:flex-col">
         {isLoading ? (
           <>
             <TileSkeleton size="hero" />
-            <div className="grid grid-cols-2 gap-4 md:contents xl:grid">
+            <div className="grid grid-cols-2 gap-4 md:contents xl:grid xl:min-h-0 xl:flex-1">
               <TileSkeleton size="small" />
               <TileSkeleton size="small" />
             </div>
           </>
         ) : (
           <>
-            <Tile movie={movies[0]} onSelect={onSelect} size="hero" className="md:col-span-2 md:row-span-2" />
-            <div className="grid grid-cols-2 gap-4 md:contents xl:grid">
+            <Tile movie={movies[0]} onSelect={onSelect} size="hero" className="md:col-span-2 md:row-span-2 xl:min-h-0 xl:flex-[2]" />
+            <div className="grid grid-cols-2 gap-4 md:contents xl:grid xl:min-h-0 xl:flex-1">
               {movies[1] && <Tile movie={movies[1]} onSelect={onSelect} size="small" />}
               {movies[2] && <Tile movie={movies[2]} onSelect={onSelect} size="small" />}
             </div>
