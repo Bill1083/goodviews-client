@@ -35,7 +35,7 @@ import RetryImage from '../components/RetryImage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { TMDB_GENRES } from '../utils/genres'
-import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews, PersonSearchResult } from '../types'
+import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews, PersonSearchResult, FilmographyEntry } from '../types'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
 type SortKey = 'date-desc' | 'date-asc' | 'release-asc' | 'release-desc' | 'rating-high' | 'rating-low' | 'rating-friends-high' | 'rating-friends-low' | 'rating-public-high' | 'rating-public-low' | 'alpha-az' | 'alpha-za'
@@ -179,7 +179,7 @@ function DidYouMeanPeople({
 //     see what they've been in, not to look at a grid of faces, so each
 //     favourite is a shelf: who they are, then their movies right there. ──
 function PersonFilmographyRow({
-  personId, name, profilePath, type, onOpenPerson, onRemove, removing, onSelectMovie,
+  personId, name, profilePath, type, onOpenPerson, onRemove, removing, onSelectMovie, genreScore, watchlistMovieIds,
 }: {
   personId: number
   name: string
@@ -189,6 +189,11 @@ function PersonFilmographyRow({
   onRemove: () => void
   removing: boolean
   onSelectMovie: (movie: Movie) => void
+  /** Per-genre affinity built from the user's own ratings — positive for
+   *  genres they tend to rate highly, negative for ones they don't. Empty
+   *  when there's no rating history to draw one from. */
+  genreScore: Map<number, number>
+  watchlistMovieIds: Set<number>
 }) {
   const { data: details, isLoading } = useQuery({
     queryKey: ['person-details', personId],
@@ -199,7 +204,26 @@ function PersonFilmographyRow({
   const credits = type === 'actor'
     ? (details?.movie_credits?.cast ?? [])
     : (details?.movie_credits?.crew ?? []).filter((c) => c.job === 'Director')
-  const films = [...credits].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)).slice(0, 12)
+
+  // Closest thing to the For You algorithm we can do client-side: rank by
+  // how well each film's genres match the genres the user actually rates
+  // highly. Falls through to "already on your watchlist" and then plain
+  // popularity — both when there's no genre signal at all (a new account)
+  // and as tie-breaks when there is one.
+  const genreAffinity = (film: FilmographyEntry) => {
+    const genres = film.genre_ids ?? []
+    if (genres.length === 0) return 0
+    return genres.reduce((sum, g) => sum + (genreScore.get(g) ?? 0), 0) / genres.length
+  }
+  const films = [...credits]
+    .sort((a, b) => {
+      const affinityDiff = genreAffinity(b) - genreAffinity(a)
+      if (affinityDiff !== 0) return affinityDiff
+      const watchlistDiff = Number(watchlistMovieIds.has(b.id)) - Number(watchlistMovieIds.has(a.id))
+      if (watchlistDiff !== 0) return watchlistDiff
+      return (b.popularity ?? 0) - (a.popularity ?? 0)
+    })
+    .slice(0, 5)
 
   const profileUrl = profilePath ? `https://image.tmdb.org/t/p/w185${profilePath}` : null
 
@@ -236,17 +260,17 @@ function PersonFilmographyRow({
       </div>
 
       {isLoading ? (
-        <div className="flex gap-3 overflow-hidden">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="aspect-[2/3] w-24 shrink-0 animate-pulse rounded-lg bg-navy-card/60" />
+        <div className="flex gap-4 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] w-36 shrink-0 animate-pulse rounded-lg bg-navy-card/60" />
           ))}
         </div>
       ) : films.length === 0 ? (
         <p className="text-xs text-gray-muted italic">No known movie credits.</p>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="flex gap-4 overflow-x-auto pb-1">
           {films.map((film) => {
-            const posterUrl = film.poster_path ? `https://image.tmdb.org/t/p/w185${film.poster_path}` : null
+            const posterUrl = film.poster_path ? `https://image.tmdb.org/t/p/w342${film.poster_path}` : null
             return (
               <button
                 key={film.id}
@@ -255,7 +279,7 @@ function PersonFilmographyRow({
                   id: film.id, title: film.title, poster_path: film.poster_path,
                   release_date: film.release_date ?? null, vote_average: film.vote_average, genre_ids: film.genre_ids,
                 })}
-                className="group flex w-24 shrink-0 flex-col gap-1.5 text-left"
+                className="group flex w-36 shrink-0 flex-col gap-2 text-left"
               >
                 <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-navy-card/60">
                   {posterUrl ? (
@@ -263,13 +287,13 @@ function PersonFilmographyRow({
                       src={posterUrl}
                       alt={film.title}
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      fallback={<div className="flex h-full w-full items-center justify-center p-1 text-center text-[9px] text-gray-muted">{film.title}</div>}
+                      fallback={<div className="flex h-full w-full items-center justify-center p-1 text-center text-xs text-gray-muted">{film.title}</div>}
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center p-1 text-center text-[9px] text-gray-muted">{film.title}</div>
+                    <div className="flex h-full w-full items-center justify-center p-1 text-center text-xs text-gray-muted">{film.title}</div>
                   )}
                 </div>
-                <p className="text-[11px] leading-snug text-gray-lighter line-clamp-2">{film.title}</p>
+                <p className="text-xs leading-snug text-gray-lighter line-clamp-2">{film.title}</p>
               </button>
             )
           })}
@@ -1331,6 +1355,19 @@ export default function MyMoviesPage() {
   // results, minus whatever's already in the relevant list, capped at 10.
   const watchedMovieIds = new Set(movieReviewPairs.map(({ movie }) => movie.id))
   const watchlistMovieIds = new Set(watchlistData.map((w) => w.movies.id))
+
+  // Rough client-side stand-in for the For You algorithm, for ranking a
+  // favourite actor/director's filmography: genres from movies the user
+  // rated well score positive, genres from ones they rated poorly score
+  // negative. Empty (and so a no-op) until they've rated anything.
+  const genreScore = new Map<number, number>()
+  for (const { movie, review } of movieReviewPairs) {
+    const weight = review.rating - 3 // ratings are 1-5; center on neutral
+    if (weight === 0) continue
+    for (const gid of movie.genre_ids ?? []) {
+      genreScore.set(gid, (genreScore.get(gid) ?? 0) + weight)
+    }
+  }
   const favActorIds = new Set(favActors.map((a) => a.actor_id))
   const favDirectorIds = new Set(favDirectors.map((d) => d.director_id))
 
@@ -1578,7 +1615,7 @@ export default function MyMoviesPage() {
               placeholder="Search actors…"
               value={favActorQ}
               onChange={(e) => setFavActorQ(e.target.value)}
-              className="input-base text-sm"
+              className="rounded-full border border-white/15 bg-navy-card/40 px-4 py-2 text-sm text-gray-lighter placeholder-gray-muted focus:outline-none focus:ring-2 focus:ring-teal/40"
             />
             {favActors.length === 0 && !favActorQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -1600,6 +1637,8 @@ export default function MyMoviesPage() {
                         onRemove={() => removeActorMutation.mutate(actor.actor_id)}
                         removing={removeActorMutation.isPending}
                         onSelectMovie={handleFilmographyMovieSelect}
+                        genreScore={genreScore}
+                        watchlistMovieIds={watchlistMovieIds}
                       />
                     ))}
                   </div>
@@ -1626,7 +1665,7 @@ export default function MyMoviesPage() {
               placeholder="Search directors…"
               value={favDirectorQ}
               onChange={(e) => setFavDirectorQ(e.target.value)}
-              className="input-base text-sm"
+              className="rounded-full border border-white/15 bg-navy-card/40 px-4 py-2 text-sm text-gray-lighter placeholder-gray-muted focus:outline-none focus:ring-2 focus:ring-teal/40"
             />
             {favDirectors.length === 0 && !favDirectorQ.trim() ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -1648,6 +1687,8 @@ export default function MyMoviesPage() {
                         onRemove={() => removeDirectorMutation.mutate(director.director_id)}
                         removing={removeDirectorMutation.isPending}
                         onSelectMovie={handleFilmographyMovieSelect}
+                        genreScore={genreScore}
+                        watchlistMovieIds={watchlistMovieIds}
                       />
                     ))}
                   </div>
