@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { getMovieDetails, getMovieReviews } from '../services/apiClient'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createReview, getMovieDetails, getMovieReviews, updateReview } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
@@ -224,7 +224,10 @@ export default function MovieDetailModal({
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
+  const [showMore, setShowMore] = useState(false)
+  const [optimisticRating, setOptimisticRating] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const queryClient = useQueryClient()
 
   useBodyScrollLock(true)
   useCloseOnBack(onClose)
@@ -277,6 +280,38 @@ export default function MovieDetailModal({
   const recommenderId = recommendation?.sender?.id
   const otherFriendReviews = (data?.friend_reviews ?? []).filter((r) => r.user_id !== recommenderId)
   const rewatchCount = myReview?.rewatch_count ?? 0
+
+  // Lets a tap on a star submit a rating immediately, without opening the full
+  // review form — that form is still reachable via the "Write a Review" action
+  // for anyone who also wants to add text/categories/sharing.
+  const rateMutation = useMutation({
+    mutationFn: (newRating: number) =>
+      myReview
+        ? updateReview(myReview.id, { rating: newRating })
+        : createReview({
+            movie_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path ?? null,
+            release_date: movie.release_date ?? null,
+            genre_ids: movie.genre_ids,
+            vote_average: movie.vote_average,
+            rating: newRating,
+            review_text: '',
+          }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] })
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
+      queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] })
+      queryClient.invalidateQueries({ queryKey: ['movies', 'for-you'] })
+      queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
+    },
+  })
+  const displayRating = optimisticRating ?? myReview?.rating ?? 0
+  const handleRate = (star: number) => {
+    setOptimisticRating(star)
+    rateMutation.mutate(star, { onError: () => setOptimisticRating(null) })
+  }
 
   return (
     <>
@@ -364,129 +399,20 @@ export default function MovieDetailModal({
             <DetailSkeleton />
           ) : (
             <>
-              {/* Year / director / genres — next to the synopsis, opposite the poster+title above */}
-              <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
-                <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
-                  {(movie.release_date || directors.length > 0) && (
-                    <p className="text-sm leading-relaxed">
-                      {movie.release_date && (
-                        <span className="font-medium text-gray-lighter">{movie.release_date.slice(0, 4)}</span>
-                      )}
-                      {directors.length > 0 && (
-                        <span className="text-gray-muted">
-                          {movie.release_date ? ' · ' : ''}
-                          Directed by{' '}
-                          {directors.map((d, i) => (
-                            <span key={d.id}>
-                              {onPersonClick ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onPersonClick(d.id, d.name, 'director')}
-                                  className="text-gray-lighter underline decoration-white/25 underline-offset-2 transition-colors hover:text-magenta hover:decoration-magenta/50"
-                                >
-                                  {d.name}
-                                </button>
-                              ) : (
-                                <span className="text-gray-lighter">{d.name}</span>
-                              )}
-                              {i < directors.length - 1 ? ', ' : ''}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {(runtime || genres.length > 0) && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {runtime != null && runtime > 0 && (
-                        <span className="text-xs text-gray-muted">
-                          {Math.floor(runtime / 60)}h {runtime % 60}m
-                        </span>
-                      )}
-                      {genres.map((g) => (
-                        <span key={g.id} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-muted">
-                          {g.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {flatrateProviders.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowProviders(true)}
-                      aria-label="See where to stream this movie in Australia"
-                      className="flex items-center gap-1.5 self-start"
-                    >
-                      {flatrateProviders.slice(0, 5).map((provider) => (
-                        <img
-                          key={provider.provider_id}
-                          src={`${TMDB_PROVIDER_LOGO}${provider.logo_path}`}
-                          alt={provider.provider_name}
-                          title={provider.provider_name}
-                          className="h-6 w-6 rounded-md object-cover ring-1 ring-white/10"
-                        />
-                      ))}
-                    </button>
-                  )}
-                </div>
-                {displayOverview && (
-                  <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light/80">{displayOverview}</p>
-                )}
-
-                {topCast.length > 0 && (
-                  <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
-                    <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
-                    <div className="flex gap-2">
-                      {topCast.map((actor) => (
-                        <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} />
-                      ))}
-                    </div>
-                    {restCast.length > 0 && (
-                      <button
-                        onClick={() => setShowAllCast((v) => !v)}
-                        className="self-start text-xs text-gray-muted transition-colors hover:text-gray-lighter"
-                      >
-                        {showAllCast ? 'Show less' : `+${restCast.length} more`}
-                      </button>
-                    )}
-                  </div>
+              {/* Quick rate — the first thing available on open, no need to tap into the
+                  full review form just to leave a star rating. */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">
+                  {myReview ? 'Your Rating' : 'Rate this movie'}
+                </p>
+                <StarRating value={displayRating} onChange={handleRate} size="lg" />
+                {!myReview && (
+                  <p className="text-xs text-gray-muted">Tap a star to rate — add a written review anytime.</p>
                 )}
               </div>
-
-              {/* Rating stats — stands alone so a short row here doesn't leave a gap before the actions */}
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <StatChip label="Your Rating">
-                  {myReview ? (
-                    <div className="flex items-center gap-2">
-                      <StarRating value={myReview.rating} readOnly size="sm" />
-                      <span className="text-xs text-gray-muted">{myReview.rating}/5</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm italic text-gray-muted">Not watched yet</span>
-                  )}
-                </StatChip>
-                <StatChip label="Avg Rating (You & Friends)">
-                  {avgRating !== null ? (
-                    <div className="flex items-center gap-2">
-                      <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
-                      <span className="text-xs text-gray-muted">{avgRating}/5</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm italic text-gray-muted">No reviews yet</span>
-                  )}
-                </StatChip>
-              </div>
-
-              {showAllCast && restCast.length > 0 && (
-                <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-                  {restCast.map((actor) => (
-                    <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} size="sm" />
-                  ))}
-                </div>
-              )}
 
               {/* Your review text + rewatch controls */}
-              {myReview && (
+              {myReview && (myReview.review_text || rewatch) && (
                 <div className="flex flex-col gap-2.5">
                   {myReview.review_text && (
                     <p className="text-sm leading-relaxed text-gray-light/80">{myReview.review_text}</p>
@@ -522,7 +448,20 @@ export default function MovieDetailModal({
                 </div>
               )}
 
-              {/* Actions */}
+              {/* Avg rating, then the action row (watchlist, write a full review, etc.) */}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <StatChip label="Avg Rating (You & Friends)">
+                  {avgRating !== null ? (
+                    <div className="flex items-center gap-2">
+                      <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
+                      <span className="text-xs text-gray-muted">{avgRating}/5</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm italic text-gray-muted">No reviews yet</span>
+                  )}
+                </StatChip>
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 {actions.map((action) => (
                   <ActionButton key={action.key} action={action} />
@@ -530,6 +469,130 @@ export default function MovieDetailModal({
               </div>
 
               {extraContent}
+
+              {/* More — collapsed by default; expands to reveal synopsis/cast/details */}
+              <div className="flex flex-col gap-4 border-t border-white/8 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowMore((v) => !v)}
+                  aria-expanded={showMore}
+                  className="flex items-center gap-1.5 self-start text-sm font-medium text-gray-lighter transition-colors hover:text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 shrink-0 transition-transform duration-200"
+                    style={{ transform: showMore ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                  {showMore ? 'Less' : 'More'}
+                </button>
+
+                <div
+                  className="flex flex-col gap-4 overflow-hidden transition-all duration-300 ease-in-out"
+                  style={{ maxHeight: showMore ? '2000px' : '0px', opacity: showMore ? 1 : 0 }}
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                    <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
+                      {(movie.release_date || directors.length > 0) && (
+                        <p className="text-sm leading-relaxed">
+                          {movie.release_date && (
+                            <span className="font-medium text-gray-lighter">{movie.release_date.slice(0, 4)}</span>
+                          )}
+                          {directors.length > 0 && (
+                            <span className="text-gray-muted">
+                              {movie.release_date ? ' · ' : ''}
+                              Directed by{' '}
+                              {directors.map((d, i) => (
+                                <span key={d.id}>
+                                  {onPersonClick ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => onPersonClick(d.id, d.name, 'director')}
+                                      className="text-gray-lighter underline decoration-white/25 underline-offset-2 transition-colors hover:text-magenta hover:decoration-magenta/50"
+                                    >
+                                      {d.name}
+                                    </button>
+                                  ) : (
+                                    <span className="text-gray-lighter">{d.name}</span>
+                                  )}
+                                  {i < directors.length - 1 ? ', ' : ''}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {(runtime || genres.length > 0) && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {runtime != null && runtime > 0 && (
+                            <span className="text-xs text-gray-muted">
+                              {Math.floor(runtime / 60)}h {runtime % 60}m
+                            </span>
+                          )}
+                          {genres.map((g) => (
+                            <span key={g.id} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-muted">
+                              {g.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {flatrateProviders.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowProviders(true)}
+                          aria-label="See where to stream this movie in Australia"
+                          className="flex items-center gap-1.5 self-start"
+                        >
+                          {flatrateProviders.slice(0, 5).map((provider) => (
+                            <img
+                              key={provider.provider_id}
+                              src={`${TMDB_PROVIDER_LOGO}${provider.logo_path}`}
+                              alt={provider.provider_name}
+                              title={provider.provider_name}
+                              className="h-6 w-6 rounded-md object-cover ring-1 ring-white/10"
+                            />
+                          ))}
+                        </button>
+                      )}
+                    </div>
+                    {displayOverview && (
+                      <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light/80">{displayOverview}</p>
+                    )}
+
+                    {topCast.length > 0 && (
+                      <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
+                        <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
+                        <div className="flex gap-2">
+                          {topCast.map((actor) => (
+                            <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} />
+                          ))}
+                        </div>
+                        {restCast.length > 0 && (
+                          <button
+                            onClick={() => setShowAllCast((v) => !v)}
+                            className="self-start text-xs text-gray-muted transition-colors hover:text-gray-lighter"
+                          >
+                            {showAllCast ? 'Show less' : `+${restCast.length} more`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {showAllCast && restCast.length > 0 && (
+                    <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+                      {restCast.map((actor) => (
+                        <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} size="sm" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Reviews */}
               <div className="flex flex-col gap-3">
