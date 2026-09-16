@@ -21,7 +21,8 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import type { Movie, ForYouMovie } from '../../types'
+import { dropFromForYouFeed, insertIntoForYouFeed } from '../../utils/forYouCache'
+import type { Movie } from '../../types'
 
 type SearchTab = 'movies' | 'people'
 
@@ -229,19 +230,15 @@ export default function DiscoverPage() {
 
   const notInterestedMutation = useMutation({
     mutationFn: (movieId: number) => markNotInterested(movieId),
-    onSuccess: (data, movieId) => {
-      const splice = (old?: { results: ForYouMovie[] } & Record<string, unknown>) => {
-        if (!old) return old
-        const idx = old.results.findIndex((m) => m.id === movieId)
-        if (idx === -1) return old
-        const results = [...old.results]
-        if (data.replacement) results.splice(idx, 1, data.replacement)
-        else results.splice(idx, 1)
-        return { ...old, results, total_results: results.length }
-      }
-      qc.setQueryData(['movies', 'for-you'], splice)
-      qc.setQueryData(['movies', 'for-you', 1], splice) // DiscoverListPage's key — for-you is always page 1
+    // Drop the card on tap rather than after the round-trip, so the feed reacts
+    // immediately; the server's replacement pick slides into the same slot once
+    // it arrives instead of the whole row reloading.
+    onMutate: (movieId: number) => {
       setSelectedMovie(null)
+      return { index: dropFromForYouFeed(qc, movieId) }
+    },
+    onSuccess: (data, _movieId, context) => {
+      if (data.replacement) insertIntoForYouFeed(qc, data.replacement, context?.index ?? -1)
     },
   })
 

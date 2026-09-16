@@ -15,7 +15,8 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
-import type { Movie, ForYouMovie } from '../../types'
+import { dropFromForYouFeed, insertIntoForYouFeed } from '../../utils/forYouCache'
+import type { Movie } from '../../types'
 
 type Kind = 'popular' | 'for-you'
 
@@ -139,19 +140,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
 
   const notInterestedMutation = useMutation({
     mutationFn: (movieId: number) => markNotInterested(movieId),
-    onSuccess: (result, movieId) => {
-      const splice = (old?: { results: ForYouMovie[] } & Record<string, unknown>) => {
-        if (!old) return old
-        const idx = old.results.findIndex((m) => m.id === movieId)
-        if (idx === -1) return old
-        const results = [...old.results]
-        if (result.replacement) results.splice(idx, 1, result.replacement)
-        else results.splice(idx, 1)
-        return { ...old, results, total_results: results.length }
-      }
-      qc.setQueryData(['movies', 'for-you'], splice)
-      qc.setQueryData(['movies', 'for-you', 1], splice)
+    onMutate: (movieId: number) => {
       setSelectedMovie(null)
+      return { index: dropFromForYouFeed(qc, movieId) }
+    },
+    onSuccess: (result, _movieId, context) => {
+      if (result.replacement) insertIntoForYouFeed(qc, result.replacement, context?.index ?? -1)
     },
   })
 

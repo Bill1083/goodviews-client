@@ -4,6 +4,7 @@ import { createReview, getMovieDetails, getMovieReviews, updateReview } from '..
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
+import { dropFromForYouFeed } from '../utils/forYouCache'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import RetryImage from './RetryImage'
@@ -64,6 +65,12 @@ interface Props {
   actions: MovieDetailAction[]
 }
 
+/** Dark outline + soft glow so the stars stay legible against the bright backdrop behind them. */
+const STAR_SHADOW = '0 0 2px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.45)'
+
+/** Actions promoted out of the button row into icon-only buttons beside the stars. */
+const INLINE_ACTION_KEYS = ['watchlist', 'send']
+
 const actionVariantClasses: Record<NonNullable<MovieDetailAction['variant']>, string> = {
   primary: 'bg-magenta text-white hover:bg-magenta/90 active:scale-95',
   teal: 'border border-teal/40 bg-teal/10 text-teal-light hover:bg-teal/20',
@@ -91,6 +98,27 @@ function ActionButton({ action }: { action: MovieDetailAction }) {
   )
 }
 
+/** The same action rendered as a compact icon-only square — label kept for tooltip/screen readers. */
+function IconActionButton({ action }: { action: MovieDetailAction }) {
+  const variant = action.variant ?? 'outline'
+  return (
+    <button
+      onClick={action.onClick}
+      disabled={action.disabled}
+      aria-label={action.label}
+      title={action.label}
+      className={[
+        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        actionVariantClasses[variant],
+        action.active ? 'ring-2 ring-teal/50' : '',
+      ].join(' ')}
+    >
+      {action.icon}
+    </button>
+  )
+}
+
 /** Mirrors the real hero banner's layout so it doesn't pop/reflow once the backdrop arrives. */
 function BannerSkeleton() {
   return (
@@ -106,60 +134,43 @@ function BannerSkeleton() {
   )
 }
 
-/** Mirrors the loaded body's layout (synopsis / cast / stats / reviews) as pulsing blocks. */
+/** Mirrors the loaded body's layout (rating / stats / synopsis / providers) as pulsing blocks. */
 function DetailSkeleton() {
   return (
     <div className="flex flex-col gap-4 animate-pulse">
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
-        <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
-          <div className="h-4 w-36 rounded bg-navy-card/70" />
-          <div className="flex gap-1.5">
-            <div className="h-5 w-14 rounded-full bg-navy-card/70" />
-            <div className="h-5 w-16 rounded-full bg-navy-card/70" />
+      <div className="flex flex-col gap-2">
+        <div className="h-3 w-24 rounded bg-navy-card/70" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-8 w-44 rounded bg-navy-card/70" />
+          <div className="flex gap-2">
+            <div className="h-9 w-9 rounded-lg bg-navy-card/70" />
+            <div className="h-9 w-9 rounded-lg bg-navy-card/70" />
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="h-3 w-full rounded bg-navy-card/70" />
-          <div className="h-3 w-full rounded bg-navy-card/70" />
-          <div className="h-3 w-2/3 rounded bg-navy-card/70" />
-        </div>
-        <div className="flex gap-2 sm:w-44 sm:shrink-0">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-14 w-14 shrink-0 rounded-full bg-navy-card/70" />
-          ))}
-        </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="h-16 flex-1 rounded-xl bg-navy-card/70" />
-        <div className="h-16 flex-1 rounded-xl bg-navy-card/70" />
+      <div className="h-16 w-48 rounded-xl bg-navy-card/70" />
+
+      <div className="flex flex-col gap-2">
+        <div className="h-3 w-full rounded bg-navy-card/70" />
+        <div className="h-3 w-full rounded bg-navy-card/70" />
+        <div className="h-3 w-2/3 rounded bg-navy-card/70" />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
-        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
-        <div className="h-9 w-32 rounded-lg bg-navy-card/70" />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="h-4 w-16 rounded bg-navy-card/70" />
-        {[0, 1].map((i) => (
-          <div key={i} className="flex flex-col gap-2 border-b border-white/8 pb-4 last:border-0">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-navy-card/70" />
-              <div className="h-3 w-24 rounded bg-navy-card/70" />
-            </div>
-            <div className="ml-10 h-3 w-5/6 rounded bg-navy-card/70" />
-          </div>
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-6 w-6 shrink-0 rounded-md bg-navy-card/70" />
         ))}
       </div>
+
+      <div className="h-5 w-16 rounded bg-navy-card/70" />
     </div>
   )
 }
 
 function StatChip({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.03] px-3.5 py-3 min-w-[140px]">
+    <div className="flex flex-col gap-1.5 self-start rounded-xl border border-white/5 bg-white/[0.03] px-3.5 py-3 min-w-[140px]">
       <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">{label}</p>
       {children}
     </div>
@@ -225,6 +236,7 @@ export default function MovieDetailModal({
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [showNotInterestedMenu, setShowNotInterestedMenu] = useState(false)
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
@@ -298,6 +310,11 @@ export default function MovieDetailModal({
             rating: newRating,
             review_text: '',
           }),
+    // A rated movie is no longer a suggestion, so take it out of the For You feed
+    // on tap instead of leaving it there until the refetch lands.
+    onMutate: () => {
+      if (!myReview) dropFromForYouFeed(queryClient, movie.id)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] })
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
@@ -312,6 +329,10 @@ export default function MovieDetailModal({
     setOptimisticRating(star)
     rateMutation.mutate(star, { onError: () => setOptimisticRating(null) })
   }
+
+  const inlineActions = actions.filter((a) => INLINE_ACTION_KEYS.includes(a.key))
+  const notInterestedAction = actions.find((a) => a.key === 'not-interested')
+  const rowActions = actions.filter((a) => !INLINE_ACTION_KEYS.includes(a.key) && a.key !== 'not-interested')
 
   return (
     <>
@@ -387,12 +408,46 @@ export default function MovieDetailModal({
 
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
-          {forYouReason && (
-            <div className="flex w-fit items-center gap-1.5 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-medium text-teal-light">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.539-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              {forYouReason}
+          {(forYouReason || notInterestedAction) && (
+            <div className="flex items-center gap-2">
+              {forYouReason && (
+                <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-medium text-teal-light">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.539-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  <span className="truncate">{forYouReason}</span>
+                </div>
+              )}
+              {notInterestedAction && (
+                <div className="relative ml-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotInterestedMenu((v) => !v)}
+                    aria-label={notInterestedAction.label}
+                    aria-expanded={showNotInterestedMenu}
+                    title={notInterestedAction.label}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-pink-brand/40 bg-pink-brand/10 text-pink-brand transition-colors hover:bg-pink-brand/20"
+                  >
+                    {notInterestedAction.icon}
+                  </button>
+                  {showNotInterestedMenu && (
+                    // Presentation only for now — picking an option just dismisses the menu;
+                    // neither choice is wired up to anything yet.
+                    <div className="absolute right-0 top-full z-20 mt-1.5 w-60 overflow-hidden rounded-lg border border-white/15 bg-navy-card shadow-2xl">
+                      {['Not interested in this movie', 'Not interested in these types of movies'].map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setShowNotInterestedMenu(false)}
+                          className="block w-full px-3 py-2.5 text-left text-xs text-gray-lighter transition-colors hover:bg-white/10"
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {isLoading ? (
@@ -405,11 +460,24 @@ export default function MovieDetailModal({
                 <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">
                   {myReview ? 'Your Rating' : 'Rate this movie'}
                 </p>
-                <StarRating value={displayRating} onChange={handleRate} size="lg" />
+                <div className="flex items-center justify-between gap-3">
+                  <div style={{ textShadow: STAR_SHADOW }}>
+                    <StarRating value={displayRating} onChange={handleRate} size="lg" />
+                  </div>
+                  {inlineActions.length > 0 && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      {inlineActions.map((action) => (
+                        <IconActionButton key={action.key} action={action} />
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {!myReview && (
                   <p className="text-xs text-gray-muted">Tap a star to rate — add a written review anytime.</p>
                 )}
               </div>
+
+              {extraContent}
 
               {/* Your review text + rewatch controls */}
               {myReview && (myReview.review_text || rewatch) && (
@@ -448,29 +516,47 @@ export default function MovieDetailModal({
                 </div>
               )}
 
-              {/* Avg rating, then the action row (watchlist, write a full review, etc.) */}
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <StatChip label="Avg Rating (You & Friends)">
-                  {avgRating !== null ? (
-                    <div className="flex items-center gap-2">
-                      <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
-                      <span className="text-xs text-gray-muted">{avgRating}/5</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm italic text-gray-muted">No reviews yet</span>
-                  )}
-                </StatChip>
-              </div>
+              <StatChip label="Avg Rating (You & Friends)">
+                {avgRating !== null ? (
+                  <div className="flex items-center gap-2">
+                    <StarRating value={Math.round(avgRating)} readOnly size="sm" accentColor="text-yellow-400" />
+                    <span className="text-xs text-gray-muted">{avgRating}/5</span>
+                  </div>
+                ) : (
+                  <span className="text-sm italic text-gray-muted">No reviews yet</span>
+                )}
+              </StatChip>
 
-              <div className="flex flex-wrap gap-2">
-                {actions.map((action) => (
-                  <ActionButton key={action.key} action={action} />
-                ))}
-              </div>
+              {/* Synopsis — trimmed while collapsed, shown in full once "More" is open */}
+              {displayOverview && (
+                <p className={['text-sm leading-relaxed text-gray-light/80', showMore ? '' : 'line-clamp-3'].join(' ')}>
+                  {displayOverview}
+                </p>
+              )}
 
-              {extraContent}
+              {flatrateProviders.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Available on</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowProviders(true)}
+                    aria-label="See where to stream this movie in Australia"
+                    className="flex items-center gap-1.5"
+                  >
+                    {flatrateProviders.slice(0, 5).map((provider) => (
+                      <img
+                        key={provider.provider_id}
+                        src={`${TMDB_PROVIDER_LOGO}${provider.logo_path}`}
+                        alt={provider.provider_name}
+                        title={provider.provider_name}
+                        className="h-6 w-6 rounded-md object-cover ring-1 ring-white/10"
+                      />
+                    ))}
+                  </button>
+                </div>
+              )}
 
-              {/* More — collapsed by default; expands to reveal synopsis/cast/details */}
+              {/* More — collapsed by default; expands to reveal the credits and friends' reviews */}
               <div className="flex flex-col gap-4 border-t border-white/8 pt-4">
                 <button
                   type="button"
@@ -492,12 +578,14 @@ export default function MovieDetailModal({
                   {showMore ? 'Less' : 'More'}
                 </button>
 
+                {/* 0fr → 1fr animates to the content's own height, so a long reviews
+                    list can't get clipped the way a fixed max-height would clip it. */}
                 <div
-                  className="flex flex-col gap-4 overflow-hidden transition-all duration-300 ease-in-out"
-                  style={{ maxHeight: showMore ? '2000px' : '0px', opacity: showMore ? 1 : 0 }}
+                  className="grid transition-all duration-300 ease-in-out"
+                  style={{ gridTemplateRows: showMore ? '1fr' : '0fr', opacity: showMore ? 1 : 0 }}
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
-                    <div className="flex flex-col gap-2.5 sm:w-52 sm:shrink-0">
+                  <div className="flex flex-col gap-4 overflow-hidden">
+                    <div className="flex flex-col gap-2.5">
                       {(movie.release_date || directors.length > 0) && (
                         <p className="text-sm leading-relaxed">
                           {movie.release_date && (
@@ -541,33 +629,12 @@ export default function MovieDetailModal({
                           ))}
                         </div>
                       )}
-                      {flatrateProviders.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowProviders(true)}
-                          aria-label="See where to stream this movie in Australia"
-                          className="flex items-center gap-1.5 self-start"
-                        >
-                          {flatrateProviders.slice(0, 5).map((provider) => (
-                            <img
-                              key={provider.provider_id}
-                              src={`${TMDB_PROVIDER_LOGO}${provider.logo_path}`}
-                              alt={provider.provider_name}
-                              title={provider.provider_name}
-                              className="h-6 w-6 rounded-md object-cover ring-1 ring-white/10"
-                            />
-                          ))}
-                        </button>
-                      )}
                     </div>
-                    {displayOverview && (
-                      <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light/80">{displayOverview}</p>
-                    )}
 
                     {topCast.length > 0 && (
-                      <div className="flex flex-col gap-2 sm:w-44 sm:shrink-0">
+                      <div className="flex flex-col gap-2">
                         <p className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Cast</p>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {topCast.map((actor) => (
                             <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} />
                           ))}
@@ -582,86 +649,94 @@ export default function MovieDetailModal({
                         )}
                       </div>
                     )}
-                  </div>
 
-                  {showAllCast && restCast.length > 0 && (
-                    <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-                      {restCast.map((actor) => (
-                        <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} size="sm" />
-                      ))}
+                    {showAllCast && restCast.length > 0 && (
+                      <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+                        {restCast.map((actor) => (
+                          <CastAvatar key={actor.id} actor={actor} onPersonClick={onPersonClick} size="sm" />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Reviews */}
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm font-medium text-gray-lighter">Reviews:</p>
+                      <ul className="flex flex-col gap-4">
+                        {recommendation && (recommendation.sender_review || recommendation.sender) && (
+                          <li
+                            className="flex flex-col gap-1.5 rounded-lg p-3"
+                            style={
+                              pinnedAccent === 'teal'
+                                ? { border: '2px solid #14ceca', background: 'rgba(20,206,202,0.06)' }
+                                : { border: '2px solid #dd3ee3', background: 'rgba(221,62,227,0.06)' }
+                            }
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div
+                                className={[
+                                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border',
+                                  pinnedAccent === 'teal' ? 'border-teal/50 bg-teal/20' : 'border-magenta/50 bg-magenta/20',
+                                ].join(' ')}
+                              >
+                                <span className={['text-xs font-semibold', pinnedAccent === 'teal' ? 'text-teal-light' : 'text-magenta'].join(' ')}>
+                                  {recommendation.sender?.username?.slice(0, 2).toUpperCase() ?? '??'}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-lighter">
+                                {recommendation.sender?.username ?? 'Unknown'}
+                              </span>
+                              {pinnedTagLabel && (
+                                <span className={['text-xs font-medium', pinnedAccent === 'teal' ? 'text-teal-light' : 'text-magenta'].join(' ')}>
+                                  {pinnedTagLabel}
+                                </span>
+                              )}
+                              {recommendation.sender_review && (
+                                <StarRating value={recommendation.sender_review.rating} readOnly size="sm" accentColor="text-yellow-400" />
+                              )}
+                              <span className="ml-auto text-xs text-gray-muted">
+                                {pinnedMetaText ?? new Date(recommendation.sender_review?.created_at ?? recommendation.recommended_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {recommendation.sender_review?.review_text && (
+                              <p className="ml-10 text-sm leading-relaxed text-gray-light/70">
+                                {recommendation.sender_review.review_text}
+                              </p>
+                            )}
+                          </li>
+                        )}
+
+                        {otherFriendReviews.map((rev) => (
+                          <li key={rev.id} className="flex flex-col gap-1.5 border-b border-white/8 pb-4 last:border-0 last:pb-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-navy-card/60">
+                                <span className="text-xs font-semibold text-gray-lighter">
+                                  {rev.profiles?.username?.slice(0, 2).toUpperCase() ?? '??'}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-lighter">{rev.profiles?.username ?? 'Unknown'}</span>
+                              <StarRating value={rev.rating} readOnly size="sm" accentColor="text-yellow-400" />
+                              <span className="ml-auto text-xs text-gray-muted">{new Date(rev.created_at).toLocaleDateString()}</span>
+                            </div>
+                            {rev.review_text && <p className="ml-10 text-sm leading-relaxed text-gray-light/70">{rev.review_text}</p>}
+                          </li>
+                        ))}
+
+                        {!recommendation && otherFriendReviews.length === 0 && (
+                          <p className="text-sm italic text-gray-muted">No reviews yet for this movie.</p>
+                        )}
+                      </ul>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              {/* Reviews */}
-              <div className="flex flex-col gap-3">
-                <p className="text-sm font-medium text-gray-lighter">Reviews:</p>
-                <ul className="flex flex-col gap-4">
-                  {recommendation && (recommendation.sender_review || recommendation.sender) && (
-                    <li
-                      className="flex flex-col gap-1.5 rounded-lg p-3"
-                      style={
-                        pinnedAccent === 'teal'
-                          ? { border: '2px solid #14ceca', background: 'rgba(20,206,202,0.06)' }
-                          : { border: '2px solid #dd3ee3', background: 'rgba(221,62,227,0.06)' }
-                      }
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div
-                          className={[
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border',
-                            pinnedAccent === 'teal' ? 'border-teal/50 bg-teal/20' : 'border-magenta/50 bg-magenta/20',
-                          ].join(' ')}
-                        >
-                          <span className={['text-xs font-semibold', pinnedAccent === 'teal' ? 'text-teal-light' : 'text-magenta'].join(' ')}>
-                            {recommendation.sender?.username?.slice(0, 2).toUpperCase() ?? '??'}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-lighter">
-                          {recommendation.sender?.username ?? 'Unknown'}
-                        </span>
-                        {pinnedTagLabel && (
-                          <span className={['text-xs font-medium', pinnedAccent === 'teal' ? 'text-teal-light' : 'text-magenta'].join(' ')}>
-                            {pinnedTagLabel}
-                          </span>
-                        )}
-                        {recommendation.sender_review && (
-                          <StarRating value={recommendation.sender_review.rating} readOnly size="sm" accentColor="text-yellow-400" />
-                        )}
-                        <span className="ml-auto text-xs text-gray-muted">
-                          {pinnedMetaText ?? new Date(recommendation.sender_review?.created_at ?? recommendation.recommended_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {recommendation.sender_review?.review_text && (
-                        <p className="ml-10 text-sm leading-relaxed text-gray-light/70">
-                          {recommendation.sender_review.review_text}
-                        </p>
-                      )}
-                    </li>
-                  )}
-
-                  {otherFriendReviews.map((rev) => (
-                    <li key={rev.id} className="flex flex-col gap-1.5 border-b border-white/8 pb-4 last:border-0 last:pb-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-navy-card/60">
-                          <span className="text-xs font-semibold text-gray-lighter">
-                            {rev.profiles?.username?.slice(0, 2).toUpperCase() ?? '??'}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-lighter">{rev.profiles?.username ?? 'Unknown'}</span>
-                        <StarRating value={rev.rating} readOnly size="sm" accentColor="text-yellow-400" />
-                        <span className="ml-auto text-xs text-gray-muted">{new Date(rev.created_at).toLocaleDateString()}</span>
-                      </div>
-                      {rev.review_text && <p className="ml-10 text-sm leading-relaxed text-gray-light/70">{rev.review_text}</p>}
-                    </li>
+              {rowActions.length > 0 && (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {rowActions.map((action) => (
+                    <ActionButton key={action.key} action={action} />
                   ))}
-
-                  {!recommendation && otherFriendReviews.length === 0 && (
-                    <p className="text-sm italic text-gray-muted">No reviews yet for this movie.</p>
-                  )}
-                </ul>
-              </div>
+                </div>
+              )}
             </>
           )}
         </div>

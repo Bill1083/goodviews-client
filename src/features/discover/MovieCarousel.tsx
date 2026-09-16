@@ -2,27 +2,66 @@ import { useEffect, useRef, useState } from 'react'
 import type { Movie } from '../../types'
 import RetryImage from '../../components/RetryImage'
 
+const SWAP_FADE_MS = 300
+
+/** Shows one poster, and when the slot's movie changes, keeps the outgoing poster on screen
+ *  while the incoming one decodes underneath — so a feed update crossfades instead of the
+ *  tile blanking out and the new poster popping in once it finally loads. */
 function CarouselPosterImg({ posterPath, title }: { posterPath: string | null; title: string }) {
-  const [loaded, setLoaded] = useState(false)
+  const [shownPath, setShownPath] = useState(posterPath)
+  const [shownLoaded, setShownLoaded] = useState(false)
+  const [incomingLoaded, setIncomingLoaded] = useState(false)
+  const swapping = posterPath !== shownPath
+
+  useEffect(() => {
+    setIncomingLoaded(false)
+    if (!posterPath) setShownPath(null)
+  }, [posterPath])
+
+  useEffect(() => {
+    if (!swapping || !incomingLoaded) return
+    const timer = setTimeout(() => {
+      setShownPath(posterPath)
+      setShownLoaded(true)
+    }, SWAP_FADE_MS)
+    return () => clearTimeout(timer)
+  }, [swapping, incomingLoaded, posterPath])
+
   const fallback = (
     <div className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] text-gray-muted">
       {title}
     </div>
   )
-  if (!posterPath) return fallback
+
   return (
     <>
-      {!loaded && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
-      <RetryImage
-        src={`${TMDB_IMG}${posterPath}`}
-        alt={title}
-        className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        draggable={false}
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-        onFail={() => setLoaded(true)}
-        fallback={fallback}
-      />
+      {!shownPath && !swapping && fallback}
+      {!shownLoaded && !swapping && <div className="absolute inset-0 animate-pulse bg-navy-card/60" />}
+      {shownPath && (
+        <RetryImage
+          key={shownPath}
+          src={`${TMDB_IMG}${shownPath}`}
+          alt={title}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${shownLoaded ? 'opacity-100' : 'opacity-0'}`}
+          draggable={false}
+          loading="lazy"
+          onLoad={() => setShownLoaded(true)}
+          onFail={() => setShownLoaded(true)}
+          fallback={fallback}
+        />
+      )}
+      {swapping && posterPath && (
+        <RetryImage
+          key={posterPath}
+          src={`${TMDB_IMG}${posterPath}`}
+          alt={title}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${incomingLoaded ? 'opacity-100' : 'opacity-0'}`}
+          draggable={false}
+          onLoad={() => setIncomingLoaded(true)}
+          onFail={() => setIncomingLoaded(true)}
+          fallback={fallback}
+        />
+      )}
     </>
   )
 }
