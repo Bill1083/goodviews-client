@@ -4,7 +4,7 @@ import { createReview, getMovieDetails, getMovieReviews, updateReview } from '..
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
-import { dropFromForYouFeed } from '../utils/forYouCache'
+import { dropFromForYouFeed, refreshForYouFeed } from '../utils/forYouCache'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import RetryImage from './RetryImage'
@@ -236,6 +236,7 @@ export default function MovieDetailModal({
   const [showAllCast, setShowAllCast] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
   const [showNotInterestedMenu, setShowNotInterestedMenu] = useState(false)
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -312,16 +313,17 @@ export default function MovieDetailModal({
           }),
     // A rated movie is no longer a suggestion, so take it out of the For You feed
     // on tap instead of leaving it there until the refetch lands.
-    onMutate: () => {
-      if (!myReview) dropFromForYouFeed(queryClient, movie.id)
-    },
+    onMutate: () => ({ dropped: !myReview && dropFromForYouFeed(queryClient, movie.id) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] })
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
-      queryClient.invalidateQueries({ queryKey: ['movies', 'for-you'] })
       queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
+      refreshForYouFeed(queryClient)
+    },
+    onError: (_err, _rating, context) => {
+      if (context?.dropped) refreshForYouFeed(queryClient)
     },
   })
   const displayRating = optimisticRating ?? myReview?.rating ?? 0
@@ -527,9 +529,16 @@ export default function MovieDetailModal({
                 )}
               </StatChip>
 
-              {/* Synopsis — trimmed while collapsed, shown in full once "More" is open */}
+              {/* Synopsis — trimmed to 3 lines; tapping it expands just the synopsis */}
               {displayOverview && (
-                <p className={['text-sm leading-relaxed text-gray-light/80', showMore ? '' : 'line-clamp-3'].join(' ')}>
+                <p
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={descExpanded}
+                  onClick={() => setDescExpanded((v) => !v)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDescExpanded((v) => !v) } }}
+                  className={['cursor-pointer text-sm leading-relaxed text-gray-light/80', descExpanded ? '' : 'line-clamp-3'].join(' ')}
+                >
                   {displayOverview}
                 </p>
               )}

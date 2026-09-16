@@ -5,6 +5,7 @@ import type { Movie } from '../../types'
 import StarRating from '../../components/StarRating'
 import PrimaryButton from '../../components/PrimaryButton'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { dropFromForYouFeed, refreshForYouFeed } from '../../utils/forYouCache'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w185'
 
@@ -91,10 +92,8 @@ export default function ReviewModal({
       // The backend invalidates its own For You/Picks-of-the-Week caches as
       // a side effect of creating a review — refetch here so the UI actually
       // reflects that instead of staying pinned to the pre-review data.
-      // invalidateQueries prefix-matches by default, so this one call covers
-      // both DiscoverPage's ['movies','for-you'] and DiscoverListPage's
-      // ['movies','for-you',1].
-      queryClient.invalidateQueries({ queryKey: ['movies', 'for-you'] })
+      dropFromForYouFeed(queryClient, movie.id)
+      refreshForYouFeed(queryClient)
       queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
       onSaved?.()
       onClose()

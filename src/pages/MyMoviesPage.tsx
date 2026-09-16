@@ -268,7 +268,7 @@ function PersonFilmographyRow({
       ) : films.length === 0 ? (
         <p className="text-xs text-gray-muted italic">No known movie credits.</p>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-1">
+        <div data-no-swipe className="flex gap-4 overflow-x-auto pb-1">
           {films.map((film) => {
             const posterUrl = film.poster_path ? `https://image.tmdb.org/t/p/w342${film.poster_path}` : null
             return (

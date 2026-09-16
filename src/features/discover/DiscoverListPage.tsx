@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -15,7 +15,7 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
-import { dropFromForYouFeed, insertIntoForYouFeed } from '../../utils/forYouCache'
+import { dropFromForYouFeed, fillForYouSlot, refreshForYouFeed, type ForYouFeed } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
 
 type Kind = 'popular' | 'for-you'
@@ -92,6 +92,32 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   // falling back to the generic title.
   const bannerLoading = !data && !isError
 
+  const pendingSlots = kind === 'for-you' ? ((data as ForYouFeed | undefined)?.pendingSlots ?? 0) : 0
+
+  // When a card is removed, glide every card that moved into its new cell instead of
+  // letting them jump. Positions are grid-relative (offsetTop/Left), so scrolling
+  // between renders doesn't read as movement.
+  const gridRef = useRef<HTMLDivElement>(null)
+  const cardPositions = useRef(new Map<string, { left: number; top: number }>())
+  useLayoutEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    const next = new Map<string, { left: number; top: number }>()
+    for (const el of Array.from(grid.children) as HTMLElement[]) {
+      const id = el.dataset.flipId
+      if (!id) continue
+      const pos = { left: el.offsetLeft, top: el.offsetTop }
+      next.set(id, pos)
+      const prev = cardPositions.current.get(id)
+      if (!prev || (prev.left === pos.left && prev.top === pos.top)) continue
+      el.animate(
+        [{ transform: `translate(${prev.left - pos.left}px, ${prev.top - pos.top}px)` }, { transform: 'translate(0, 0)' }],
+        { duration: 380, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+      )
+    }
+    cardPositions.current = next
+  }, [data])
+
   // Reset scroll on arriving at this page and on every page change —
   // otherwise it opens wherever the Discover home page (or the previous
   // page of results) happened to be scrolled to.
@@ -142,11 +168,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
     mutationFn: (movieId: number) => markNotInterested(movieId),
     onMutate: (movieId: number) => {
       setSelectedMovie(null)
-      return { index: dropFromForYouFeed(qc, movieId) }
+      return { dropped: dropFromForYouFeed(qc, movieId) }
     },
     onSuccess: (result, _movieId, context) => {
-      if (result.replacement) insertIntoForYouFeed(qc, result.replacement, context?.index ?? -1)
+      if (context?.dropped) fillForYouSlot(qc, result.replacement)
     },
+    onError: () => refreshForYouFeed(qc),
   })
 
   const watchlistRemoveMutation = useMutation({
@@ -225,7 +252,8 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
         </div>
 
         {/* Grid */}
-        <div style={{ opacity: isFetching ? 0.6 : 1 }} className="flex flex-col gap-6 transition-opacity">
+        {/* Only dim for Popular's page changes — For You updates in place (see forYouCache). */}
+        <div style={{ opacity: kind === 'popular' && isFetching ? 0.6 : 1 }} className="flex flex-col gap-6 transition-opacity">
           {isError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
 
           {kind === 'for-you' && bannerLoading && (
@@ -238,10 +266,11 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
             <PaginationControls page={page} totalPages={data.total_pages} onChange={setPage} />
           )}
 
-          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+          <div ref={gridRef} className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
             {(data?.results ?? []).map((movie, i) => (
               <div
                 key={movie.id}
+                data-flip-id={movie.id}
                 className="animate-[fadeInUp_0.4s_ease-out_both]"
                 style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
               >
@@ -252,6 +281,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
                   onWatchlistAdd={(m) => watchlistAddMutation.mutate(m)}
                   onWatchlistRemove={(m) => watchlistRemoveMutation.mutate(m)}
                 />
+              </div>
+            ))}
+            {Array.from({ length: pendingSlots }).map((_, i) => (
+              <div key={`pending-${i}`} aria-hidden className="animate-[fadeInUp_0.4s_ease-out_both]">
+                <div className="aspect-[2/3] w-full animate-pulse rounded-lg bg-navy-card/60" />
+                <div className="mx-auto mt-2 h-3 w-2/3 animate-pulse rounded bg-navy-card/60" />
               </div>
             ))}
           </div>

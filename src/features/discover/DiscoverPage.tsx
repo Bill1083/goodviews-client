@@ -21,7 +21,7 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import { dropFromForYouFeed, insertIntoForYouFeed } from '../../utils/forYouCache'
+import { dropFromForYouFeed, fillForYouSlot, refreshForYouFeed } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
 
 type SearchTab = 'movies' | 'people'
@@ -230,16 +230,16 @@ export default function DiscoverPage() {
 
   const notInterestedMutation = useMutation({
     mutationFn: (movieId: number) => markNotInterested(movieId),
-    // Drop the card on tap rather than after the round-trip, so the feed reacts
-    // immediately; the server's replacement pick slides into the same slot once
-    // it arrives instead of the whole row reloading.
+    // Drop the card on tap rather than after the round-trip; the server's
+    // replacement pick fills the freed slot once it arrives.
     onMutate: (movieId: number) => {
       setSelectedMovie(null)
-      return { index: dropFromForYouFeed(qc, movieId) }
+      return { dropped: dropFromForYouFeed(qc, movieId) }
     },
     onSuccess: (data, _movieId, context) => {
-      if (data.replacement) insertIntoForYouFeed(qc, data.replacement, context?.index ?? -1)
+      if (context?.dropped) fillForYouSlot(qc, data.replacement)
     },
+    onError: () => refreshForYouFeed(qc),
   })
 
   // Search state
