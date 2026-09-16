@@ -91,8 +91,13 @@ export async function getPicksOfTheWeek(
   return data
 }
 
-export async function markNotInterested(movieId: number): Promise<{ replacement: ForYouMovie | null }> {
-  const { data } = await apiClient.post('/api/movies/not-interested', { movie_id: movieId })
+export type NotInterestedScope = 'movie' | 'type'
+
+export async function markNotInterested(
+  movieId: number,
+  scope: NotInterestedScope = 'movie',
+): Promise<{ replacement: ForYouMovie | null }> {
+  const { data } = await apiClient.post('/api/movies/not-interested', { movie_id: movieId, scope })
   return data
 }
 

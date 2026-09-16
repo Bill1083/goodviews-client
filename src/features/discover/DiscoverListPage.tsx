@@ -5,6 +5,7 @@ import {
   getTrendingMovies,
   getForYouMovies,
   markNotInterested,
+  type NotInterestedScope,
   getWatchlist,
   addToWatchlist,
   removeFromWatchlist,
@@ -165,12 +166,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
   })
 
   const notInterestedMutation = useMutation({
-    mutationFn: (movieId: number) => markNotInterested(movieId),
-    onMutate: (movieId: number) => {
+    mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
+    onMutate: ({ movieId }) => {
       setSelectedMovie(null)
       return { dropped: dropFromForYouFeed(qc, movieId) }
     },
-    onSuccess: (result, _movieId, context) => {
+    onSuccess: (result, _vars, context) => {
       if (context?.dropped) fillForYouSlot(qc, result.replacement)
     },
     onError: () => refreshForYouFeed(qc),
@@ -352,22 +353,12 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
               ),
               onClick: () => setShowSendPanel((v) => !v),
             },
-            ...(kind === 'for-you'
-              ? [
-                  {
-                    key: 'not-interested',
-                    label: 'Not Interested',
-                    variant: 'danger' as const,
-                    icon: (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 105.636 5.636a9 9 0 0012.728 12.728zM6 6l12 12" />
-                      </svg>
-                    ),
-                    onClick: () => notInterestedMutation.mutate(selectedMovie.id),
-                  },
-                ]
-              : []),
           ]}
+          onNotInterested={
+            kind === 'for-you'
+              ? (scope) => notInterestedMutation.mutate({ movieId: selectedMovie.id, scope })
+              : undefined
+          }
         />
       )}
 

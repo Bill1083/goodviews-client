@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createReview, getMovieDetails, getMovieReviews, updateReview } from '../services/apiClient'
+import { createReview, getMovieDetails, getMovieReviews, updateReview, type NotInterestedScope } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
@@ -60,6 +60,9 @@ interface Props {
    *  from the "For You" page — e.g. "Because you liked Inception" or "Alex rated this highly". */
   forYouReason?: string | null
 
+  /** Shows the "not interested" menu beside the For You reason when provided. */
+  onNotInterested?: (scope: NotInterestedScope) => void
+
   /** Action buttons (write review, watchlist, send to friends, etc.), rendered left to right
    *  above the reviews list. */
   actions: MovieDetailAction[]
@@ -70,6 +73,11 @@ const STAR_SHADOW = '0 0 2px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,0.85), 0 0 1
 
 /** Actions promoted out of the button row into icon-only buttons beside the stars. */
 const INLINE_ACTION_KEYS = ['watchlist', 'send']
+
+const NOT_INTERESTED_OPTIONS: { scope: NotInterestedScope; label: string }[] = [
+  { scope: 'movie', label: 'Not interested in this movie' },
+  { scope: 'type', label: 'Not interested in these types of movies' },
+]
 
 const actionVariantClasses: Record<NonNullable<MovieDetailAction['variant']>, string> = {
   primary: 'bg-magenta text-white hover:bg-magenta/90 active:scale-95',
@@ -231,6 +239,7 @@ export default function MovieDetailModal({
   extraContent,
   actions,
   forYouReason,
+  onNotInterested,
 }: Props) {
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const [showAllCast, setShowAllCast] = useState(false)
@@ -238,6 +247,16 @@ export default function MovieDetailModal({
   const [showMore, setShowMore] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const [showNotInterestedMenu, setShowNotInterestedMenu] = useState(false)
+  const notInterestedRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showNotInterestedMenu) return
+    const closeOnOutsidePress = (e: PointerEvent) => {
+      if (!notInterestedRef.current?.contains(e.target as Node)) setShowNotInterestedMenu(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePress)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePress)
+  }, [showNotInterestedMenu])
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
@@ -333,8 +352,7 @@ export default function MovieDetailModal({
   }
 
   const inlineActions = actions.filter((a) => INLINE_ACTION_KEYS.includes(a.key))
-  const notInterestedAction = actions.find((a) => a.key === 'not-interested')
-  const rowActions = actions.filter((a) => !INLINE_ACTION_KEYS.includes(a.key) && a.key !== 'not-interested')
+  const rowActions = actions.filter((a) => !INLINE_ACTION_KEYS.includes(a.key))
 
   return (
     <>
@@ -410,7 +428,7 @@ export default function MovieDetailModal({
 
         {/* Details — scrollable */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
-          {(forYouReason || notInterestedAction) && (
+          {(forYouReason || onNotInterested) && (
             <div className="flex items-center gap-2">
               {forYouReason && (
                 <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-medium text-teal-light">
@@ -420,30 +438,33 @@ export default function MovieDetailModal({
                   <span className="truncate">{forYouReason}</span>
                 </div>
               )}
-              {notInterestedAction && (
-                <div className="relative ml-auto shrink-0">
+              {onNotInterested && (
+                <div ref={notInterestedRef} className="relative ml-auto shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowNotInterestedMenu((v) => !v)}
-                    aria-label={notInterestedAction.label}
+                    aria-label="Not interested"
                     aria-expanded={showNotInterestedMenu}
-                    title={notInterestedAction.label}
+                    title="Not interested"
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-pink-brand/40 bg-pink-brand/10 text-pink-brand transition-colors hover:bg-pink-brand/20"
                   >
-                    {notInterestedAction.icon}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 105.636 5.636a9 9 0 0012.728 12.728zM6 6l12 12" />
+                    </svg>
                   </button>
                   {showNotInterestedMenu && (
-                    // Presentation only for now — picking an option just dismisses the menu;
-                    // neither choice is wired up to anything yet.
                     <div className="absolute right-0 top-full z-20 mt-1.5 w-60 overflow-hidden rounded-lg border border-white/15 bg-navy-card shadow-2xl">
-                      {['Not interested in this movie', 'Not interested in these types of movies'].map((option) => (
+                      {NOT_INTERESTED_OPTIONS.map(({ scope, label }) => (
                         <button
-                          key={option}
+                          key={scope}
                           type="button"
-                          onClick={() => setShowNotInterestedMenu(false)}
+                          onClick={() => {
+                            setShowNotInterestedMenu(false)
+                            onNotInterested(scope)
+                          }}
                           className="block w-full px-3 py-2.5 text-left text-xs text-gray-lighter transition-colors hover:bg-white/10"
                         >
-                          {option}
+                          {label}
                         </button>
                       ))}
                     </div>
@@ -529,7 +550,7 @@ export default function MovieDetailModal({
                 )}
               </StatChip>
 
-              {/* Synopsis — trimmed to 3 lines; tapping it expands just the synopsis */}
+              {/* Synopsis — trimmed to 3 lines; tapping it toggles just the synopsis, and More opens it too */}
               {displayOverview && (
                 <p
                   role="button"
@@ -569,7 +590,11 @@ export default function MovieDetailModal({
               <div className="flex flex-col gap-4 border-t border-white/8 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowMore((v) => !v)}
+                  onClick={() => {
+                    const next = !showMore
+                    setShowMore(next)
+                    setDescExpanded(next)
+                  }}
                   aria-expanded={showMore}
                   className="flex items-center gap-1.5 self-start text-sm font-medium text-gray-lighter transition-colors hover:text-white"
                 >

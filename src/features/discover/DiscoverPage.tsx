@@ -6,6 +6,7 @@ import {
   getForYouMovies,
   getPicksOfTheWeek,
   markNotInterested,
+  type NotInterestedScope,
   searchMovies,
   searchPeople,
   getWatchlist,
@@ -114,7 +115,7 @@ function SearchMovieModal({
   onRemoveWatchlist: () => void
   onPersonClick: (personId: number, name: string, type: 'actor' | 'director') => void
   forYouReason?: string | null
-  onNotInterested?: () => void
+  onNotInterested?: (scope: NotInterestedScope) => void
 }) {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [showSendPanel, setShowSendPanel] = useState(false)
@@ -170,22 +171,8 @@ function SearchMovieModal({
             ),
             onClick: () => setShowSendPanel((v) => !v),
           },
-          ...(onNotInterested
-            ? [
-                {
-                  key: 'not-interested',
-                  label: 'Not Interested',
-                  variant: 'danger' as const,
-                  icon: (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 105.636 5.636a9 9 0 0012.728 12.728zM6 6l12 12" />
-                    </svg>
-                  ),
-                  onClick: onNotInterested,
-                },
-              ]
-            : []),
         ]}
+        onNotInterested={onNotInterested}
       />
 
       {showReviewModal && (
@@ -229,14 +216,14 @@ export default function DiscoverPage() {
   }, [picks])
 
   const notInterestedMutation = useMutation({
-    mutationFn: (movieId: number) => markNotInterested(movieId),
+    mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
     // Drop the card on tap rather than after the round-trip; the server's
     // replacement pick fills the freed slot once it arrives.
-    onMutate: (movieId: number) => {
+    onMutate: ({ movieId }) => {
       setSelectedMovie(null)
       return { dropped: dropFromForYouFeed(qc, movieId) }
     },
-    onSuccess: (data, _movieId, context) => {
+    onSuccess: (data, _vars, context) => {
       if (context?.dropped) fillForYouSlot(qc, data.replacement)
     },
     onError: () => refreshForYouFeed(qc),
@@ -528,7 +515,9 @@ export default function DiscoverPage() {
             (picksReasonById[selectedMovie.id] ? `Pick of the Week — ${picksReasonById[selectedMovie.id]}` : undefined)
           }
           onNotInterested={
-            forYouReasonById[selectedMovie.id] ? () => notInterestedMutation.mutate(selectedMovie.id) : undefined
+            forYouReasonById[selectedMovie.id]
+              ? (scope) => notInterestedMutation.mutate({ movieId: selectedMovie.id, scope })
+              : undefined
           }
         />
       )}
