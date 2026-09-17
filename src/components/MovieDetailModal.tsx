@@ -142,36 +142,50 @@ function BannerSkeleton() {
   )
 }
 
-/** Mirrors the loaded body's layout (rating / stats / synopsis / providers) as pulsing blocks. */
+/** Mirrors the loaded body block-for-block, at matching heights, so nothing moves under
+ *  the user's thumb when the data lands — tapping a star or "not interested" the instant
+ *  the modal opens shouldn't land on whatever slid into that spot. */
 function DetailSkeleton() {
   return (
     <div className="flex flex-col gap-4 animate-pulse">
+      {/* Quick rate: label, stars + icon buttons, hint line */}
       <div className="flex flex-col gap-2">
-        <div className="h-3 w-24 rounded bg-navy-card/70" />
+        <div className="h-4 w-24 rounded bg-navy-card/70" />
         <div className="flex items-center justify-between gap-3">
-          <div className="h-8 w-44 rounded bg-navy-card/70" />
+          <div className="h-9 w-44 rounded bg-navy-card/70" />
           <div className="flex gap-2">
             <div className="h-9 w-9 rounded-lg bg-navy-card/70" />
             <div className="h-9 w-9 rounded-lg bg-navy-card/70" />
           </div>
         </div>
+        <div className="h-4 w-64 max-w-full rounded bg-navy-card/70" />
       </div>
 
-      <div className="h-16 w-48 rounded-xl bg-navy-card/70" />
+      {/* Avg rating chip */}
+      <div className="h-[69px] w-48 rounded-xl bg-navy-card/70" />
 
-      <div className="flex flex-col gap-2">
-        <div className="h-3 w-full rounded bg-navy-card/70" />
-        <div className="h-3 w-full rounded bg-navy-card/70" />
-        <div className="h-3 w-2/3 rounded bg-navy-card/70" />
+      {/* Synopsis — three lines, the collapsed height */}
+      <div className="flex flex-col gap-2 py-0.5">
+        <div className="h-4 w-full rounded bg-navy-card/70" />
+        <div className="h-4 w-full rounded bg-navy-card/70" />
+        <div className="h-4 w-2/3 rounded bg-navy-card/70" />
       </div>
 
-      <div className="flex gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-6 w-6 shrink-0 rounded-md bg-navy-card/70" />
-        ))}
+      {/* Providers row */}
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-20 rounded bg-navy-card/70" />
+        <div className="h-6 w-6 shrink-0 rounded-md bg-navy-card/70" />
+        <div className="h-6 w-6 shrink-0 rounded-md bg-navy-card/70" />
       </div>
 
-      <div className="h-5 w-16 rounded bg-navy-card/70" />
+      {/* "More" toggle, including its divider and the gap above its collapsed panel */}
+      <div className="flex flex-col gap-4 border-t border-white/8 pt-4">
+        <div className="h-5 w-16 rounded bg-navy-card/70" />
+        <div className="h-0" />
+      </div>
+
+      {/* Bottom-right action button */}
+      <div className="h-9 w-36 self-end rounded-lg bg-navy-card/70" />
     </div>
   )
 }
@@ -550,21 +564,42 @@ export default function MovieDetailModal({
                 )}
               </StatChip>
 
-              {/* Synopsis — trimmed to 3 lines; tapping it toggles just the synopsis, and More opens it too */}
-              {displayOverview && (
-                <p
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={descExpanded}
-                  onClick={() => setDescExpanded((v) => !v)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDescExpanded((v) => !v) } }}
-                  className={['cursor-pointer text-sm leading-relaxed text-gray-light/80', descExpanded ? '' : 'line-clamp-3'].join(' ')}
-                >
-                  {displayOverview}
-                </p>
+              {/* Synopsis — capped at 3 lines on a phone (tap to expand, as does More), but shown
+                  in full wherever there's room for it. Its three lines are reserved while the
+                  details load so the buttons below don't jump once the text arrives. */}
+              {detailsLoading && !displayOverview ? (
+                <div className="flex flex-col gap-2 py-0.5" aria-hidden>
+                  {['w-full', 'w-full', 'w-2/3'].map((w) => (
+                    <div key={w} className={`h-4 ${w} animate-pulse rounded bg-navy-card/60`} />
+                  ))}
+                </div>
+              ) : (
+                displayOverview && (
+                  <p
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={descExpanded}
+                    onClick={() => setDescExpanded((v) => !v)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDescExpanded((v) => !v) } }}
+                    className={[
+                      'cursor-pointer text-sm leading-relaxed text-gray-light/80',
+                      descExpanded ? '' : 'line-clamp-3 sm:line-clamp-none',
+                    ].join(' ')}
+                  >
+                    {displayOverview}
+                  </p>
+                )
               )}
 
-              {flatrateProviders.length > 0 && (
+              {detailsLoading ? (
+                <div className="flex items-center gap-2" aria-hidden>
+                  <span className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Available on</span>
+                  <div className="h-6 w-6 animate-pulse rounded-md bg-navy-card/60" />
+                  <div className="h-6 w-6 animate-pulse rounded-md bg-navy-card/60" />
+                </div>
+              ) : flatrateProviders.length === 0 ? (
+                <p className="text-xs text-gray-muted">Not available on any services in your region</p>
+              ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-gray-muted uppercase tracking-wide">Available on</span>
                   <button
