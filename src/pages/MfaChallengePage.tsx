@@ -36,6 +36,29 @@ function TrustedDeviceDebug({ userId }: { userId: string }) {
   )
 }
 
+/* KNOWN ISSUE (unresolved, low frequency — deliberately left as-is for now)
+ *
+ * Two symptoms, both reported on a phone, both intermittent, both so far only
+ * on staging:
+ *   1. A device that was remembered here gets challenged again anyway, often
+ *      shortly after signing in on a second device.
+ *   2. The code is accepted and the user lands back on /auth instead of home,
+ *      i.e. the store's `user` went null right after challengeAndVerify — so
+ *      ProtectedRoute bounced them — rather than anything trusted-device related.
+ *
+ * Ruled out: the backend holds any number of remembered devices per account
+ * (verified with two live tokens at once, both accepted, surviving a fresh
+ * sign-in), tokens are 30 days and weren't expiring, and nothing server-side
+ * deletes them. Driving two browsers through the real staging flow — remember
+ * on one, sign in and remember on the other, revisit the first, and again after
+ * wiping the first's session and signing back in with a password — never
+ * reproduced either symptom.
+ *
+ * ?mfadebug=1 renders TrustedDeviceDebug below: origin, account, whether a
+ * token is stored on the device, and what the server says about it. Symptom 2
+ * would need the session/AAL transitions traced instead (App.tsx's
+ * onAuthStateChange -> refreshAal).
+ */
 export default function MfaChallengePage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
