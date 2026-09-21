@@ -41,7 +41,12 @@ export default function HeatStrip({ cells, ariaLabel, valueFormatter = (v) => St
       </div>
       <div className="mt-1 flex gap-0.5">
         {cells.map((cell, i) => (
-          <span key={`${cell.label}-${i}-l`} className="min-w-0 flex-1 truncate text-center text-[10px] leading-none text-gray-muted" style={{ visibility: i % labelEvery === 0 ? 'visible' : 'hidden' }}>
+          <span
+            key={`${cell.label}-${i}-l`}
+            // Sparse labels (every 6th hour) may spill over their hidden neighbours rather than truncate.
+            className={`min-w-0 flex-1 text-[10px] leading-none text-gray-muted ${labelEvery > 1 ? 'overflow-visible whitespace-nowrap text-left' : 'truncate text-center'}`}
+            style={{ visibility: i % labelEvery === 0 ? 'visible' : 'hidden' }}
+          >
             {cell.label}
           </span>
         ))}
