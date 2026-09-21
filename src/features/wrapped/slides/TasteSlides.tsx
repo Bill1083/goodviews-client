@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import RetryImage from '../../../components/RetryImage'
 import type { PersonStat, WrappedSlide } from '../../../types/stats'
 import { formatPercent, plural, releaseYear } from '../../../utils/formatStats'
-import { genreStyle } from '../../../utils/genres'
+import { genreLabel, genreStyle } from '../../../utils/genres'
 import { tmdbImage } from '../../../utils/tmdbImage'
 import SlideShell, { Body, Eyebrow, Headline, WrappedMotionContext, useStagger } from '../SlideShell'
 
@@ -20,18 +20,18 @@ export function GenresSlide({ slide }: { slide: Genres }) {
       <Eyebrow index={0}>Your genres</Eyebrow>
       <Headline index={1}>
         <span aria-hidden="true">{genreStyle(top.id).emoji} </span>
-        {formatPercent(top.share)} {top.name}
+        {formatPercent(top.share)} {genreLabel(top.id, top.name)}
       </Headline>
       <Body index={2}>
-        {top.count} of your films were {top.name}. {slide.total_genres} {plural(slide.total_genres, 'genre')} in total
-        {slide.surprise ? ` — and the surprise hit was ${slide.surprise.name}, ${slide.surprise.avg_rating?.toFixed(1)}★ across only ${slide.surprise.count} ${plural(slide.surprise.count, 'film')}.` : '.'}
+        {top.count} of your films were {genreLabel(top.id, top.name)}. {slide.total_genres} {plural(slide.total_genres, 'genre')} in total
+        {slide.surprise ? ` — and the surprise hit was ${genreLabel(slide.surprise.id, slide.surprise.name)}, ${slide.surprise.avg_rating?.toFixed(1)}★ across only ${slide.surprise.count} ${plural(slide.surprise.count, 'film')}.` : '.'}
       </Body>
       <ul className="mt-2 flex w-full flex-col gap-2.5">
         {slide.top.map((g, i) => (
           <li key={g.id} {...stagger(3 + i, 110)} className={`flex items-center gap-3 ${stagger(3 + i, 110).className}`}>
             <span className="w-24 shrink-0 truncate text-sm text-white/90 sm:w-32">
               <span aria-hidden="true">{genreStyle(g.id).emoji} </span>
-              {g.name}
+              {genreLabel(g.id, g.name)}
             </span>
             <span className="h-2.5 flex-1 overflow-hidden rounded-r-[4px] bg-white/15">
               <span className={`block h-full rounded-r-[4px] bg-white ${reduced ? '' : 'bar-grow-x'}`} style={{ width: `${(g.share / max) * 100}%`, animationDelay: `${i * 110 + 300}ms` }} />

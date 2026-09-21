@@ -3,7 +3,7 @@ import RadarChart from '../../../components/charts/RadarChart'
 import { useInView } from '../../../hooks/useInView'
 import type { DashboardStats } from '../../../types/stats'
 import { formatPercent, plural } from '../../../utils/formatStats'
-import { genreStyle } from '../../../utils/genres'
+import { genreLabel, genreStyle } from '../../../utils/genres'
 import DashboardCard from './DashboardCard'
 
 interface Props {
@@ -26,7 +26,7 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
   const hl = stats.genre_highlights
 
   const axes = top.map((g) => ({
-    label: g.name,
+    label: genreLabel(g.id, g.name),
     value: mode === 'watched' ? g.count / maxCount : Math.max(0, g.affinity) / maxAffinity,
     valueLabel:
       mode === 'watched'
@@ -38,10 +38,10 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
   if (hl.most_watched && hl.highest_rated) {
     callout =
       hl.most_watched.id === hl.highest_rated.id
-        ? `${hl.most_watched.name} is both your most-watched and your highest-rated genre (${hl.highest_rated.avg_rating?.toFixed(1)}★).`
-        : `You watch ${hl.most_watched.name} the most, but you rate ${hl.highest_rated.name} the highest (${hl.highest_rated.avg_rating?.toFixed(1)}★ across ${hl.highest_rated.count} films).`
+        ? `${genreLabel(hl.most_watched.id, hl.most_watched.name)} is both your most-watched and your highest-rated genre (${hl.highest_rated.avg_rating?.toFixed(1)}★).`
+        : `You watch ${genreLabel(hl.most_watched.id, hl.most_watched.name)} the most, but you rate ${genreLabel(hl.highest_rated.id, hl.highest_rated.name)} the highest (${hl.highest_rated.avg_rating?.toFixed(1)}★ across ${hl.highest_rated.count} films).`
   } else if (hl.most_watched) {
-    callout = `${hl.most_watched.name} leads with ${hl.most_watched.count} ${plural(hl.most_watched.count, 'film')}.`
+    callout = `${genreLabel(hl.most_watched.id, hl.most_watched.name)} leads with ${hl.most_watched.count} ${plural(hl.most_watched.count, 'film')}.`
   }
 
   return (
@@ -84,14 +84,14 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
           {callout && <p className="text-sm leading-snug text-gray-light">{callout}</p>}
           {hl.lowest_rated && (
             <p className="text-xs text-gray-muted">
-              Least loved: {hl.lowest_rated.name} ({hl.lowest_rated.avg_rating?.toFixed(1)}★ over {hl.lowest_rated.count} films)
+              Least loved: {genreLabel(hl.lowest_rated.id, hl.lowest_rated.name)} ({hl.lowest_rated.avg_rating?.toFixed(1)}★ over {hl.lowest_rated.count} films)
             </p>
           )}
           <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5">
             {stats.genres.slice(0, 8).map((g) => (
               <li key={g.id} className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: genreStyle(g.id).color }} aria-hidden="true" />
-                <span className="truncate text-gray-light">{g.name}</span>
+                <span className="truncate text-gray-light">{genreLabel(g.id, g.name)}</span>
                 <span className="ml-auto shrink-0 text-xs text-gray-muted">
                   {g.count} · {g.avg_rating?.toFixed(1) ?? '—'}★
                 </span>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import RetryImage from '../../../components/RetryImage'
 import type { WrappedSlide } from '../../../types/stats'
 import { formatMinutesLong, plural } from '../../../utils/formatStats'
+import { genreLabel } from '../../../utils/genres'
 import { tmdbImage } from '../../../utils/tmdbImage'
 import { useStagger } from '../SlideShell'
 import { shareWrapped } from '../shareWrapped'
@@ -72,7 +73,7 @@ export default function SummarySlide({ slide, year, onReplay, onExit }: Props) {
             </div>
             <div>
               <dt className="text-[10px] uppercase tracking-[0.2em] text-white/60">Top genre</dt>
-              <dd className="truncate text-lg font-semibold">{slide.top_genre?.name ?? '—'}</dd>
+              <dd className="truncate text-lg font-semibold">{slide.top_genre ? genreLabel(slide.top_genre.id, slide.top_genre.name) : '—'}</dd>
             </div>
             <div>
               <dt className="text-[10px] uppercase tracking-[0.2em] text-white/60">Average</dt>

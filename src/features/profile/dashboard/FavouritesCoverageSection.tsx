@@ -21,7 +21,7 @@ function Row({ fav, kind, onPerson, onMovie }: { fav: FavouriteCoverage; kind: s
       </button>
       <div className="min-w-0 flex-1">
         <button type="button" onClick={() => onPerson(fav.id)} className="block max-w-full truncate text-left text-sm font-semibold text-gray-lighter hover:text-teal">
-          {name}
+          {name} <span className="text-[11px] font-normal text-gray-muted">· {kind.toLowerCase()}</span>
         </button>
         <p className="text-xs text-gray-muted">
           {fav.seen_count === 0

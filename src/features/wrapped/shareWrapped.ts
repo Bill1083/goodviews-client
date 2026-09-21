@@ -1,5 +1,6 @@
 import type { WrappedSlide } from '../../types/stats'
 import { plural } from '../../utils/formatStats'
+import { genreLabel } from '../../utils/genres'
 import { tmdbImage } from '../../utils/tmdbImage'
 
 type Summary = Extract<WrappedSlide, { kind: 'summary' }>
@@ -99,7 +100,7 @@ export async function renderShareCard(slide: Summary, year: number): Promise<Blo
   }
   stat('Films', String(slide.films), 90, 780)
   stat('Hours', String(Math.round(slide.minutes / 60)), 560, 780)
-  stat('Top genre', slide.top_genre?.name ?? '—', 90, 980)
+  stat('Top genre', slide.top_genre ? genreLabel(slide.top_genre.id, slide.top_genre.name) : '—', 90, 980)
   stat('Average', `${slide.avg_rating?.toFixed(1) ?? '—'}★`, 560, 980)
   if (slide.top_director) {
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
@@ -136,7 +137,7 @@ export async function renderShareCard(slide: Summary, year: number): Promise<Blo
 /** Share as an image where the platform allows it, else download the PNG,
  * else share/copy a text summary. Returns what happened. */
 export async function shareWrapped(slide: Summary, year: number): Promise<'shared' | 'downloaded' | 'copied' | 'cancelled'> {
-  const text = `My ${year} GoodViews Wrapped: ${slide.films} films, ${Math.round(slide.minutes / 60)} hours, top genre ${slide.top_genre?.name ?? '—'}. I'm ${slide.persona.title} ${slide.persona.emoji}`
+  const text = `My ${year} GoodViews Wrapped: ${slide.films} films, ${Math.round(slide.minutes / 60)} hours, top genre ${slide.top_genre ? genreLabel(slide.top_genre.id, slide.top_genre.name) : '—'}. I'm ${slide.persona.title} ${slide.persona.emoji}`
   const blob = await renderShareCard(slide, year)
 
   if (blob) {

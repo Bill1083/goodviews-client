@@ -1,6 +1,6 @@
 import type { DashboardStats, MovieRef } from '../../../types/stats'
 import { formatMinutesLong, formatPercent, plural } from '../../../utils/formatStats'
-import { genreStyle } from '../../../utils/genres'
+import { genreLabel, genreStyle } from '../../../utils/genres'
 import DashboardCard from './DashboardCard'
 import PosterThumb from './PosterThumb'
 
@@ -40,7 +40,7 @@ export default function WatchlistSection({ stats, index, className, onMovie }: P
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-muted">Intention gap</p>
           <p className="mt-1 text-sm leading-snug text-gray-light">
             <span className="mr-1" aria-hidden="true">{genreStyle(gap.id).emoji}</span>
-            {formatPercent(gap.watchlist_share)} of your backlog is {gap.name}, but only {formatPercent(gap.watched_share)} of what you've watched is.
+            {formatPercent(gap.watchlist_share)} of your backlog is {genreLabel(gap.id, gap.name)}, but only {formatPercent(gap.watched_share)} of what you've watched is.
           </p>
         </div>
       )}

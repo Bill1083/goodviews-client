@@ -42,6 +42,12 @@ export const GENRE_STYLE: Record<number, { color: string; emoji: string }> = {
 
 const FALLBACK_STYLE = { color: '#6f6d7a', emoji: '🎞️' }
 
+/** The app's own display name for a genre id ("Sci-Fi" rather than TMDB's
+ * "Science Fiction"), falling back to whatever the server sent. */
+export function genreLabel(id: number, fallback: string): string {
+  return GENRE_NAME_BY_ID[id] ?? fallback
+}
+
 export function genreStyle(id: number): { color: string; emoji: string } {
   return GENRE_STYLE[id] ?? FALLBACK_STYLE
 }
