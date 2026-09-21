@@ -17,7 +17,11 @@ export function useInView<T extends Element>(rootMargin = '0px 0px -10% 0px'): [
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
+        // Already scrolled past (bottom above the viewport) counts as seen:
+        // on a reload that restores scroll position, a card above the fold
+        // would otherwise sit at its starting value indefinitely — wrong for
+        // anyone scrolling back up, for find-in-page and for screen readers.
+        if (entries.some((e) => e.isIntersecting || e.boundingClientRect.bottom <= 0)) {
           setInView(true)
           observer.disconnect()
         }
