@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
-import { getFriendRequests, getProfile } from '../services/apiClient'
+import { getFriendRequests, getProfile, getWrappedAvailability } from '../services/apiClient'
 import SettingsDrawer from './SettingsDrawer'
+import { isWrappedSeen } from '../utils/wrappedSeen'
 
 const NAV_TABS = [
   { label: 'Discover', path: '/' },
@@ -58,6 +59,29 @@ export default function Navbar() {
   })
   const hasPendingRequests = friendRequests.length > 0
 
+  // A ready-and-unseen Wrapped gets a sparkle beside the Profile tab, where
+  // its hub card lives — same idiom as the friend-request bell.
+  const { data: wrapped } = useQuery({
+    queryKey: ['stats', 'wrapped', 'availability'],
+    queryFn: getWrappedAvailability,
+    enabled: !!user,
+    staleTime: 60 * 60_000,
+  })
+  const [seenTick, setSeenTick] = useState(0)
+  useEffect(() => {
+    const bump = () => setSeenTick((t) => t + 1)
+    window.addEventListener('wrapped-seen', bump)
+    window.addEventListener('focus', bump)
+    return () => {
+      window.removeEventListener('wrapped-seen', bump)
+      window.removeEventListener('focus', bump)
+    }
+  }, [])
+  const wrappedReady = useMemo(
+    () => (user && wrapped ? wrapped.years.some((y) => y.status === 'ready' && !isWrappedSeen(user.id, y.year)) : false),
+    [user, wrapped, seenTick],
+  )
+
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: getProfile,
@@ -90,6 +114,13 @@ export default function Navbar() {
               >
                 <span className="flex items-center gap-1.5">
                   {tab.label}
+                  {tab.path === '/profile' && wrappedReady && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Your Wrapped is ready" className="bell-wiggle">
+                      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="#14ceca" />
+                      <circle cx="19" cy="5" r="2" fill="#dd3ee3" />
+                      <circle cx="5" cy="18" r="1.5" fill="#dd3ee3" />
+                    </svg>
+                  )}
                   {tab.path === '/profile' && hasPendingRequests && (
                     <svg
                       width="16"

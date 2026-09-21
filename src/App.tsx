@@ -18,6 +18,7 @@ import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
 import AboutPage from './pages/AboutPage'
 import OnboardingPage from './pages/OnboardingPage'
+import WrappedPage from './features/wrapped/WrappedPage'
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -136,6 +137,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wrapped/:year"
+          element={
+            <ProtectedRoute>
+              <WrappedPage />
             </ProtectedRoute>
           }
         />
