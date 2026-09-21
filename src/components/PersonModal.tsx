@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { invalidateTasteStats } from '../utils/tasteStatsCache'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -69,12 +70,12 @@ function FilmographyMovieView({
         genre_ids: entry.genre_ids,
         vote_average: entry.vote_average,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const removeMutation = useMutation({
     mutationFn: () => removeFromWatchlist(entry.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const posterUrl = entry.poster_path ? `${TMDB_POSTER}${entry.poster_path}` : null
@@ -169,6 +170,7 @@ function FilmographyMovieView({
           onSaved={() => {
             setShowReviewModal(false)
             qc.invalidateQueries({ queryKey: ['my-reviews'] })
+            invalidateTasteStats(qc)
             qc.invalidateQueries({ queryKey: ['watchlist'] })
           }}
         />,
@@ -258,23 +260,23 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
   const addActorMutation = useMutation({
     mutationFn: () =>
       addFavouriteActor({ person_id: personId, name: person!.name, profile_path: person!.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
 
   const removeActorMutation = useMutation({
     mutationFn: () => removeFavouriteActor(personId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
 
   const addDirectorMutation = useMutation({
     mutationFn: () =>
       addFavouriteDirector({ person_id: personId, name: person!.name, profile_path: person!.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
 
   const removeDirectorMutation = useMutation({
     mutationFn: () => removeFavouriteDirector(personId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
 
   const profileUrl = person?.profile_path ? `${TMDB_PROFILE}${person.profile_path}` : null
@@ -599,19 +601,19 @@ function InnerPersonView({
 
   const addActorMutation = useMutation({
     mutationFn: () => addFavouriteActor({ person_id: personId, name: person!.name, profile_path: person!.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
   const removeActorMutation = useMutation({
     mutationFn: () => removeFavouriteActor(personId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
   const addDirectorMutation = useMutation({
     mutationFn: () => addFavouriteDirector({ person_id: personId, name: person!.name, profile_path: person!.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
   const removeDirectorMutation = useMutation({
     mutationFn: () => removeFavouriteDirector(personId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
 
   if (isLoading) {

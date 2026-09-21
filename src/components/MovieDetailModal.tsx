@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { invalidateTasteStats } from '../utils/tasteStatsCache'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createReview, getMovieDetails, getMovieReviews, updateReview, type NotInterestedScope } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
@@ -351,6 +352,7 @@ export default function MovieDetailModal({
       queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] })
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
+      invalidateTasteStats(queryClient)
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
       queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
       refreshForYouFeed(queryClient)

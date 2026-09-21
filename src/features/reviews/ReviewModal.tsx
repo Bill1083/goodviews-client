@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createReview, updateReview, getMyCategories, getMyFriendGroups, getMyFriends } from '../../services/apiClient'
 import type { Movie } from '../../types'
@@ -88,6 +89,7 @@ export default function ReviewModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
+      invalidateTasteStats(queryClient)
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
       // The backend invalidates its own For You/Picks-of-the-Week caches as
       // a side effect of creating a review — refetch here so the UI actually
@@ -111,6 +113,7 @@ export default function ReviewModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
+      invalidateTasteStats(queryClient)
       onSaved?.()
       onClose()
     },

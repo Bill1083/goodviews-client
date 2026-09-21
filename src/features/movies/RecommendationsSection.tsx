@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import ReviewModal from '../reviews/ReviewModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -320,12 +321,12 @@ export default function RecommendationsSection() {
         genre_ids: rec.movies.genre_ids,
         vote_average: rec.movies.vote_average,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const watchlistRemoveMutation = useMutation({
     mutationFn: (movieId: number) => removeFromWatchlist(movieId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const handleOpen = (rec: Recommendation) => {

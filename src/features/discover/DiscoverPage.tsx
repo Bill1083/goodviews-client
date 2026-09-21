@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -271,12 +272,12 @@ export default function DiscoverPage() {
         genre_ids: movie.genre_ids,
         vote_average: movie.vote_average,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const watchlistRemoveMutation = useMutation({
     mutationFn: (movie: Movie) => removeFromWatchlist(movie.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const watchlistIds = new Set(watchlist.map((w) => w.movie_id))

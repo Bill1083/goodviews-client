@@ -23,6 +23,7 @@ import type {
   FavouriteDirector,
   MovieImages,
 } from '../types'
+import type { DashboardStats, WrappedAvailability, WrappedPayload, WrappedResult } from '../types/stats'
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
@@ -446,4 +447,51 @@ export async function getCuratedOnboardingPeople(
     params: { genre_ids: genreIds.join(','), movie_ids: movieIds.join(',') },
   })
   return data
+}
+
+// ─── Taste stats + Wrapped ───────────────────────────────────────────────────
+
+/** The browser's IANA zone, so the backend buckets months / years / streaks in
+ * the user's local time. (The Wrapped unlock itself is always UTC server-side.) */
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+export async function getMyStats(): Promise<DashboardStats> {
+  const { data } = await apiClient.get<DashboardStats>('/api/stats/me', {
+    params: { tz: browserTimeZone() },
+  })
+  return data
+}
+
+export async function getWrappedAvailability(): Promise<WrappedAvailability> {
+  const { data } = await apiClient.get<WrappedAvailability>('/api/stats/wrapped', {
+    params: { tz: browserTimeZone() },
+  })
+  return data
+}
+
+/** 423 (still locked) and 404 (no such year) are ordinary outcomes for the
+ * Wrapped screen, so they come back as values instead of thrown errors —
+ * react-query then caches them like any other result and never retries. */
+export async function getWrapped(year: number): Promise<WrappedResult> {
+  try {
+    const { data } = await apiClient.get<WrappedPayload>(`/api/stats/wrapped/${year}`, {
+      params: { tz: browserTimeZone() },
+    })
+    return data
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 423) {
+        const body = err.response.data as { unlocks_at?: string } | undefined
+        return { status: 'locked', year, unlocks_at: body?.unlocks_at ?? '' }
+      }
+      if (err.response.status === 404) return { status: 'missing', year }
+    }
+    throw err
+  }
 }

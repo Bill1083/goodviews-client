@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { invalidateTasteStats } from '../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -953,11 +954,11 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
 
   const addWatchlistMutation = useMutation({
     mutationFn: () => addToWatchlist({ movie_id: movie.id, title: movie.title, poster_path: movie.poster_path ?? null, release_date: movie.release_date ?? null, genre_ids: movie.genre_ids, vote_average: movie.vote_average }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(queryClient) },
   })
   const removeWatchlistMutation = useMutation({
     mutationFn: () => removeFromWatchlist(movie.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(queryClient) },
   })
 
   const actions = [
@@ -1143,6 +1144,7 @@ export default function MyMoviesPage() {
     mutationFn: (movieId: number) => removeFromWatchlist(movieId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['watchlist'] })
+      invalidateTasteStats(qc)
       setWatchlistDetail(null)
     },
   })
@@ -1157,7 +1159,7 @@ export default function MyMoviesPage() {
         genre_ids: movie.genre_ids,
         vote_average: movie.vote_average,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['watchlist'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const incrementRewatchMutation = useMutation({
@@ -1221,25 +1223,25 @@ export default function MyMoviesPage() {
 
   const removeActorMutation = useMutation({
     mutationFn: (actorId: number) => removeFavouriteActor(actorId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
 
   const removeDirectorMutation = useMutation({
     mutationFn: (directorId: number) => removeFavouriteDirector(directorId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
 
   const addActorMutation = useMutation({
     mutationFn: (person: PersonSearchResult) =>
       addFavouriteActor({ person_id: person.id, name: person.name, profile_path: person.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-actors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-actors'] }); invalidateTasteStats(qc) },
   })
   const addingActorId = addActorMutation.isPending ? addActorMutation.variables?.id ?? null : null
 
   const addDirectorMutation = useMutation({
     mutationFn: (person: PersonSearchResult) =>
       addFavouriteDirector({ person_id: person.id, name: person.name, profile_path: person.profile_path }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourite-directors'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['favourite-directors'] }); invalidateTasteStats(qc) },
   })
   const addingDirectorId = addDirectorMutation.isPending ? addDirectorMutation.variables?.id ?? null : null
 

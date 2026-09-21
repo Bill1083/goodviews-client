@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
 import ColorPicker from '../../components/ColorPicker'
 import Avatar from '../../components/Avatar'
 import AvatarPicker from '../../components/AvatarPicker'
 import SettingsPanel from '../../components/SettingsPanel'
+import TasteDashboard from './dashboard/TasteDashboard'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import type { Category, FriendGroup, UserSearchResult } from '../../types'
@@ -162,12 +164,6 @@ function ModalShell({
 export default function ProfilePage() {
   const { user } = useAuthStore()
   const qc = useQueryClient()
-
-  // Fixed, non-scrolling screen — the <main> below is height-capped to the
-  // viewport (minus the navbar), so no matter how many friends/categories/
-  // groups exist the page itself never grows past the viewport. The friends
-  // list and category/group panel scroll internally instead.
-  useBodyScrollLock(true)
 
   // Wide enough to comfortably fit a third column — settings is shown inline
   // instead of making it another click away behind the navbar drawer.
@@ -345,6 +341,7 @@ export default function ProfilePage() {
     mutationFn: (friendId: string) => addFriend(friendId),
     onSuccess: (_data, friendId) => {
       qc.invalidateQueries({ queryKey: ['friends'] })
+      invalidateTasteStats(qc)
       setFriendSearchResults((prev) =>
         prev.map((r) => (r.id === friendId ? { ...r, has_pending_request: true } : r)),
       )
@@ -355,6 +352,7 @@ export default function ProfilePage() {
     mutationFn: (requestId: string) => acceptFriendRequest(requestId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['friends'] })
+      invalidateTasteStats(qc)
       qc.invalidateQueries({ queryKey: ['friend-requests'] })
     },
   })
@@ -366,7 +364,7 @@ export default function ProfilePage() {
 
   const removeFriendMutation = useMutation({
     mutationFn: (friendId: string) => removeFriend(friendId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['friends'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['friends'] }); invalidateTasteStats(qc) },
   })
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -435,7 +433,7 @@ export default function ProfilePage() {
   const avatarZoom = profileData?.avatar_zoom ?? 1
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-49px)] md:h-[calc(100dvh-67px)] max-w-4xl flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-10 xl:max-w-[1400px]">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10 xl:max-w-[1400px] 2xl:max-w-[1600px]">
       {/* ── Profile Header ─────────────────────────────────────────────────── */}
       {isEditingProfile ? (
         /* ── Edit mode ── */
@@ -566,14 +564,18 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* ── Taste dashboard ─────────────────────────────────────────────────── */}
+      {/* The forefront of the profile: everything the user's ratings say about
+          their taste, plus the Wrapped hub. The page scrolls normally now — a
+          dashboard this size can't live in a viewport-capped shell. */}
+      <TasteDashboard />
+
       {/* ── Friends panel + accordions ──────────────────────────────────────── */}
-      {/* flex-1/min-h-0 makes this row fill whatever's left of the fixed-height
-          <main> above; overflow-y-auto is a safety-net scroll for this region
-          only (never the page) in case both children's own internal scroll
-          areas still aren't enough on a very short viewport. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:gap-6">
+      {/* The social row sits below the dashboard as an ordinary block; the
+          friends list keeps its own capped, internal scroll. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
         {/* Friends list panel */}
-        <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 max-h-[45vh] sm:h-full sm:max-h-none sm:w-64">
+        <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-navy-card/60 p-4 max-h-[45vh] sm:max-h-[32rem] sm:w-64">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-lighter">Friends List</h2>
@@ -659,7 +661,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right: accordions */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        <div className="flex flex-1 flex-col gap-3">
           {/* My Movie Categories */}
           <div className="rounded-xl border border-white/10 bg-navy-card/60 overflow-hidden">
             <button
@@ -754,11 +756,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Settings — inline on screens wide enough to give it real room,
-            instead of only being reachable via the navbar drawer. Its own
-            scroll region, same as the two columns to its left, so it can
-            never grow the fixed-height page. */}
+            instead of only being reachable via the navbar drawer. Sticky with
+            its own capped scroll, so it stays in reach while the page scrolls. */}
         {showInlineSettings && (
-          <div className="flex h-full w-[420px] shrink-0 flex-col gap-6 overflow-y-auto rounded-2xl border border-white/10 bg-navy-card/60 p-5">
+          <div className="sticky top-[83px] flex max-h-[calc(100dvh-7rem)] w-[420px] shrink-0 flex-col gap-6 self-start overflow-y-auto rounded-2xl border border-white/10 bg-navy-card/60 p-5">
             <SettingsPanel />
           </div>
         )}

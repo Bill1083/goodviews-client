@@ -279,3 +279,87 @@ option.custom-option {
 .auth-logo-card {
   background-color: rgba(32, 30, 36, 0.55);
 }
+
+/* ─── Taste dashboard ────────────────────────────────────────────────────── */
+/* Bars grow from their baseline once the card scrolls into view. */
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.bar-grow { transform-origin: bottom; animation: barGrow 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes barGrowX {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.bar-grow-x { transform-origin: left; animation: barGrowX 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Slow breathing glow for the "your Wrapped is ready" card. */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(20, 206, 202, 0.35), 0 0 28px rgba(20, 206, 202, 0.22); }
+  50%      { box-shadow: 0 0 0 1px rgba(221, 62, 227, 0.45), 0 0 40px rgba(221, 62, 227, 0.32); }
+}
+.glow-pulse { animation: glowPulse 2.8s ease-in-out infinite; }
+
+/* ─── Wrapped ────────────────────────────────────────────────────────────── */
+/* Each slide type has a fixed look; persona + summary borrow the persona's. */
+.wrapped-theme-aurora { background: radial-gradient(120% 90% at 12% 8%, rgba(20,206,202,0.55) 0%, rgba(20,206,202,0) 55%), radial-gradient(90% 80% at 92% 92%, rgba(221,62,227,0.42) 0%, rgba(221,62,227,0) 60%), #071a45; }
+.wrapped-theme-neon   { background: radial-gradient(110% 80% at 85% 10%, rgba(221,62,227,0.6) 0%, rgba(221,62,227,0) 58%), radial-gradient(90% 90% at 10% 90%, rgba(1,109,185,0.7) 0%, rgba(1,109,185,0) 60%), #12082a; }
+.wrapped-theme-ocean  { background: radial-gradient(120% 90% at 20% 100%, rgba(20,206,202,0.45) 0%, rgba(20,206,202,0) 55%), radial-gradient(90% 70% at 90% 0%, rgba(1,109,185,0.75) 0%, rgba(1,109,185,0) 60%), #04173f; }
+.wrapped-theme-sunset { background: radial-gradient(110% 80% at 15% 15%, rgba(224,85,128,0.68) 0%, rgba(224,85,128,0) 58%), radial-gradient(90% 80% at 90% 95%, rgba(242,145,63,0.5) 0%, rgba(242,145,63,0) 60%), #2a0b2c; }
+.wrapped-theme-sepia  { background: radial-gradient(110% 90% at 80% 15%, rgba(227,221,160,0.35) 0%, rgba(227,221,160,0) 55%), radial-gradient(90% 80% at 10% 95%, rgba(140,90,40,0.55) 0%, rgba(140,90,40,0) 60%), #1f1410; }
+.wrapped-theme-gold   { background: radial-gradient(110% 90% at 50% 0%, rgba(227,201,106,0.6) 0%, rgba(227,201,106,0) 58%), radial-gradient(90% 80% at 90% 100%, rgba(221,62,227,0.3) 0%, rgba(221,62,227,0) 60%), #1c1206; }
+.wrapped-theme-noir   { background: radial-gradient(100% 80% at 50% 110%, rgba(224,85,128,0.28) 0%, rgba(224,85,128,0) 60%), #050308; }
+.wrapped-theme-ember  { background: radial-gradient(110% 80% at 80% 20%, rgba(242,145,63,0.55) 0%, rgba(242,145,63,0) 58%), radial-gradient(100% 80% at 10% 100%, rgba(224,85,128,0.55) 0%, rgba(224,85,128,0) 60%), #240607; }
+
+@keyframes wrappedSlideIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.wrapped-slide-in { animation: wrappedSlideIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Big reveals — the persona title, the film of the year. */
+@keyframes wrappedPop {
+  from { opacity: 0; transform: scale(0.55); }
+  70%  { opacity: 1; transform: scale(1.06); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.wrapped-pop { animation: wrappedPop 0.65s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Poster walls: each tile lands with its own slight tilt (set via --tilt). */
+@keyframes posterPop {
+  from { opacity: 0; transform: translateY(22px) rotate(var(--tilt, 0deg)) scale(0.8); }
+  to   { opacity: 1; transform: translateY(0)    rotate(var(--tilt, 0deg)) scale(1); }
+}
+.poster-pop { animation: posterPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+.float-y { animation: floatY 5.5s ease-in-out infinite; }
+
+/* Gradient headline text (persona reveal, hero numbers). */
+.text-gradient-brand {
+  background: linear-gradient(95deg, #14ceca 0%, #e9e9e9 45%, #dd3ee3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
+/* Nothing in the app respected this before the Wrapped; the story auto-advance
+   and count-ups are handled in JS (usePrefersReducedMotion) — this covers the
+   CSS side so entrances become instant and loops stop. */
+@media (prefers-reduced-motion: reduce) {
+  .page-slide-right, .page-slide-left, .dialog-scale-in, .modal-backdrop-fade,
+  .modal-zoom-forward, .search-ease-in, .wrapped-slide-in, .wrapped-pop,
+  .poster-pop, .bar-grow, .bar-grow-x {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .glow-pulse, .float-y, .auth-poster, .auth-poster-carousel-track, .bell-wiggle {
+    animation: none !important;
+  }
+  .rec-card-new { animation: none !important; box-shadow: 0 0 0 2px #dd3ee3; }
+  .accordion-body { transition: none !important; }
+}
