@@ -108,7 +108,8 @@ export default function WrappedStory({ data, onExit, onSeen }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onExit()
       else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
-        if ((e.target as HTMLElement | null)?.tagName === 'BUTTON' && e.key !== 'ArrowRight') return
+        // Real controls (close, summary buttons) keep Enter/Space for themselves.
+        if ((e.target as HTMLElement | null)?.closest?.('[data-wrapped-control]') && e.key !== 'ArrowRight') return
         e.preventDefault()
         next()
       } else if (e.key === 'ArrowLeft') {
@@ -177,6 +178,8 @@ export default function WrappedStory({ data, onExit, onSeen }: Props) {
               type="button"
               aria-label="Previous slide"
               className="absolute inset-y-0 left-0 z-10 w-[30%] cursor-default focus:outline-none"
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
               onPointerDown={zoneDown}
               onPointerUp={zoneUp('prev')}
               onPointerCancel={zoneCancel}
@@ -188,6 +191,8 @@ export default function WrappedStory({ data, onExit, onSeen }: Props) {
               type="button"
               aria-label="Next slide"
               className="absolute inset-y-0 right-0 z-10 w-[70%] cursor-default focus:outline-none"
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
               onPointerDown={zoneDown}
               onPointerUp={zoneUp('next')}
               onPointerCancel={zoneCancel}
@@ -214,6 +219,7 @@ export default function WrappedStory({ data, onExit, onSeen }: Props) {
             type="button"
             onClick={onExit}
             aria-label="Close Wrapped"
+            data-wrapped-control="true"
             className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg leading-none text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60"
           >
             ×

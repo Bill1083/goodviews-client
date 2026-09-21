@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from './services/supabaseClient'
@@ -18,7 +18,9 @@ import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
 import AboutPage from './pages/AboutPage'
 import OnboardingPage from './pages/OnboardingPage'
-import WrappedPage from './features/wrapped/WrappedPage'
+
+// Loaded on demand: the Wrapped is a once-a-year screen with its own bundle.
+const WrappedPage = lazy(() => import('./features/wrapped/WrappedPage'))
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -144,7 +146,9 @@ function AppRoutes() {
           path="/wrapped/:year"
           element={
             <ProtectedRoute>
-              <WrappedPage />
+              <Suspense fallback={null}>
+                <WrappedPage />
+              </Suspense>
             </ProtectedRoute>
           }
         />

@@ -19,14 +19,14 @@ interface Props {
  * back. This slide never auto-advances. */
 export default function SummarySlide({ slide, year, onReplay, onExit }: Props) {
   const stagger = useStagger()
-  const [shareState, setShareState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle')
+  const [shareState, setShareState] = useState<'idle' | 'busy' | 'shared' | 'downloaded' | 'copied' | 'failed'>('idle')
   const hours = Math.round(slide.minutes / 60)
 
   const share = async () => {
     setShareState('busy')
     try {
       const result = await shareWrapped(slide, year)
-      setShareState(result === 'cancelled' ? 'idle' : 'done')
+      setShareState(result === 'cancelled' ? 'idle' : result)
     } catch {
       setShareState('failed')
     }
@@ -96,9 +96,19 @@ export default function SummarySlide({ slide, year, onReplay, onExit }: Props) {
           </dl>
         </div>
 
-        <div {...stagger(1)} className={`flex flex-wrap justify-center gap-2 ${stagger(1).className}`}>
+        <div {...stagger(1)} className={`flex flex-wrap justify-center gap-2 ${stagger(1).className}`} data-wrapped-control="true">
           <button type="button" onClick={share} disabled={shareState === 'busy'} className="rounded-full bg-magenta px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-105 disabled:opacity-60">
-            {shareState === 'busy' ? 'Preparing…' : shareState === 'done' ? 'Shared ✓' : shareState === 'failed' ? 'Copied text instead' : 'Share'}
+            {shareState === 'busy'
+              ? 'Preparing…'
+              : shareState === 'shared'
+                ? 'Shared ✓'
+                : shareState === 'downloaded'
+                  ? 'Image saved ✓'
+                  : shareState === 'copied'
+                    ? 'Copied to clipboard ✓'
+                    : shareState === 'failed'
+                      ? 'Sharing failed'
+                      : 'Share'}
           </button>
           <button type="button" onClick={onReplay} className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-medium text-white/90 transition-colors hover:border-teal hover:text-teal">
             Replay
