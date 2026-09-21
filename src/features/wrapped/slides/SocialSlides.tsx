@@ -79,6 +79,16 @@ export function FriendsSlide({ slide }: { slide: Friends }) {
   )
 }
 
+/** The same number reads very differently at 2% and at 40%, so the line
+ * grades with it rather than always claiming a subtitle habit. */
+function passportLine(share: number): string {
+  const pct = formatPercent(share)
+  if (share <= 0) return 'All in English this year — the rest of the world is waiting.'
+  if (share < 0.1) return `Just ${pct} of your films weren't in English. The rest of the world is still waiting.`
+  if (share < 0.25) return `${pct} of your films weren't in English — you're branching out.`
+  return `${pct} of your films weren't in English. Subtitles are a lifestyle.`
+}
+
 export function WorldSlide({ slide }: { slide: World }) {
   const stagger = useStagger()
   return (
@@ -87,11 +97,7 @@ export function WorldSlide({ slide }: { slide: World }) {
       <Headline index={1}>
         {slide.countries} {plural(slide.countries, 'country', 'countries')}, {slide.languages} {plural(slide.languages, 'language')}
       </Headline>
-      <Body index={2}>
-        {slide.non_english_share > 0
-          ? `${formatPercent(slide.non_english_share)} of your films weren't in English. Subtitles are a lifestyle.`
-          : 'All in English this year — the rest of the world is waiting.'}
-      </Body>
+      <Body index={2}>{passportLine(slide.non_english_share)}</Body>
       <ul className="mt-2 flex flex-wrap gap-2">
         {slide.top_countries.map((c, i) => (
           <li key={c.code} {...stagger(3 + i)} className={`rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm text-white ${stagger(3 + i).className}`}>
