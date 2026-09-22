@@ -27,15 +27,6 @@ export interface PersonStat {
   films: MovieRef[]
 }
 
-export interface FavouriteCoverage {
-  id: number
-  name: string | null
-  profile_path: string | null
-  seen_count: number
-  avg_rating: number | null
-  films: MovieRef[]
-}
-
 export interface GenreStat {
   id: number
   name: string
@@ -98,33 +89,6 @@ export interface WatchlistOldest {
   days_waiting: number
 }
 
-export interface ExtrasStats {
-  sample_size: number
-  languages: {
-    count: number
-    top: { code: string; count: number; share: number }[]
-    non_english_share: number
-  }
-  countries: {
-    count: number
-    top: { code: string; count: number }[]
-  }
-  budget: {
-    blockbuster_count: number
-    indie_count: number
-    median_budget: number | null
-    sample_size: number
-  }
-  hidden_gems: (RatedFilm & { popularity: number })[]
-  franchises: {
-    collection_id: number
-    name: string
-    count: number
-    avg_rating: number | null
-    films: MovieRef[]
-  }[]
-}
-
 export interface DashboardStats {
   generated_at: string
   tz: string
@@ -135,17 +99,11 @@ export interface DashboardStats {
     watch_minutes: number
     avg_rating: number | null
     rewatches: number
+    rewatched_films: number
     written_reviews: number
     written_words: number
     first_rated_at: string | null
     last_rated_at: string | null
-  }
-  ratings: {
-    distribution: { rating: number; count: number }[]
-    loved_share: number
-    okay_share: number
-    disliked_share: number
-    most_common: number | null
   }
   genres: GenreStat[]
   genre_highlights: {
@@ -154,49 +112,7 @@ export interface DashboardStats {
     lowest_rated: GenreStat | null
     affinity_top: GenreStat[]
   }
-  decades: DecadeStat[]
-  eras: { oldest: EraFilm | null; newest: EraFilm | null; mean_release_year: number | null }
-  people: { directors: PeopleBlock; actors: PeopleBlock }
-  favourites: { actors: FavouriteCoverage[]; directors: FavouriteCoverage[] }
-  rewatches: { total: number; top: RatedFilm[] }
-  activity: {
-    months: { month: string; count: number }[]
-    busiest_month: { month: string; count: number } | null
-    current_streak_weeks: number
-    longest_streak_weeks: number
-    weekday_counts: number[]
-    hour_counts: number[]
-  }
-  categories: { category_id: string; count: number; avg_rating: number | null }[]
-  top_rated: { five_star_count: number; films: RatedFilm[] }
-  vs_world: {
-    mean_delta: number | null
-    label: 'kinder' | 'harsher' | 'in step' | null
-    agreement_share: number | null
-    sample_size: number
-    hot_takes: { loved_more: HotTake[]; loved_less: HotTake[] }
-  }
-  runtime: {
-    avg_minutes: number | null
-    longest: RuntimeFilm | null
-    shortest: RuntimeFilm | null
-    share_over_2h: number
-    share_under_90m: number
-    sample_size: number
-  }
-  watchlist: {
-    count: number
-    total_minutes: number
-    oldest: WatchlistOldest | null
-    genre_gap: { id: number; name: string; watchlist_share: number; watched_share: number }[]
-  }
-  friends: {
-    friend_count: number
-    compared: FriendCompat[]
-    twin: FriendCompat | null
-    nemesis: FriendCompat | null
-  }
-  extras: ExtrasStats | null
+  watchlist: { count: number; total_minutes: number }
 }
 
 // ─── Wrapped ────────────────────────────────────────────────────────────────
@@ -253,6 +169,14 @@ export type WrappedSlide =
       label: 'kinder' | 'harsher' | 'in step' | null
       agreement_share: number | null
     })
+  | (Themed & {
+      kind: 'runtime'
+      avg_minutes: number | null
+      longest: RuntimeFilm
+      shortest: RuntimeFilm | null
+      share_over_2h: number
+      share_under_90m: number
+    })
   | (Themed & { kind: 'rewatches'; total: number; top: RatedFilm[] })
   | (Themed & {
       kind: 'words'
@@ -304,13 +228,23 @@ export type WrappedResult =
   | { status: 'locked'; year: number; unlocks_at: string }
   | { status: 'missing'; year: number }
 
-export type WrappedYear =
-  | { year: number; status: 'locked'; unlocks_at: string }
-  | { year: number; status: 'ready'; films: number; min_films: number }
-  | { year: number; status: 'not_enough'; films: number; min_films: number }
+/** The year in its reveal window. Absent outside 1 Dec – 31 Dec, so nothing
+ * about an unfinished year reaches the profile. */
+export interface WrappedCurrentYear {
+  year: number
+  status: 'ready' | 'not_enough'
+  films: number
+  min_films: number
+}
+
+export interface WrappedHistoryYear {
+  year: number
+  films: number
+}
 
 export interface WrappedAvailability {
   current_year: number
   server_time: string
-  years: WrappedYear[]
+  current: WrappedCurrentYear | null
+  history: WrappedHistoryYear[]
 }

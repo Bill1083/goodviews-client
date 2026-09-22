@@ -37,6 +37,7 @@ export default function SettingsDrawer({ open, onClose }: { open: boolean; onClo
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
+        data-settings-scroll="true"
         className={[
           'fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-y-auto bg-navy border-l border-white/10 shadow-2xl transition-transform duration-300 ease-out sm:w-[440px]',
           open ? 'translate-x-0' : 'translate-x-full',

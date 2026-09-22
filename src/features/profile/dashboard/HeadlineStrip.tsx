@@ -9,13 +9,12 @@ interface Props {
   className?: string
 }
 
-/** The numbers the dashboard leads with. Films watched is the hero figure;
- * everything else is a plain tile. Counts up once scrolled into view. */
+/** The plain totals. Every sub-line here is a count or a date — naming a
+ * film or a person would give away a Wrapped slide. */
 export default function HeadlineStrip({ stats, className = '' }: Props) {
   const [ref, inView] = useInView<HTMLDivElement>()
   const h = stats.headline
   const hours = h.watch_minutes / 60
-  const topRewatch = stats.rewatches.top[0]
 
   return (
     <div ref={ref} className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6 ${className}`}>
@@ -44,7 +43,7 @@ export default function HeadlineStrip({ stats, className = '' }: Props) {
         label="Rewatches"
         value={h.rewatches}
         active={inView}
-        sub={topRewatch ? `${topRewatch.movie.title} ×${topRewatch.rewatch_count + 1}` : 'nothing twice, yet'}
+        sub={h.rewatched_films > 0 ? `across ${h.rewatched_films} ${plural(h.rewatched_films, 'film')}` : 'nothing twice, yet'}
       />
       <StatTile
         label="Reviews written"

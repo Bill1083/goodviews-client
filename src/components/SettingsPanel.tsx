@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
@@ -9,6 +11,39 @@ import { useAuthStore } from '../store/authStore'
 import { verifyReauth } from '../utils/mfa'
 import { PASSWORD_HINT, PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 import ReauthField from './ReauthField'
+
+/** Confirmations are portalled to <body> on purpose.
+ *  SettingsDrawer slides in with a CSS transform, and a transformed ancestor
+ *  becomes the containing block for `position: fixed` descendants — so a
+ *  dialog rendered in place landed at the top of the drawer's own (scrolled)
+ *  box instead of in front of the reader, who then couldn't scroll to it.
+ *  Out here it centres on the viewport wherever the panel happens to be
+ *  scrolled to. */
+function ConfirmOverlay({ onDismiss, children }: { onDismiss: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onDismiss() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onDismiss])
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+      onClick={onDismiss}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="panel-card dialog-scale-in flex w-full max-w-sm flex-col gap-5 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
+}
 
 function SectionHeading({ icon, tone = 'teal', children }: { icon: React.ReactNode; tone?: 'teal' | 'red'; children: React.ReactNode }) {
   return (
@@ -70,7 +105,20 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   const [enrollError, setEnrollError] = useState<string | null>(null)
   const [showDisableMfaConfirm, setShowDisableMfaConfirm] = useState(false)
 
-  useBodyScrollLock(showSignOutConfirm || showDeleteConfirm || showDisableMfaConfirm)
+  const confirmOpen = showSignOutConfirm || showDeleteConfirm || showDisableMfaConfirm
+  useBodyScrollLock(confirmOpen)
+
+  // The drawer and the profile's inline column scroll themselves, and the
+  // drawer already holds the body lock while it's open (so the shared hook
+  // won't pick them up) — freeze them here instead, or the settings slide
+  // around behind the dialog.
+  useEffect(() => {
+    if (!confirmOpen) return
+    const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-settings-scroll]'))
+    const previous = panels.map((el) => el.style.overflow)
+    panels.forEach((el) => { el.style.overflow = 'hidden' })
+    return () => { panels.forEach((el, i) => { el.style.overflow = previous[i] }) }
+  }, [confirmOpen])
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -567,14 +615,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
       {/* Sign-out confirmation dialog */}
       {showSignOutConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
-          onClick={() => setShowSignOutConfirm(false)}
-        >
-          <div
-            className="panel-card dialog-scale-in flex max-w-sm w-full flex-col gap-5 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ConfirmOverlay onDismiss={() => setShowSignOutConfirm(false)}>
             <p className="text-base font-semibold text-gray-lighter">Sign out of GoodViews?</p>
             <div className="flex gap-3 justify-end">
               <button
@@ -590,20 +631,12 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
                 Sign Out
               </button>
             </div>
-          </div>
-        </div>
+        </ConfirmOverlay>
       )}
 
       {/* Delete account confirmation dialog */}
       {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
-          onClick={() => { if (!deleteAccountMutation.isPending) setShowDeleteConfirm(false) }}
-        >
-          <div
-            className="panel-card dialog-scale-in flex max-w-sm w-full flex-col gap-5 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ConfirmOverlay onDismiss={() => { if (!deleteAccountMutation.isPending) setShowDeleteConfirm(false) }}>
             <div className="flex flex-col gap-1.5">
               <p className="text-base font-semibold text-red-400">Delete Account</p>
               <p className="text-sm text-gray-muted">
@@ -648,20 +681,12 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
                 {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Forever'}
               </button>
             </div>
-          </div>
-        </div>
+        </ConfirmOverlay>
       )}
 
       {/* Disable 2FA confirmation dialog */}
       {showDisableMfaConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-dark/60 backdrop-blur-sm px-4"
-          onClick={() => { if (!disableMfaMutation.isPending) setShowDisableMfaConfirm(false) }}
-        >
-          <div
-            className="panel-card dialog-scale-in flex max-w-sm w-full flex-col gap-5 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ConfirmOverlay onDismiss={() => { if (!disableMfaMutation.isPending) setShowDisableMfaConfirm(false) }}>
             <div className="flex flex-col gap-1.5">
               <p className="text-base font-semibold text-red-400">Disable Two-Factor Authentication?</p>
               <p className="text-sm text-gray-muted">
@@ -689,8 +714,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
                 {disableMfaMutation.isPending ? 'Disabling…' : 'Disable'}
               </button>
             </div>
-          </div>
-        </div>
+        </ConfirmOverlay>
       )}
     </>
   )

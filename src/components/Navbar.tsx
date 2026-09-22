@@ -77,8 +77,10 @@ export default function Navbar() {
       window.removeEventListener('focus', bump)
     }
   }, [])
+  // Only the year that's currently unlocked, so an unwatched old Wrapped
+  // doesn't keep nudging forever — those live in the profile's history.
   const wrappedReady = useMemo(
-    () => (user && wrapped ? wrapped.years.some((y) => y.status === 'ready' && !isWrappedSeen(user.id, y.year)) : false),
+    () => Boolean(user && wrapped?.current?.status === 'ready' && !isWrappedSeen(user.id, wrapped.current.year)),
     [user, wrapped, seenTick],
   )
 

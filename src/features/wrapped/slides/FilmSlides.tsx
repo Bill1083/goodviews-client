@@ -1,7 +1,7 @@
 import { useContext } from 'react'
 import RetryImage from '../../../components/RetryImage'
 import type { RatedFilm, WrappedSlide } from '../../../types/stats'
-import { formatPercent, plural, releaseYear } from '../../../utils/formatStats'
+import { formatPercent, formatRuntime, plural, releaseYear } from '../../../utils/formatStats'
 import { ratingLabel } from '../../../utils/ratings'
 import { tmdbImage } from '../../../utils/tmdbImage'
 import SlideShell, { Body, Eyebrow, Headline, WrappedMotionContext, useStagger } from '../SlideShell'
@@ -13,6 +13,7 @@ type Critic = Extract<WrappedSlide, { kind: 'critic' }>
 type Rewatches = Extract<WrappedSlide, { kind: 'rewatches' }>
 type Words = Extract<WrappedSlide, { kind: 'words' }>
 type HiddenGem = Extract<WrappedSlide, { kind: 'hidden_gem' }>
+type Runtime = Extract<WrappedSlide, { kind: 'runtime' }>
 
 function Poster({ path, title, className = '', pop = false }: { path: string | null; title: string; className?: string; pop?: boolean }) {
   const { reduced } = useContext(WrappedMotionContext)
@@ -214,6 +215,39 @@ export function WordsSlide({ slide }: { slide: Words }) {
       <blockquote {...stagger(3)} className={`mt-2 border-l-2 border-white/40 pl-4 text-base italic leading-relaxed text-white/90 sm:text-lg ${stagger(3).className}`}>
         "{slide.longest.excerpt}"
       </blockquote>
+    </SlideShell>
+  )
+}
+
+export function RuntimeSlide({ slide }: { slide: Runtime }) {
+  const stagger = useStagger()
+  return (
+    <SlideShell backdropPath={slide.longest.backdrop_path}>
+      <Eyebrow index={0}>Attention span</Eyebrow>
+      <Headline index={1}>
+        {slide.avg_minutes ? `${formatRuntime(slide.avg_minutes)} a sitting` : 'Time well spent'}
+      </Headline>
+      <Body index={2}>
+        Your longest was {slide.longest.title} at {formatRuntime(slide.longest.runtime)}
+        {slide.shortest && slide.shortest.id !== slide.longest.id
+          ? `, and your quickest was ${slide.shortest.title} at ${formatRuntime(slide.shortest.runtime)}.`
+          : '.'}
+      </Body>
+      <div {...stagger(3)} className={`mt-2 flex items-center gap-5 ${stagger(3).className}`}>
+        <div className="w-24 shrink-0 sm:w-28">
+          <Poster path={slide.longest.poster_path} title={slide.longest.title} />
+        </div>
+        <dl className="flex flex-col gap-3">
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.2em] text-white/60">Over two hours</dt>
+            <dd className="text-3xl font-bold text-white">{formatPercent(slide.share_over_2h)}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-[0.2em] text-white/60">Under ninety minutes</dt>
+            <dd className="text-3xl font-bold text-white">{formatPercent(slide.share_under_90m)}</dd>
+          </div>
+        </dl>
+      </div>
     </SlideShell>
   )
 }

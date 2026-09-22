@@ -1,5 +1,5 @@
 import type { WrappedReady, WrappedSlide } from '../../../types/stats'
-import { CriticSlide, HatesSlide, HiddenGemSlide, HotTakeSlide, LovesSlide, RewatchesSlide, WordsSlide } from './FilmSlides'
+import { CriticSlide, HatesSlide, HiddenGemSlide, HotTakeSlide, LovesSlide, RewatchesSlide, RuntimeSlide, WordsSlide } from './FilmSlides'
 import { IntroSlide, MonthsSlide, VolumeSlide } from './OpeningSlides'
 import PersonaSlide from './PersonaSlide'
 import { FriendsSlide, WatchlistSlide, WorldSlide } from './SocialSlides'
@@ -21,6 +21,8 @@ export default function SlideRenderer({ slide, data, onReplay, onExit }: Props) 
       return <IntroSlide slide={slide} year={data.year} />
     case 'volume':
       return <VolumeSlide slide={slide} />
+    case 'runtime':
+      return <RuntimeSlide slide={slide} />
     case 'months':
       return <MonthsSlide slide={slide} year={data.year} />
     case 'genres':

@@ -759,7 +759,7 @@ export default function ProfilePage() {
             instead of only being reachable via the navbar drawer. Sticky with
             its own capped scroll, so it stays in reach while the page scrolls. */}
         {showInlineSettings && (
-          <div className="sticky top-[83px] flex max-h-[calc(100dvh-7rem)] w-[420px] shrink-0 flex-col gap-6 self-start overflow-y-auto rounded-2xl border border-white/10 bg-navy-card/60 p-5">
+          <div data-settings-scroll="true" className="sticky top-[83px] flex max-h-[calc(100dvh-7rem)] w-[420px] shrink-0 flex-col gap-6 self-start overflow-y-auto rounded-2xl border border-white/10 bg-navy-card/60 p-5">
             <SettingsPanel />
           </div>
         )}

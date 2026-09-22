@@ -3,22 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getWrappedAvailability } from '../../../services/apiClient'
 import { useAuthStore } from '../../../store/authStore'
-import type { WrappedYear } from '../../../types/stats'
-import { daysUntil, formatDate, plural } from '../../../utils/formatStats'
+import type { WrappedHistoryYear } from '../../../types/stats'
+import { plural } from '../../../utils/formatStats'
 import { isWrappedSeen } from '../../../utils/wrappedSeen'
 
-function LockIcon() {
+function ReelIcon({ size = 26 }: { size?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  )
-}
-
-function ReelIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="2" />
       <circle cx="12" cy="6.5" r="1.4" />
@@ -29,10 +20,10 @@ function ReelIcon() {
   )
 }
 
-/** Uses the same local "seen" flags the Wrapped page writes, and re-reads
- * them when the tab regains focus or a Wrapped is marked seen. */
-function useSeenTick(): number {
-  const [tick, setTick] = useState(0)
+/** Re-reads the local "seen" flags when the tab regains focus or a Wrapped
+ * marks itself watched, so the "it's here" treatment calms down afterwards. */
+function useSeenTick(): void {
+  const [, setTick] = useState(0)
   useEffect(() => {
     const bump = () => setTick((t) => t + 1)
     window.addEventListener('wrapped-seen', bump)
@@ -44,11 +35,14 @@ function useSeenTick(): number {
       window.removeEventListener('storage', bump)
     }
   }, [])
-  return tick
 }
 
-/** The Wrapped's home on the profile: a countdown while the current year is
- * sealed, a glowing "play" card once a year is ready, and chips for replays. */
+/** The Wrapped's home on the profile.
+ *
+ * The current year only appears once the server says it has unlocked — through
+ * December and not a day earlier, so there is no countdown, no "sealed until",
+ * nothing at all to hint at what's being tallied. Once the year turns over it
+ * drops back into the history, which is available all year round. */
 export default function WrappedHubCard() {
   const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id) ?? 'anon'
@@ -58,14 +52,51 @@ export default function WrappedHubCard() {
     queryFn: getWrappedAvailability,
     staleTime: 10 * 60_000,
   })
-  if (!data) return null
 
-  const current = data.years.find((y) => y.year === data.current_year) ?? null
-  const ready = data.years.filter((y): y is Extract<WrappedYear, { status: 'ready' }> => y.status === 'ready')
-  const unseen = ready.find((y) => !isWrappedSeen(userId, y.year)) ?? null
-  const replays = ready.filter((y) => y !== unseen)
+  if (!data) return null
+  const { current, history } = data
+  if (!current && history.length === 0) return null
 
   const play = (year: number) => navigate(`/wrapped/${year}`)
+  const unseen = current?.status === 'ready' && !isWrappedSeen(userId, current.year)
+
+  // ── Nothing current: the archive stands on its own ────────────────────────
+  if (!current) {
+    return (
+      <section className="rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:p-5">
+        <div className="flex items-center gap-2 text-teal">
+          <ReelIcon size={18} />
+          <h2 className="text-sm font-semibold uppercase tracking-wide">Wrapped history</h2>
+        </div>
+        <p className="mt-1 text-sm text-gray-muted">Your past years in film. This year's arrives in December.</p>
+        <HistoryGrid years={history} onPlay={play} />
+      </section>
+    )
+  }
+
+  // ── It's December ─────────────────────────────────────────────────────────
+  if (current.status === 'not_enough') {
+    const missing = Math.max(0, current.min_films - current.films)
+    return (
+      <section className="rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:p-5">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white/10 bg-navy text-gray-light">
+            <ReelIcon />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">{current.year} Wrapped</p>
+            <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">
+              Rate {missing} more {plural(missing, 'film')} before the year is out
+            </h2>
+            <p className="mt-0.5 text-sm text-gray-muted">
+              {current.films} logged so far. {current.min_films} is all it takes.
+            </p>
+          </div>
+        </div>
+        {history.length > 0 && <HistoryGrid years={history} onPlay={play} compact />}
+      </section>
+    )
+  }
 
   if (unseen) {
     return (
@@ -75,99 +106,75 @@ export default function WrappedHubCard() {
         <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">It's here</p>
-            <h2 className="text-gradient-brand mt-1 text-2xl font-bold sm:text-3xl">Your {unseen.year} Wrapped is ready</h2>
+            <h2 className="text-gradient-brand mt-1 text-2xl font-bold sm:text-3xl">Your {current.year} Wrapped is ready</h2>
             <p className="mt-1 text-sm text-gray-light">
-              {unseen.films} {plural(unseen.films, 'film')}, one story. Best with the sound of your own gasps.
+              {current.films} {plural(current.films, 'film')}, one story. Best with the sound of your own gasps.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => play(unseen.year)}
+            onClick={() => play(current.year)}
             className="inline-flex shrink-0 items-center gap-2 rounded-full bg-magenta px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-105 active:scale-95"
           >
             <ReelIcon />
             Play it
           </button>
         </div>
-        {replays.length > 0 && <Replays years={replays} onPlay={play} />}
+        {history.length > 0 && <HistoryGrid years={history} onPlay={play} compact />}
       </section>
     )
   }
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:p-5">
+    <section className="rounded-2xl border border-white/10 bg-navy-card/60 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-white/10 bg-navy text-gray-light shadow-inner">
-            <div className="absolute inset-2.5 rounded-full border border-dashed border-white/15" aria-hidden="true" />
-            {current?.status === 'locked' ? <LockIcon /> : <ReelIcon />}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white/10 bg-navy text-gray-light">
+            <ReelIcon />
           </div>
           <div className="min-w-0">
-            {current?.status === 'locked' && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">Sealed until {formatDate(current.unlocks_at, { day: 'numeric', month: 'long' })}</p>
-                <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">
-                  Your {current.year} Wrapped unlocks in {daysUntil(current.unlocks_at)} {plural(daysUntil(current.unlocks_at), 'day')}
-                </h2>
-                <p className="mt-0.5 text-sm text-gray-muted">We're keeping score. No peeking.</p>
-              </>
-            )}
-            {current?.status === 'not_enough' && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">{current.year} Wrapped</p>
-                <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">
-                  Rate {current.min_films - current.films} more {plural(current.min_films - current.films, 'film')} this year to generate yours
-                </h2>
-                <p className="mt-0.5 text-sm text-gray-muted">Five films is all it takes.</p>
-              </>
-            )}
-            {current?.status === 'ready' && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">{current.year} Wrapped</p>
-                <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">Your {current.year} story, whenever you want it</h2>
-                <p className="mt-0.5 text-sm text-gray-muted">It keeps counting until New Year's Eve.</p>
-              </>
-            )}
-            {!current && (
-              <>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">Wrapped</p>
-                <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">Your year in film, every December</h2>
-              </>
-            )}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal">{current.year} Wrapped</p>
+            <h2 className="mt-1 text-lg font-bold text-gray-lighter sm:text-xl">Your {current.year} story, whenever you want it</h2>
+            <p className="mt-0.5 text-sm text-gray-muted">It keeps counting until New Year's Eve.</p>
           </div>
         </div>
-        {current?.status === 'ready' && (
-          <button
-            type="button"
-            onClick={() => play(current.year)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-magenta/40 bg-magenta/10 px-5 py-2.5 text-sm font-semibold text-magenta transition-colors hover:bg-magenta/20"
-          >
-            <ReelIcon />
-            Replay {current.year}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => play(current.year)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-magenta/40 bg-magenta/10 px-5 py-2.5 text-sm font-semibold text-magenta transition-colors hover:bg-magenta/20"
+        >
+          <ReelIcon />
+          Replay {current.year}
+        </button>
       </div>
-      {replays.filter((y) => y.year !== current?.year).length > 0 && (
-        <Replays years={replays.filter((y) => y.year !== current?.year)} onPlay={play} />
-      )}
+      {history.length > 0 && <HistoryGrid years={history} onPlay={play} compact />}
     </section>
   )
 }
 
-function Replays({ years, onPlay }: { years: { year: number }[]; onPlay: (year: number) => void }) {
+function HistoryGrid({ years, onPlay, compact = false }: { years: WrappedHistoryYear[]; onPlay: (year: number) => void; compact?: boolean }) {
   return (
-    <div className="relative mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
-      <span className="text-xs text-gray-muted">Replay</span>
-      {years.map((y) => (
-        <button
-          key={y.year}
-          type="button"
-          onClick={() => onPlay(y.year)}
-          className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-gray-light transition-colors hover:border-teal hover:text-teal"
-        >
-          {y.year}
-        </button>
-      ))}
+    <div className={compact ? 'relative mt-4 border-t border-white/10 pt-3' : 'mt-4'}>
+      {compact && <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-muted">Earlier years</p>}
+      <ul
+        data-no-swipe="true"
+        className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {years.map((y) => (
+          <li key={y.year}>
+            <button
+              type="button"
+              onClick={() => onPlay(y.year)}
+              className="flex min-w-[104px] flex-col items-start rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-teal/50 hover:bg-teal/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/60"
+            >
+              <span className="text-xl font-bold leading-none text-gray-lighter">{y.year}</span>
+              <span className="mt-1 text-[11px] text-gray-muted">
+                {y.films} {plural(y.films, 'film')}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
