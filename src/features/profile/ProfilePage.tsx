@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
@@ -644,8 +645,14 @@ export default function ProfilePage() {
               <li className="py-2 text-xs text-gray-muted italic">No friends yet.</li>
             ) : filteredFriends.map((f) => (
               <li key={f.id} className="flex items-center gap-2 py-2">
-                <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} focalY={f.avatar_focal_y} zoom={f.avatar_zoom} size="xs" />
-                <span className="flex-1 truncate text-sm text-gray-light">{f.username}</span>
+                <Link
+                  to={`/u/${f.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md transition-colors hover:text-teal focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/60"
+                  title={`View ${f.username}'s profile`}
+                >
+                  <Avatar username={f.username} avatarUrl={f.avatar_url} color={f.avatar_color} focalY={f.avatar_focal_y} zoom={f.avatar_zoom} size="xs" />
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-light">{f.username}</span>
+                </Link>
                 <button
                   onClick={() => removeFriendMutation.mutate(f.id)}
                   className="text-gray-muted hover:text-red-400 transition-colors"
@@ -805,8 +812,15 @@ export default function ProfilePage() {
             <ul className="flex flex-col divide-y divide-white/5">
               {friendSearchResults.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 py-3">
-                  <Avatar username={r.username} avatarUrl={r.avatar_url} color={r.avatar_color} focalY={r.avatar_focal_y} zoom={r.avatar_zoom} size="sm" />
-                  <span className="flex-1 truncate text-sm text-gray-light">{r.username}</span>
+                  <Link
+                    to={`/u/${r.id}`}
+                    onClick={() => setAddFriendOpen(false)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md transition-colors hover:text-teal focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/60"
+                    title={`View ${r.username}'s profile`}
+                  >
+                    <Avatar username={r.username} avatarUrl={r.avatar_url} color={r.avatar_color} focalY={r.avatar_focal_y} zoom={r.avatar_zoom} size="sm" />
+                    <span className="min-w-0 flex-1 truncate text-sm text-gray-light">{r.username}</span>
+                  </Link>
                   {r.is_friend ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

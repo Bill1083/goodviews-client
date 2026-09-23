@@ -12,6 +12,7 @@ import MyMoviesPage from './pages/MyMoviesPage'
 import DiscoverPage from './features/discover/DiscoverPage'
 import DiscoverListPage from './features/discover/DiscoverListPage'
 import ProfilePage from './features/profile/ProfilePage'
+import PublicProfilePage from './features/profile/PublicProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
@@ -149,6 +150,14 @@ function AppRoutes() {
               <Suspense fallback={null}>
                 <WrappedPage />
               </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/u/:userId"
+          element={
+            <ProtectedRoute>
+              <PublicProfilePage />
             </ProtectedRoute>
           }
         />

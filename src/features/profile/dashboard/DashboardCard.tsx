@@ -12,6 +12,8 @@ interface Props {
   index?: number
   action?: ReactNode
   footnote?: ReactNode
+  /** Replaces the "rate N more films" nudge — someone else's profile can't act on it. */
+  lockedMessage?: ReactNode
   children: ReactNode
 }
 
@@ -26,6 +28,7 @@ export default function DashboardCard({
   index = 0,
   action,
   footnote,
+  lockedMessage,
   children,
 }: Props) {
   const missing = Math.max(0, minFilms - films)
@@ -43,7 +46,7 @@ export default function DashboardCard({
       </header>
       {missing > 0 ? (
         <p className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-center text-sm text-gray-muted">
-          Rate {missing} more {plural(missing, 'film')} to unlock this.
+          {lockedMessage ?? `Rate ${missing} more ${plural(missing, 'film')} to unlock this.`}
         </p>
       ) : (
         children

@@ -122,6 +122,23 @@ export interface FriendProfile {
   avatar_zoom: number | null
 }
 
+/** Someone else's profile, as far as their privacy settings allow. The
+ * private half of the row (mute flags, onboarding state) is never sent, and
+ * `friends` is null — not empty — when they've hidden the list. */
+export interface PublicProfile {
+  id: string
+  username: string | null
+  bio: string | null
+  avatar_url: string | null
+  avatar_color: string | null
+  avatar_focal_y: number | null
+  avatar_zoom: number | null
+  is_self: boolean
+  is_friend: boolean
+  friends: FriendProfile[] | null
+  friend_count: number | null
+}
+
 export interface FriendGroup {
   id: string
   name: string

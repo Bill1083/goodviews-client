@@ -10,13 +10,16 @@ interface Props {
   stats: DashboardStats
   index: number
   className?: string
+  /** Whose taste this is. Undefined on your own profile, where the copy is
+   *  second person; a username elsewhere, which switches it to third. */
+  subject?: string | null
 }
 
 type Mode = 'watched' | 'loved'
 
 /** "Taste DNA": a radar of the top genres by how often you watch them, or by
  * how much you like them (rating-weighted affinity), plus the callouts. */
-export default function GenreDnaSection({ stats, index, className }: Props) {
+export default function GenreDnaSection({ stats, index, className, subject }: Props) {
   const [mode, setMode] = useState<Mode>('watched')
   const [ref, inView] = useInView<HTMLDivElement>()
   const films = stats.headline.films
@@ -34,12 +37,18 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
         : `${g.affinity > 0 ? '+' : ''}${g.affinity} affinity · ${g.avg_rating?.toFixed(1) ?? '—'}★ avg`,
   }))
 
+  const possessive = subject ? 'their' : 'your'
   let callout: string | null = null
   if (hl.most_watched && hl.highest_rated) {
+    const most = genreLabel(hl.most_watched.id, hl.most_watched.name)
+    const best = genreLabel(hl.highest_rated.id, hl.highest_rated.name)
+    const detail = `${hl.highest_rated.avg_rating?.toFixed(1)}★ across ${hl.highest_rated.count} films`
     callout =
       hl.most_watched.id === hl.highest_rated.id
-        ? `${genreLabel(hl.most_watched.id, hl.most_watched.name)} is both your most-watched and your highest-rated genre (${hl.highest_rated.avg_rating?.toFixed(1)}★).`
-        : `You watch ${genreLabel(hl.most_watched.id, hl.most_watched.name)} the most, but you rate ${genreLabel(hl.highest_rated.id, hl.highest_rated.name)} the highest (${hl.highest_rated.avg_rating?.toFixed(1)}★ across ${hl.highest_rated.count} films).`
+        ? `${most} is both ${possessive} most-watched and ${possessive} highest-rated genre (${hl.highest_rated.avg_rating?.toFixed(1)}★).`
+        : subject
+          ? `${subject} watches ${most} the most, but rates ${best} the highest (${detail}).`
+          : `You watch ${most} the most, but you rate ${best} the highest (${detail}).`
   } else if (hl.most_watched) {
     callout = `${genreLabel(hl.most_watched.id, hl.most_watched.name)} leads with ${hl.most_watched.count} ${plural(hl.most_watched.count, 'film')}.`
   }
@@ -52,6 +61,7 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
       className={className}
       films={films}
       minFilms={3}
+      lockedMessage={subject ? 'Not enough films rated yet.' : undefined}
       action={
         <div className="flex rounded-full border border-white/15 p-0.5 text-xs" role="tablist" aria-label="Radar mode">
           {(['watched', 'loved'] as const).map((m) => (
@@ -78,7 +88,9 @@ export default function GenreDnaSection({ stats, index, className }: Props) {
         {axes.length >= 3 ? (
           <RadarChart key={mode} axes={axes} ariaLabel={`Top genres by ${mode === 'watched' ? 'films watched' : 'affinity'}`} animate={inView} />
         ) : (
-          <p className="text-sm text-gray-muted">Watch films across a few more genres to map your DNA.</p>
+          <p className="text-sm text-gray-muted">
+            {subject ? 'Not enough genres yet to map a DNA.' : 'Watch films across a few more genres to map your DNA.'}
+          </p>
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           {callout && <p className="text-sm leading-snug text-gray-light">{callout}</p>}

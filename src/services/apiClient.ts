@@ -22,6 +22,7 @@ import type {
   FavouriteActor,
   FavouriteDirector,
   MovieImages,
+  PublicProfile,
 } from '../types'
 import type { DashboardStats, WrappedAvailability, WrappedPayload, WrappedResult } from '../types/stats'
 
@@ -308,6 +309,7 @@ export interface ProfileData {
   avatar_zoom: number
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
+  hide_friends_list: boolean
   mute_recommendations: boolean
   mute_friend_requests: boolean
   has_onboarded: boolean
@@ -328,6 +330,7 @@ export async function updateProfile(payload: Partial<{
   avatar_zoom: number
   profile_visibility: 'no_one' | 'friends_only' | 'everyone'
   hide_recent_movies: boolean
+  hide_friends_list: boolean
   mute_recommendations: boolean
   mute_friend_requests: boolean
   has_onboarded: boolean
@@ -459,6 +462,33 @@ export function browserTimeZone(): string {
   } catch {
     return 'UTC'
   }
+}
+
+/** 403 (their privacy settings) and 404 are ordinary outcomes for a profile
+ * link, so they come back as values the page can render rather than throws. */
+export type PublicProfileResult =
+  | { status: 'ok'; profile: PublicProfile }
+  | { status: 'private' }
+  | { status: 'not_found' }
+
+export async function getUserProfile(userId: string): Promise<PublicProfileResult> {
+  try {
+    const { data } = await apiClient.get<PublicProfile>(`/api/profile/${userId}`)
+    return { status: 'ok', profile: data }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 403) return { status: 'private' }
+      if (err.response.status === 404) return { status: 'not_found' }
+    }
+    throw err
+  }
+}
+
+export async function getUserStats(userId: string): Promise<DashboardStats> {
+  const { data } = await apiClient.get<DashboardStats>(`/api/stats/user/${userId}`, {
+    params: { tz: browserTimeZone() },
+  })
+  return data
 }
 
 export async function getMyStats(): Promise<DashboardStats> {

@@ -147,6 +147,11 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
   })
 
+  const hideFriendsMutation = useMutation({
+    mutationFn: (val: boolean) => updateProfile({ hide_friends_list: val }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
   const muteRecommendationsMutation = useMutation({
     mutationFn: (val: boolean) => updateProfile({ mute_recommendations: val }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
@@ -367,6 +372,22 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             aria-checked={profile?.hide_recent_movies ?? false}
           >
             <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.hide_recent_movies ? 'translate-x-6' : ''].join(' ')} />
+          </button>
+        </div>
+
+        {/* Hide friends list */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
+          <div className="min-w-0 flex-1 pr-2">
+            <span className="text-base text-gray-light">Hide my Friends List</span>
+            <p className="text-xs text-gray-muted mt-0.5">Keeps who you're friends with off your profile for anyone who visits it</p>
+          </div>
+          <button
+            onClick={() => hideFriendsMutation.mutate(!(profile?.hide_friends_list ?? false))}
+            className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.hide_friends_list ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            role="switch"
+            aria-checked={profile?.hide_friends_list ?? false}
+          >
+            <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.hide_friends_list ? 'translate-x-6' : ''].join(' ')} />
           </button>
         </div>
         </div>
