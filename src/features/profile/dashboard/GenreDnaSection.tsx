@@ -78,11 +78,7 @@ export default function GenreDnaSection({ stats, index, className, subject }: Pr
           ))}
         </div>
       }
-      footnote={
-        mode === 'loved'
-          ? 'Affinity adds up every rating above "It was okay" and subtracts every rating below it, per genre.'
-          : undefined
-      }
+      
     >
       <div ref={ref} className="flex flex-col items-center gap-4 lg:flex-row lg:items-start">
         {axes.length >= 3 ? (
