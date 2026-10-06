@@ -86,10 +86,15 @@ export async function getForYouMovies(
   return data
 }
 
-export async function getPicksOfTheWeek(
+/** Today's three — today in the browser's timezone, so they turn over at the
+ *  user's midnight. */
+export async function getMoviesOfTheDay(
   signal?: AbortSignal,
 ): Promise<{ page: number; results: ForYouMovie[]; total_pages: number; total_results: number }> {
-  const { data } = await apiClient.get('/api/movies/picks-of-the-week', { signal })
+  const { data } = await apiClient.get('/api/movies/movies-of-the-day', {
+    params: { tz: browserTimeZone() },
+    signal,
+  })
   return data
 }
 

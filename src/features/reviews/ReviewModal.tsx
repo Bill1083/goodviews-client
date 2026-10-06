@@ -6,7 +6,7 @@ import type { Movie } from '../../types'
 import StarRating from '../../components/StarRating'
 import PrimaryButton from '../../components/PrimaryButton'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
-import { dropFromForYouFeed, refreshForYouFeed } from '../../utils/forYouCache'
+import { dropFromDailyPicks, dropFromForYouFeed, refreshDailyPicks, refreshForYouFeed } from '../../utils/forYouCache'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w185'
 
@@ -91,12 +91,13 @@ export default function ReviewModal({
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
       invalidateTasteStats(queryClient)
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
-      // The backend invalidates its own For You/Picks-of-the-Week caches as
-      // a side effect of creating a review — refetch here so the UI actually
-      // reflects that instead of staying pinned to the pre-review data.
+      // The backend takes a rated film out of For You and today's Movies of
+      // the Day as a side effect of creating a review — mirror that here and
+      // refetch so the freed slots fill, instead of staying pinned to the
+      // pre-review data.
       dropFromForYouFeed(queryClient, movie.id)
       refreshForYouFeed(queryClient)
-      queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
+      if (dropFromDailyPicks(queryClient, movie.id)) void refreshDailyPicks(queryClient)
       onSaved?.()
       onClose()
     },

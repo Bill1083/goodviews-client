@@ -17,7 +17,14 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
 import ReviewModal from '../reviews/ReviewModal'
-import { dropFromForYouFeed, dropFromPicks, fillForYouSlot, refreshForYouFeed, refreshPicks, type ForYouFeed } from '../../utils/forYouCache'
+import {
+  dropFromDailyPicks,
+  dropFromForYouFeed,
+  fillForYouSlot,
+  refreshDailyPicks,
+  refreshForYouFeed,
+  type ForYouFeed,
+} from '../../utils/forYouCache'
 import type { Movie } from '../../types'
 
 type Kind = 'popular' | 'for-you'
@@ -170,17 +177,17 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
     onMutate: ({ movieId }) => {
       setSelectedMovie(null)
-      // The picks share this cache; a film can be in both, and the server
-      // clears it from this week's picks too.
-      return { dropped: dropFromForYouFeed(qc, movieId), droppedPick: dropFromPicks(qc, movieId) }
+      // A film can also be one of today's picks, and the server takes it
+      // out of those too.
+      return { dropped: dropFromForYouFeed(qc, movieId), droppedPick: dropFromDailyPicks(qc, movieId) }
     },
     onSuccess: (result, _vars, context) => {
       if (context?.dropped) fillForYouSlot(qc, result.replacement)
-      if (context?.droppedPick) void refreshPicks(qc)
+      if (context?.droppedPick) void refreshDailyPicks(qc)
     },
     onError: (_err, _vars, context) => {
       refreshForYouFeed(qc)
-      if (context?.droppedPick) void refreshPicks(qc)
+      if (context?.droppedPick) void refreshDailyPicks(qc)
     },
   })
 

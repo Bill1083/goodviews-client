@@ -5,7 +5,7 @@ import { createReview, getMovieDetails, getMovieReviews, updateReview, type NotI
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
-import { dropFromForYouFeed, refreshForYouFeed } from '../utils/forYouCache'
+import { dropFromDailyPicks, dropFromForYouFeed, refreshDailyPicks, refreshForYouFeed } from '../utils/forYouCache'
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import RetryImage from './RetryImage'
@@ -346,19 +346,24 @@ export default function MovieDetailModal({
             review_text: '',
           }),
     // A rated movie is no longer a suggestion, so take it out of the For You feed
-    // on tap instead of leaving it there until the refetch lands.
-    onMutate: () => ({ dropped: !myReview && dropFromForYouFeed(queryClient, movie.id) }),
-    onSuccess: () => {
+    // and today's picks on tap instead of leaving it there until the refetch lands.
+    onMutate: () => ({
+      dropped: !myReview && dropFromForYouFeed(queryClient, movie.id),
+      droppedPick: !myReview && dropFromDailyPicks(queryClient, movie.id),
+    }),
+    onSuccess: (_data, _rating, context) => {
       queryClient.invalidateQueries({ queryKey: ['movie-reviews', movie.id] })
       queryClient.invalidateQueries({ queryKey: ['reviews', 'me'] })
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] })
       invalidateTasteStats(queryClient)
       queryClient.invalidateQueries({ queryKey: ['watchlist'] })
-      queryClient.invalidateQueries({ queryKey: ['movies', 'picks-of-the-week'] })
       refreshForYouFeed(queryClient)
+      // The server refills the freed slot on the next fetch.
+      if (context?.droppedPick) void refreshDailyPicks(queryClient)
     },
     onError: (_err, _rating, context) => {
       if (context?.dropped) refreshForYouFeed(queryClient)
+      if (context?.droppedPick) void refreshDailyPicks(queryClient)
     },
   })
   const displayRating = optimisticRating ?? myReview?.rating ?? 0

@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tansta
 import {
   getTrendingMovies,
   getForYouMovies,
-  getPicksOfTheWeek,
+  getMoviesOfTheDay,
   markNotInterested,
   type NotInterestedScope,
   searchMovies,
@@ -17,14 +17,21 @@ import {
 } from '../../services/apiClient'
 import MovieSearchBar from '../movies/MovieSearchBar'
 import MovieCarousel from './MovieCarousel'
-import PicksOfTheWeek from './PicksOfTheWeek'
+import MoviesOfTheDay from './MoviesOfTheDay'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import { dropFromForYouFeed, dropFromPicks, fillForYouSlot, refreshForYouFeed, refreshPicks } from '../../utils/forYouCache'
+import {
+  dailyPicksKey,
+  dropFromDailyPicks,
+  dropFromForYouFeed,
+  fillForYouSlot,
+  refreshDailyPicks,
+  refreshForYouFeed,
+} from '../../utils/forYouCache'
 import type { ForYouFeed } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
 
@@ -233,16 +240,16 @@ export default function DiscoverPage() {
     return map
   }, [forYou])
 
-  const { data: picks, isLoading: picksLoading } = useQuery<ForYouFeed>({
-    queryKey: ['movies', 'picks-of-the-week'],
-    queryFn: ({ signal }) => getPicksOfTheWeek(signal),
-    staleTime: 1000 * 60 * 60, // server-side TTL is 7 days; this is just the client cache
+  const { data: dailyPicks, isLoading: dailyPicksLoading } = useQuery<ForYouFeed>({
+    queryKey: dailyPicksKey(),
+    queryFn: ({ signal }) => getMoviesOfTheDay(signal),
+    staleTime: 1000 * 60 * 30, // the server holds each day's three; this is just the client cache
   })
-  const picksReasonById = useMemo(() => {
+  const dailyReasonById = useMemo(() => {
     const map: Record<number, string> = {}
-    for (const m of picks?.results ?? []) map[m.id] = m.reason
+    for (const m of dailyPicks?.results ?? []) map[m.id] = m.reason
     return map
-  }, [picks])
+  }, [dailyPicks])
 
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
@@ -250,18 +257,19 @@ export default function DiscoverPage() {
     // replacement pick fills the freed slot once it arrives.
     onMutate: ({ movieId }) => {
       setSelectedMovie(null)
-      // A film can be both a pick and in For You; it leaves both at once.
-      return { dropped: dropFromForYouFeed(qc, movieId), droppedPick: dropFromPicks(qc, movieId) }
+      // A film can be both one of today's picks and in For You; it leaves
+      // both at once.
+      return { dropped: dropFromForYouFeed(qc, movieId), droppedPick: dropFromDailyPicks(qc, movieId) }
     },
     onSuccess: (data, _vars, context) => {
       if (context?.dropped) fillForYouSlot(qc, data.replacement)
-      // The server has cleared this week's picks; refetching recomputes them
-      // without the dismissed film, filling the gap.
-      if (context?.droppedPick) void refreshPicks(qc)
+      // The server has taken it out of today's picks; refetching refills
+      // that one slot and leaves the other two where they are.
+      if (context?.droppedPick) void refreshDailyPicks(qc)
     },
     onError: (_err, _vars, context) => {
       refreshForYouFeed(qc)
-      if (context?.droppedPick) void refreshPicks(qc)
+      if (context?.droppedPick) void refreshDailyPicks(qc)
     },
   })
 
@@ -416,9 +424,10 @@ export default function DiscoverPage() {
         </div>
 
         {/* Browsing view — one full-width column below xl:. From xl: up,
-            Picks and the carousels split the page evenly, with the row
-            given a *minimum* height matching the viewport (Picks fills its
-            half exactly via flex fractions — see PicksOfTheWeek). Carousels
+            Movies of the Day and the carousels split the page evenly, with
+            the row given a *minimum* height matching the viewport (Movies of
+            the Day fills its half exactly via flex fractions — see
+            MoviesOfTheDay). Carousels
             still size their own posters off width alone (capped at a
             handful visible, not a skinny strip of many), so on a generous
             screen everything just fits the floor exactly, while a shorter
@@ -426,10 +435,10 @@ export default function DiscoverPage() {
             scroll rather than squeezing the posters down to fit. */}
         {!hasTyped && (
           <div className="grid w-full grid-cols-1 gap-10 xl:min-h-[calc(100dvh-164px)] xl:grid-cols-2 xl:items-start xl:gap-8">
-            <PicksOfTheWeek
-              movies={picks?.results ?? []}
-              pendingSlots={picks?.pendingSlots ?? 0}
-              isLoading={picksLoading}
+            <MoviesOfTheDay
+              movies={dailyPicks?.results ?? []}
+              pendingSlots={dailyPicks?.pendingSlots ?? 0}
+              isLoading={dailyPicksLoading}
               onSelect={setSelectedMovie}
             />
 
@@ -567,10 +576,10 @@ export default function DiscoverPage() {
           onPersonClick={(pid) => setPersonModalId(pid)}
           forYouReason={
             forYouReasonById[selectedMovie.id] ??
-            (picksReasonById[selectedMovie.id] ? `Pick of the Week — ${picksReasonById[selectedMovie.id]}` : undefined)
+            (dailyReasonById[selectedMovie.id] ? `Movie of the Day — ${dailyReasonById[selectedMovie.id]}` : undefined)
           }
           onNotInterested={
-            selectedMovie.id in forYouReasonById || selectedMovie.id in picksReasonById
+            selectedMovie.id in forYouReasonById || selectedMovie.id in dailyReasonById
               ? (scope) => notInterestedMutation.mutate({ movieId: selectedMovie.id, scope })
               : undefined
           }

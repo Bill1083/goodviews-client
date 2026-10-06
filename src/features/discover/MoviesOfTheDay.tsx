@@ -6,7 +6,7 @@ const TMDB_POSTER = 'https://image.tmdb.org/t/p/w342'
 
 interface Props {
   movies: Movie[]
-  /** Slots emptied by a "not interested" that the recompute hasn't refilled yet. */
+  /** Slots emptied by a "not interested" (or a rating) that the refill hasn't landed in yet. */
   pendingSlots?: number
   isLoading: boolean
   onSelect: (movie: Movie) => void
@@ -20,6 +20,10 @@ const HEIGHTS = {
 // Grid placement for the hero slot, shared by the tile and its skeleton so a
 // refilling hero keeps its shape.
 const HERO_PLACEMENT = 'md:col-span-2 md:row-span-2 xl:min-h-0 xl:flex-[2]'
+
+// Each day's films rise in one after another, the hero first.
+const ENTRANCE = 'animate-[fadeInUp_0.5s_ease-out_both] motion-reduce:animate-none'
+const ENTRANCE_STAGGER_MS = 90
 
 /** What fills the tile behind the title. The backdrop when there is one; if a
  *  film has none (or it fails to load), its poster, blurred and scaled to
@@ -57,11 +61,13 @@ function Tile({
   movie,
   onSelect,
   size,
+  order,
   className = '',
 }: {
   movie: Movie
   onSelect: (movie: Movie) => void
   size: 'hero' | 'small'
+  order: number
   className?: string
 }) {
   const posterUrl = movie.poster_path ? `${TMDB_POSTER}${movie.poster_path}` : null
@@ -70,7 +76,8 @@ function Tile({
   return (
     <div
       onClick={() => onSelect(movie)}
-      className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${HEIGHTS[size]} ${className}`}
+      style={{ animationDelay: `${order * ENTRANCE_STAGGER_MS}ms` }}
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${ENTRANCE} ${HEIGHTS[size]} ${className}`}
     >
       <TileArt movie={movie} />
       <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/60 to-transparent" />
@@ -85,7 +92,7 @@ function Tile({
         )}
         <div className="min-w-0 flex-1">
           <p className={`font-semibold uppercase tracking-wider text-teal ${isHero ? 'text-xs sm:text-sm' : 'text-[10px] sm:text-xs'}`}>
-            {isHero ? 'Pick of the Week' : 'Also for you'}
+            {isHero ? 'Movie of the Day' : 'Also today'}
           </p>
           <h3
             style={{ fontFamily: '"Source Sans 3", sans-serif' }}
@@ -105,14 +112,17 @@ function TileSkeleton({ size, className = '' }: { size: 'hero' | 'small'; classN
   return <div className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${HEIGHTS[size]} ${className}`} />
 }
 
-export default function PicksOfTheWeek({ movies, pendingSlots = 0, isLoading, onSelect }: Props) {
+export default function MoviesOfTheDay({ movies, pendingSlots = 0, isLoading, onSelect }: Props) {
   if (!isLoading && movies.length === 0 && pendingSlots === 0) return null
 
   // After a dismissal the remaining picks shift up (the second becomes the
-  // hero) and the freed slot shows a skeleton until the recompute lands.
+  // hero) and the freed slot shows a skeleton until the refill lands, which
+  // then rises in like the rest (tiles are keyed by film).
   const filled = Math.min(3, movies.length + pendingSlots)
   const slot = (i: number, size: 'hero' | 'small', className = '') => {
-    if (movies[i]) return <Tile movie={movies[i]} onSelect={onSelect} size={size} className={className} />
+    if (movies[i]) {
+      return <Tile key={movies[i].id} movie={movies[i]} onSelect={onSelect} size={size} order={i} className={className} />
+    }
     if (isLoading || i < filled) return <TileSkeleton size={size} className={className} />
     return null
   }
@@ -121,9 +131,9 @@ export default function PicksOfTheWeek({ movies, pendingSlots = 0, isLoading, on
     <section className="flex w-full flex-col gap-3 xl:h-full xl:min-h-0">
       <div className="xl:shrink-0">
         <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
-          Movie Picks of the Week
+          Movies of the Day
         </h2>
-        <p className="text-sm text-gray-muted">Your top matches, refreshed every week</p>
+        <p className="text-sm text-gray-muted">Fresh picks, every day</p>
       </div>
 
       {/* Three tiers, purely by viewport width (later breakpoints override

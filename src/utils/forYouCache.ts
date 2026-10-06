@@ -63,18 +63,28 @@ export async function refreshForYouFeed(qc: QueryClient) {
   }
 }
 
-// ─── Movie Picks of the Week ────────────────────────────────────────────────
+// ─── Movies of the Day ──────────────────────────────────────────────────────
 
-const PICKS_KEY = ['movies', 'picks-of-the-week']
+/** Prefix shared by every day's Movies of the Day query. */
+const DAILY_PICKS_KEY = ['movies', 'movies-of-the-day']
 
-/** Removes a dismissed pick on tap so the rest shift up (the second pick
- *  becomes the hero), leaving a pending slot for the recompute to fill.
- *  Returns whether the movie was a pick. */
-export function dropFromPicks(qc: QueryClient, movieId: number): boolean {
+/** The query key for today's picks. Today is the browser's local date — the
+ *  same day the server picks for, since it's sent our timezone — so a page
+ *  left open past midnight asks for the new day's three rather than serving
+ *  yesterday's from cache. */
+export function dailyPicksKey(now: Date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return [...DAILY_PICKS_KEY, `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`]
+}
+
+/** Removes a pick on tap (dismissed or just rated) so the rest shift up — the
+ *  second pick becomes the hero — leaving a pending slot for the refill.
+ *  Returns whether the movie was one of today's picks. */
+export function dropFromDailyPicks(qc: QueryClient, movieId: number): boolean {
   // An in-flight refetch would otherwise land afterwards and put it back.
-  qc.cancelQueries({ queryKey: PICKS_KEY })
+  qc.cancelQueries({ queryKey: DAILY_PICKS_KEY })
   let dropped = false
-  qc.setQueryData<ForYouFeed>(PICKS_KEY, (old) => {
+  qc.setQueriesData<ForYouFeed>({ queryKey: DAILY_PICKS_KEY }, (old) => {
     if (!old || !old.results.some((m) => m.id === movieId)) return old
     dropped = true
     const results = old.results.filter((m) => m.id !== movieId)
@@ -83,8 +93,9 @@ export function dropFromPicks(qc: QueryClient, movieId: number): boolean {
   return dropped
 }
 
-/** The server clears this week's picks when one is dismissed and recomputes
- *  them (without it) on the next fetch, so a plain refetch fills the gap. */
-export function refreshPicks(qc: QueryClient) {
-  return qc.invalidateQueries({ queryKey: PICKS_KEY })
+/** The server takes the film out of today's picks and refills just that slot
+ *  on the next fetch, leaving the other two in place — so a plain refetch
+ *  fills the gap. */
+export function refreshDailyPicks(qc: QueryClient) {
+  return qc.invalidateQueries({ queryKey: DAILY_PICKS_KEY })
 }
