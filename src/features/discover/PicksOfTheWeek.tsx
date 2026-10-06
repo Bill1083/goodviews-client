@@ -6,8 +6,51 @@ const TMDB_POSTER = 'https://image.tmdb.org/t/p/w342'
 
 interface Props {
   movies: Movie[]
+  /** Slots emptied by a "not interested" that the recompute hasn't refilled yet. */
+  pendingSlots?: number
   isLoading: boolean
   onSelect: (movie: Movie) => void
+}
+
+const HEIGHTS = {
+  hero: 'h-64 sm:h-80 md:h-full xl:h-auto',
+  small: 'h-40 sm:h-48 md:h-full xl:h-auto',
+} as const
+
+// Grid placement for the hero slot, shared by the tile and its skeleton so a
+// refilling hero keeps its shape.
+const HERO_PLACEMENT = 'md:col-span-2 md:row-span-2 xl:min-h-0 xl:flex-[2]'
+
+/** What fills the tile behind the title. The backdrop when there is one; if a
+ *  film has none (or it fails to load), its poster, blurred and scaled to
+ *  cover, so the tile still reads as that film rather than an empty box. The
+ *  picks sit at the top of the page, so they load eagerly. */
+function TileArt({ movie }: { movie: Movie }) {
+  const backdropUrl = movie.backdrop_path ? `${TMDB_BACKDROP}${movie.backdrop_path}` : null
+  const posterUrl = movie.poster_path ? `${TMDB_POSTER}${movie.poster_path}` : null
+
+  const posterArt = posterUrl ? (
+    <RetryImage
+      src={posterUrl}
+      alt=""
+      loading="eager"
+      className="absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-md"
+      fallback={<></>}
+    />
+  ) : (
+    <></>
+  )
+
+  if (!backdropUrl) return posterArt
+  return (
+    <RetryImage
+      src={backdropUrl}
+      alt=""
+      loading="eager"
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+      fallback={posterArt}
+    />
+  )
 }
 
 function Tile({
@@ -21,32 +64,22 @@ function Tile({
   size: 'hero' | 'small'
   className?: string
 }) {
-  const backdropUrl = movie.backdrop_path ? `${TMDB_BACKDROP}${movie.backdrop_path}` : null
   const posterUrl = movie.poster_path ? `${TMDB_POSTER}${movie.poster_path}` : null
   const isHero = size === 'hero'
 
   return (
     <div
       onClick={() => onSelect(movie)}
-      className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${
-        isHero ? 'h-64 sm:h-80 md:h-full xl:h-auto' : 'h-40 sm:h-48 md:h-full xl:h-auto'
-      } ${className}`}
+      className={`group relative w-full cursor-pointer overflow-hidden rounded-card border border-white/10 bg-navy-card ${HEIGHTS[size]} ${className}`}
     >
-      {backdropUrl && (
-        <RetryImage
-          src={backdropUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-          fallback={<></>}
-        />
-      )}
+      <TileArt movie={movie} />
       <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/60 to-transparent" />
 
       <div className={`absolute inset-x-0 bottom-0 flex items-end gap-3 ${isHero ? 'p-5 sm:p-8' : 'p-3 sm:p-4'}`}>
         {isHero && posterUrl && (
           <div className="hidden w-20 shrink-0 overflow-hidden rounded-lg border-2 border-white/10 bg-navy-card shadow-xl sm:block md:w-24">
             <div className="aspect-[2/3] w-full">
-              <RetryImage src={posterUrl} alt="" className="h-full w-full object-cover" fallback={<div className="h-full w-full bg-navy-card" />} />
+              <RetryImage src={posterUrl} alt="" loading="eager" className="h-full w-full object-cover" fallback={<div className="h-full w-full bg-navy-card" />} />
             </div>
           </div>
         )}
@@ -68,18 +101,21 @@ function Tile({
   )
 }
 
-function TileSkeleton({ size }: { size: 'hero' | 'small' }) {
-  return (
-    <div
-      className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${
-        size === 'hero' ? 'h-64 sm:h-80 md:h-full xl:h-auto' : 'h-40 sm:h-48 md:h-full xl:h-auto'
-      }`}
-    />
-  )
+function TileSkeleton({ size, className = '' }: { size: 'hero' | 'small'; className?: string }) {
+  return <div className={`animate-pulse rounded-card border border-white/10 bg-navy-card ${HEIGHTS[size]} ${className}`} />
 }
 
-export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
-  if (!isLoading && movies.length === 0) return null
+export default function PicksOfTheWeek({ movies, pendingSlots = 0, isLoading, onSelect }: Props) {
+  if (!isLoading && movies.length === 0 && pendingSlots === 0) return null
+
+  // After a dismissal the remaining picks shift up (the second becomes the
+  // hero) and the freed slot shows a skeleton until the recompute lands.
+  const filled = Math.min(3, movies.length + pendingSlots)
+  const slot = (i: number, size: 'hero' | 'small', className = '') => {
+    if (movies[i]) return <Tile movie={movies[i]} onSelect={onSelect} size={size} className={className} />
+    if (isLoading || i < filled) return <TileSkeleton size={size} className={className} />
+    return null
+  }
 
   return (
     <section className="flex w-full flex-col gap-3 xl:h-full xl:min-h-0">
@@ -103,23 +139,11 @@ export default function PicksOfTheWeek({ movies, isLoading, onSelect }: Props) {
              hero/pair sized by flex fraction (2:1) instead of a fixed rem
              value, so they always exactly fill it with no overflow. */}
       <div className="flex flex-col gap-4 md:grid md:h-[26rem] md:grid-cols-3 md:grid-rows-2 xl:flex xl:h-auto xl:min-h-0 xl:flex-1 xl:flex-col">
-        {isLoading ? (
-          <>
-            <TileSkeleton size="hero" />
-            <div className="grid grid-cols-2 gap-4 md:contents xl:grid xl:min-h-0 xl:flex-1">
-              <TileSkeleton size="small" />
-              <TileSkeleton size="small" />
-            </div>
-          </>
-        ) : (
-          <>
-            <Tile movie={movies[0]} onSelect={onSelect} size="hero" className="md:col-span-2 md:row-span-2 xl:min-h-0 xl:flex-[2]" />
-            <div className="grid grid-cols-2 gap-4 md:contents xl:grid xl:min-h-0 xl:flex-1">
-              {movies[1] && <Tile movie={movies[1]} onSelect={onSelect} size="small" />}
-              {movies[2] && <Tile movie={movies[2]} onSelect={onSelect} size="small" />}
-            </div>
-          </>
-        )}
+        {slot(0, 'hero', HERO_PLACEMENT)}
+        <div className="grid grid-cols-2 gap-4 md:contents xl:grid xl:min-h-0 xl:flex-1">
+          {slot(1, 'small')}
+          {slot(2, 'small')}
+        </div>
       </div>
     </section>
   )

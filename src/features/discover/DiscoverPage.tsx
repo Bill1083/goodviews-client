@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getTrendingMovies,
   getForYouMovies,
@@ -23,7 +24,8 @@ import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import PersonCard from '../../components/PersonCard'
 import ReviewModal from '../reviews/ReviewModal'
-import { dropFromForYouFeed, fillForYouSlot, refreshForYouFeed } from '../../utils/forYouCache'
+import { dropFromForYouFeed, dropFromPicks, fillForYouSlot, refreshForYouFeed, refreshPicks } from '../../utils/forYouCache'
+import type { ForYouFeed } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
 
 type SearchTab = 'movies' | 'people'
@@ -183,6 +185,32 @@ function SearchMovieModal({
   )
 }
 
+/** What the search failure actually was, in words a person can act on. */
+function searchErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) return "Search couldn't reach GoodViews. Check your connection and try again."
+    if (error.response.status === 429) return "You're searching a little fast. Give it a few seconds and try again."
+    if (error.response.status >= 500) return "The film database isn't responding right now. Try again in a moment."
+  }
+  return 'Something went wrong. Please try again.'
+}
+
+function SearchError({ error, onRetry, retrying }: { error: unknown; onRetry: () => void; retrying: boolean }) {
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <p className="text-sm text-red-400">{searchErrorMessage(error)}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-medium text-gray-lighter transition-colors hover:border-teal hover:text-teal disabled:opacity-50"
+      >
+        {retrying ? 'Trying…' : 'Try again'}
+      </button>
+    </div>
+  )
+}
+
 // ─── Main component ─────────────────────────────────────────────────────────
 export default function DiscoverPage() {
   const qc = useQueryClient()
@@ -205,7 +233,7 @@ export default function DiscoverPage() {
     return map
   }, [forYou])
 
-  const { data: picks, isLoading: picksLoading } = useQuery({
+  const { data: picks, isLoading: picksLoading } = useQuery<ForYouFeed>({
     queryKey: ['movies', 'picks-of-the-week'],
     queryFn: ({ signal }) => getPicksOfTheWeek(signal),
     staleTime: 1000 * 60 * 60, // server-side TTL is 7 days; this is just the client cache
@@ -222,12 +250,19 @@ export default function DiscoverPage() {
     // replacement pick fills the freed slot once it arrives.
     onMutate: ({ movieId }) => {
       setSelectedMovie(null)
-      return { dropped: dropFromForYouFeed(qc, movieId) }
+      // A film can be both a pick and in For You; it leaves both at once.
+      return { dropped: dropFromForYouFeed(qc, movieId), droppedPick: dropFromPicks(qc, movieId) }
     },
     onSuccess: (data, _vars, context) => {
       if (context?.dropped) fillForYouSlot(qc, data.replacement)
+      // The server has cleared this week's picks; refetching recomputes them
+      // without the dismissed film, filling the gap.
+      if (context?.droppedPick) void refreshPicks(qc)
     },
-    onError: () => refreshForYouFeed(qc),
+    onError: (_err, _vars, context) => {
+      refreshForYouFeed(qc)
+      if (context?.droppedPick) void refreshPicks(qc)
+    },
   })
 
   // Search state
@@ -243,18 +278,27 @@ export default function DiscoverPage() {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
   const [personModalId, setPersonModalId] = useState<number | null>(null)
 
-  const { data, isFetching, isError } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['movies', 'search', query, page],
     queryFn: ({ signal }) => searchMovies(query, page, signal),
     enabled: query.length >= 2 && searchTab === 'movies',
     staleTime: 1000 * 60 * 5,
+    // Results stay on screen while the next search loads instead of blanking.
+    placeholderData: keepPreviousData,
   })
 
-  const { data: peopleData, isFetching: peopleFetching, isError: peopleError } = useQuery({
+  const {
+    data: peopleData,
+    isFetching: peopleFetching,
+    isError: peopleError,
+    error: peopleErrorValue,
+    refetch: refetchPeople,
+  } = useQuery({
     queryKey: ['people', 'search', personQuery, personPage],
     queryFn: ({ signal }) => searchPeople(personQuery, personPage, signal),
     enabled: personQuery.length >= 2 && searchTab === 'people',
     staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData,
   })
 
   const { data: watchlist = [] } = useQuery({
@@ -282,26 +326,31 @@ export default function DiscoverPage() {
 
   const watchlistIds = new Set(watchlist.map((w) => w.movie_id))
 
-  const pendingQueryRef = useRef<string | null>(null)
-
+  // A new search simply replaces the old one: React Query aborts the
+  // superseded request through its AbortSignal. Searches used to be parked
+  // while another was loading and released when it finished, which dropped
+  // any search typed in that window: the release only ran when loading
+  // flipped, and by then it often already had.
+  //
+  // Re-submitting the same text after an error retries it; otherwise the
+  // query key wouldn't change and "try again" would silently do nothing.
   const handleSearch = (q: string) => {
     if (searchTab === 'people') {
+      if (q === personQuery && personPage === 1 && peopleError) {
+        void refetchPeople()
+        return
+      }
       setPersonQuery(q)
       setPersonPage(1)
       return
     }
-    if (isFetching) { pendingQueryRef.current = q; return }
-    pendingQueryRef.current = null
-    setQuery(q); setPage(1)
-  }
-
-  useEffect(() => {
-    if (!isFetching && pendingQueryRef.current) {
-      const q = pendingQueryRef.current
-      pendingQueryRef.current = null
-      setQuery(q); setPage(1)
+    if (q === query && page === 1 && isError) {
+      void refetch()
+      return
     }
-  }, [isFetching])
+    setQuery(q)
+    setPage(1)
+  }
 
   const openSearch = () => {
     setSearchOpen(true)
@@ -377,7 +426,12 @@ export default function DiscoverPage() {
             scroll rather than squeezing the posters down to fit. */}
         {!hasTyped && (
           <div className="grid w-full grid-cols-1 gap-10 xl:min-h-[calc(100dvh-164px)] xl:grid-cols-2 xl:items-start xl:gap-8">
-            <PicksOfTheWeek movies={picks?.results ?? []} isLoading={picksLoading} onSelect={setSelectedMovie} />
+            <PicksOfTheWeek
+              movies={picks?.results ?? []}
+              pendingSlots={picks?.pendingSlots ?? 0}
+              isLoading={picksLoading}
+              onSelect={setSelectedMovie}
+            />
 
             <div className="flex w-full flex-col gap-10 xl:h-full xl:min-h-0">
               <section className="flex w-full flex-col gap-3 xl:min-h-0 xl:flex-1">
@@ -434,7 +488,7 @@ export default function DiscoverPage() {
             {/* Movie results */}
             {searchTab === 'movies' && (
               <>
-                {isError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
+                {isError && <SearchError error={error} onRetry={() => void refetch()} retrying={isFetching} />}
 
                 {data && data.results.length > 0 && (
                   <>
@@ -470,7 +524,7 @@ export default function DiscoverPage() {
             {/* People results */}
             {searchTab === 'people' && (
               <>
-                {peopleError && <p className="text-sm text-red-400">Something went wrong. Please try again.</p>}
+                {peopleError && <SearchError error={peopleErrorValue} onRetry={() => void refetchPeople()} retrying={peopleFetching} />}
 
                 {peopleData && peopleData.results.length > 0 && (
                   <>
@@ -516,7 +570,7 @@ export default function DiscoverPage() {
             (picksReasonById[selectedMovie.id] ? `Pick of the Week — ${picksReasonById[selectedMovie.id]}` : undefined)
           }
           onNotInterested={
-            forYouReasonById[selectedMovie.id]
+            selectedMovie.id in forYouReasonById || selectedMovie.id in picksReasonById
               ? (scope) => notInterestedMutation.mutate({ movieId: selectedMovie.id, scope })
               : undefined
           }

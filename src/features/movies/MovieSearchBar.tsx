@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   onSearch: (query: string) => void
@@ -11,6 +11,14 @@ interface Props {
 export default function MovieSearchBar({ onSearch, isLoading = false, placeholder = 'Search...', onTyping }: Props) {
   const [value, setValue] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // The debounce fires 800ms after the keystroke that scheduled it. Calling
+  // the onSearch captured back then used that render's view of the parent's
+  // state — which is how a search typed while another was loading got
+  // dropped. Always call the latest one instead.
+  const onSearchRef = useRef(onSearch)
+  useEffect(() => {
+    onSearchRef.current = onSearch
+  }, [onSearch])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value
@@ -18,14 +26,14 @@ export default function MovieSearchBar({ onSearch, isLoading = false, placeholde
     onTyping?.(q)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      if (q.trim().length >= 2) onSearch(q.trim())
+      if (q.trim().length >= 2) onSearchRef.current(q.trim())
     }, 800)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (value.trim().length >= 2) onSearch(value.trim())
+    if (value.trim().length >= 2) onSearchRef.current(value.trim())
   }
 
   return (

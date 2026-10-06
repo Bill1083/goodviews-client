@@ -62,3 +62,29 @@ export async function refreshForYouFeed(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: ['movies', 'for-you'] })
   }
 }
+
+// ─── Movie Picks of the Week ────────────────────────────────────────────────
+
+const PICKS_KEY = ['movies', 'picks-of-the-week']
+
+/** Removes a dismissed pick on tap so the rest shift up (the second pick
+ *  becomes the hero), leaving a pending slot for the recompute to fill.
+ *  Returns whether the movie was a pick. */
+export function dropFromPicks(qc: QueryClient, movieId: number): boolean {
+  // An in-flight refetch would otherwise land afterwards and put it back.
+  qc.cancelQueries({ queryKey: PICKS_KEY })
+  let dropped = false
+  qc.setQueryData<ForYouFeed>(PICKS_KEY, (old) => {
+    if (!old || !old.results.some((m) => m.id === movieId)) return old
+    dropped = true
+    const results = old.results.filter((m) => m.id !== movieId)
+    return { ...old, results, total_results: results.length, pendingSlots: (old.pendingSlots ?? 0) + 1 }
+  })
+  return dropped
+}
+
+/** The server clears this week's picks when one is dismissed and recomputes
+ *  them (without it) on the next fetch, so a plain refetch fills the gap. */
+export function refreshPicks(qc: QueryClient) {
+  return qc.invalidateQueries({ queryKey: PICKS_KEY })
+}
