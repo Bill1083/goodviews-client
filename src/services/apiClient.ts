@@ -23,6 +23,7 @@ import type {
   FavouriteDirector,
   MovieImages,
   PublicProfile,
+  StreamingProvider,
 } from '../types'
 import type { DashboardStats, WrappedAvailability, WrappedPayload, WrappedResult } from '../types/stats'
 
@@ -83,6 +84,28 @@ export async function getForYouMovies(
   signal?: AbortSignal,
 ): Promise<{ page: number; results: ForYouMovie[]; total_pages: number; total_results: number }> {
   const { data } = await apiClient.get('/api/movies/for-you', { signal })
+  return data
+}
+
+/** The curated streaming-provider list for Settings' picker — not
+ * user-specific, so no auth/profile dependency. */
+export async function getStreamingProviders(signal?: AbortSignal): Promise<StreamingProvider[]> {
+  const { data } = await apiClient.get('/api/movies/streaming-providers', { signal })
+  return data
+}
+
+/** "Your Streaming Services": popular/well-rated/genre-affinity films
+ * available on the providers this user picked in Settings. Empty results
+ * means either no providers selected or nothing matched — the Discover page
+ * tells those apart via the user's own streaming_provider_ids. */
+export async function getStreamingPicks(
+  excludeSeen: boolean,
+  signal?: AbortSignal,
+): Promise<{ results: Movie[] }> {
+  const { data } = await apiClient.get('/api/movies/streaming-picks', {
+    params: { exclude_seen: excludeSeen },
+    signal,
+  })
   return data
 }
 
@@ -326,6 +349,9 @@ export interface ProfileData {
    * used to tell "existed before this feature shipped" apart from "brand
    * new signup" when deciding which tutorials to show. */
   created_at: string | null
+  /** TMDB provider ids (watch_region=AU) this user says they subscribe to —
+   * drives the "Your Streaming Services" carousel. */
+  streaming_provider_ids: number[]
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -347,6 +373,7 @@ export async function updateProfile(payload: Partial<{
   mute_friend_requests: boolean
   has_onboarded: boolean
   onboarding_genre_ids: number[]
+  streaming_provider_ids: number[]
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data

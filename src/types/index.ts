@@ -45,6 +45,15 @@ export interface WatchProvider {
   logo_path: string
 }
 
+/** One entry in the curated streaming-provider picker (Settings) — same
+ * shape as WatchProvider, but logo_path can be missing and this isn't tied
+ * to any one movie's availability. */
+export interface StreamingProvider {
+  provider_id: number
+  provider_name: string
+  logo_path: string | null
+}
+
 /** One country's worth of TMDB/JustWatch availability data. */
 export interface WatchProviderRegion {
   /** JustWatch page for this movie/region — required attribution link when showing this data. */

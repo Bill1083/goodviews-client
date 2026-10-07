@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
-import { getProfile, updateProfile, deleteAccount } from '../services/apiClient'
+import { getProfile, getStreamingProviders, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useAuthStore } from '../store/authStore'
@@ -76,6 +76,9 @@ const DangerIcon = () => (
 const AppearanceIcon = () => (
   <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a4 4 0 115.656 0M9.172 16.172a4 4 0 010-5.656 4 4 0 015.656 0 4 4 0 010 5.656" /></svg>
 )
+const StreamingIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM8 20h8M12 16v4" /></svg>
+)
 
 /** The full settings UI — shared between the full-page /settings route (for
  *  direct links/bookmarks), the SettingsDrawer opened from the navbar on
@@ -133,6 +136,28 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     queryKey: ['profile'],
     queryFn: getProfile,
   })
+
+  // The catalog itself barely changes — cached server-side for a week, and
+  // client-side for a day, rather than refetched every time Settings opens.
+  const { data: streamingProviders, isLoading: streamingProvidersLoading } = useQuery({
+    queryKey: ['streaming-providers'],
+    queryFn: () => getStreamingProviders(),
+    staleTime: 1000 * 60 * 60 * 24,
+  })
+
+  const streamingProviderIds = profile?.streaming_provider_ids ?? []
+
+  const streamingProvidersMutation = useMutation({
+    mutationFn: (ids: number[]) => updateProfile({ streaming_provider_ids: ids }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
+  const toggleStreamingProvider = (providerId: number) => {
+    const next = streamingProviderIds.includes(providerId)
+      ? streamingProviderIds.filter((id) => id !== providerId)
+      : [...streamingProviderIds, providerId]
+    streamingProvidersMutation.mutate(next)
+  }
 
   const { data: mfaFactors } = useQuery({
     queryKey: ['mfa-factors'],
@@ -389,6 +414,59 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             </div>
           </div>
         )}
+        </div>
+      </section>
+
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<StreamingIcon />}>Streaming Services</SectionHeading>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-gray-muted">
+            Pick what you subscribe to — the "Your Streaming Services" row on Discover only shows films actually available to you.
+          </p>
+          {streamingProvidersLoading ? (
+            <div className="flex flex-wrap gap-2.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-[68px] w-20 animate-pulse rounded-xl bg-white/5" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2.5">
+              {streamingProviders?.map((p) => {
+                const selected = streamingProviderIds.includes(p.provider_id)
+                return (
+                  <button
+                    key={p.provider_id}
+                    type="button"
+                    onClick={() => toggleStreamingProvider(p.provider_id)}
+                    title={p.provider_name}
+                    aria-pressed={selected}
+                    className={[
+                      'flex w-20 flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-colors',
+                      selected ? 'border-teal bg-teal/10' : 'border-white/10 bg-white/5 hover:border-white/20',
+                    ].join(' ')}
+                  >
+                    <div className="h-10 w-10 overflow-hidden rounded-lg bg-navy-card/60">
+                      {p.logo_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w92${p.logo_path}`}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm text-gray-muted">
+                          {p.provider_name[0]}
+                        </div>
+                      )}
+                    </div>
+                    <span className="line-clamp-2 text-center text-[10px] leading-tight text-gray-light">
+                      {p.provider_name}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 

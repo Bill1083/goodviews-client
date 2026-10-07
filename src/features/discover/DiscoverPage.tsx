@@ -7,6 +7,8 @@ import {
   getTrendingMovies,
   getForYouMovies,
   getMoviesOfTheDay,
+  getStreamingPicks,
+  getProfile,
   markNotInterested,
   type NotInterestedScope,
   searchMovies,
@@ -251,6 +253,19 @@ export default function DiscoverPage() {
     return map
   }, [dailyPicks])
 
+  // "Your Streaming Services" — only what's actually available on the
+  // provider(s) picked in Settings. Shares the ['profile'] cache entry with
+  // Settings/Profile rather than fetching it again.
+  const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile })
+  const streamingProviderIds = profile?.streaming_provider_ids ?? []
+  const [hideSeenStreaming, setHideSeenStreaming] = useState(false)
+  const { data: streamingPicks, isLoading: streamingPicksLoading } = useQuery({
+    queryKey: ['movies', 'streaming-picks', hideSeenStreaming],
+    queryFn: ({ signal }) => getStreamingPicks(hideSeenStreaming, signal),
+    enabled: streamingProviderIds.length > 0,
+    staleTime: 1000 * 60 * 30,
+  })
+
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
     // Drop the card on tap rather than after the round-trip; the server's
@@ -464,6 +479,58 @@ export default function DiscoverPage() {
                   <MovieCarousel
                     movies={forYou?.results ?? []}
                     onOpenAll={() => navigate('/discover/for-you')}
+                    onSelectMovie={setSelectedMovie}
+                  />
+                )}
+              </section>
+
+              <section className="flex w-full flex-col gap-3 xl:min-h-0 xl:flex-1">
+                <div className="flex w-full items-start justify-between gap-3">
+                  <div>
+                    <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
+                      Your Streaming Services
+                    </h2>
+                    <p className="text-sm text-gray-muted">What's actually available on what you're subscribed to</p>
+                  </div>
+                  {streamingProviderIds.length > 0 && (
+                    <label className="flex shrink-0 cursor-pointer items-center gap-2 pt-1">
+                      <span className="text-xs text-gray-muted">Hide seen</span>
+                      <button
+                        type="button"
+                        onClick={() => setHideSeenStreaming((v) => !v)}
+                        className={['relative h-5 w-9 rounded-full transition-colors', hideSeenStreaming ? 'bg-teal' : 'bg-white/20'].join(' ')}
+                        role="switch"
+                        aria-checked={hideSeenStreaming}
+                        aria-label="Hide films I've already seen"
+                      >
+                        <span className={['absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', hideSeenStreaming ? 'translate-x-4' : ''].join(' ')} />
+                      </button>
+                    </label>
+                  )}
+                </div>
+
+                {streamingProviderIds.length === 0 ? (
+                  <button
+                    onClick={() => navigate('/settings')}
+                    className="flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-white/15 bg-navy-card/30 px-6 py-8 text-center transition-colors hover:border-teal/40 hover:bg-navy-card/50"
+                  >
+                    <span className="text-sm font-medium text-gray-light">Add your streaming services</span>
+                    <span className="text-xs text-gray-muted">Tell us what you subscribe to and we'll show you what you can actually watch</span>
+                  </button>
+                ) : streamingPicksLoading ? (
+                  <CarouselSkeleton />
+                ) : (streamingPicks?.results ?? []).length === 0 ? (
+                  <div className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-navy-card/30 px-6 py-8 text-center">
+                    <p className="text-xs text-gray-muted">
+                      {hideSeenStreaming
+                        ? "Looks like you've seen everything we could find — try turning off \"Hide seen\"."
+                        : "Nothing matched right now — check back soon."}
+                    </p>
+                  </div>
+                ) : (
+                  <MovieCarousel
+                    movies={streamingPicks?.results ?? []}
+                    onOpenAll={() => {}}
                     onSelectMovie={setSelectedMovie}
                   />
                 )}
