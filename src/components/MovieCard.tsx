@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Movie } from '../types'
 import RetryImage from './RetryImage'
+import { hoverGlowStyle, useHoverHighlight } from '../store/preferencesStore'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 
@@ -58,6 +59,7 @@ export default function MovieCard({
   const [cardHovered, setCardHovered] = useState(false)
   const [iconHovered, setIconHovered] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
+  const { enabled: highlightOn, color: highlightColor } = useHoverHighlight()
 
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
   const hasWatchlist = !!(onWatchlistAdd || onWatchlistRemove || watchlistRemoveOnly)
@@ -95,7 +97,8 @@ export default function MovieCard({
       style={{
         outline: hasWatchlist && cardHovered ? '2px solid #2b6cb0' : '2px solid transparent',
         outlineOffset: '-2px',
-        transition: 'outline-color 0.15s ease',
+        transition: 'outline-color 0.15s ease, box-shadow 0.2s ease, transform 0.2s ease',
+        ...hoverGlowStyle(highlightOn, highlightColor, cardHovered),
       }}
     >
       <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative bg-navy-card/60">

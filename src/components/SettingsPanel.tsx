@@ -8,6 +8,7 @@ import { getProfile, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useAuthStore } from '../store/authStore'
+import { NEON_COLORS, usePreferencesStore } from '../store/preferencesStore'
 import { verifyReauth } from '../utils/mfa'
 import { PASSWORD_HINT, PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 import ReauthField from './ReauthField'
@@ -72,6 +73,9 @@ const AccountIcon = () => (
 const DangerIcon = () => (
   <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
 )
+const AppearanceIcon = () => (
+  <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a4 4 0 115.656 0M9.172 16.172a4 4 0 010-5.656 4 4 0 015.656 0 4 4 0 010 5.656" /></svg>
+)
 
 /** The full settings UI — shared between the full-page /settings route (for
  *  direct links/bookmarks), the SettingsDrawer opened from the navbar on
@@ -104,6 +108,11 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   const [enrollCode, setEnrollCode] = useState('')
   const [enrollError, setEnrollError] = useState<string | null>(null)
   const [showDisableMfaConfirm, setShowDisableMfaConfirm] = useState(false)
+
+  const hoverHighlightEnabled = usePreferencesStore((s) => s.hoverHighlightEnabled)
+  const hoverHighlightColor = usePreferencesStore((s) => s.hoverHighlightColor)
+  const setHoverHighlightEnabled = usePreferencesStore((s) => s.setHoverHighlightEnabled)
+  const setHoverHighlightColor = usePreferencesStore((s) => s.setHoverHighlightColor)
 
   const confirmOpen = showSignOutConfirm || showDeleteConfirm || showDisableMfaConfirm
   useBodyScrollLock(confirmOpen)
@@ -330,6 +339,57 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
       {/* Settings list */}
       <div className="flex flex-col gap-6 sm:gap-8">
+
+      <section className="panel-card p-5 sm:p-6">
+        <SectionHeading icon={<AppearanceIcon />}>Appearance</SectionHeading>
+        <div className="flex flex-col divide-y divide-white/10">
+
+        {/* Hover highlight toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-5">
+          <div className="min-w-0 flex-1 pr-2">
+            <span className="text-base text-gray-light">Highlight Films on Hover</span>
+            <p className="text-xs text-gray-muted mt-0.5">Make the film you're hovering over light up in a colour of your choice. Off leaves hover exactly as it is now.</p>
+          </div>
+          <button
+            onClick={() => setHoverHighlightEnabled(!hoverHighlightEnabled)}
+            className={['relative w-12 h-6 rounded-full transition-colors shrink-0', hoverHighlightEnabled ? 'bg-teal' : 'bg-white/20'].join(' ')}
+            role="switch"
+            aria-checked={hoverHighlightEnabled}
+          >
+            <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', hoverHighlightEnabled ? 'translate-x-6' : ''].join(' ')} />
+          </button>
+        </div>
+
+        {/* Highlight colour swatches — only shown once the toggle above is on */}
+        {hoverHighlightEnabled && (
+          <div className="flex flex-wrap items-center gap-3 py-5">
+            <span className="text-sm text-gray-muted shrink-0">Highlight colour</span>
+            <div className="flex flex-wrap gap-2.5">
+              {NEON_COLORS.map((c) => {
+                const selected = hoverHighlightColor === c.value
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setHoverHighlightColor(c.value)}
+                    title={c.name}
+                    aria-label={c.name}
+                    aria-pressed={selected}
+                    className="h-8 w-8 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: c.value,
+                      boxShadow: selected
+                        ? `0 0 0 2px #160a2f, 0 0 0 4px ${c.value}, 0 0 10px 2px ${c.value}`
+                        : `0 0 8px 1px ${c.value}99`,
+                    }}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
+        </div>
+      </section>
 
       <section className="panel-card p-5 sm:p-6">
         <SectionHeading icon={<PrivacyIcon />}>Privacy</SectionHeading>

@@ -14,6 +14,7 @@ import {
 import MovieDetailModal from '../../components/MovieDetailModal'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
+import { hoverGlowStyle, useHoverHighlight } from '../../store/preferencesStore'
 import type { Recommendation, Movie, MovieReviewsData } from '../../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
@@ -147,6 +148,7 @@ function RecMovieCard({
   const [hovered, setHovered] = useState(false)
   const movie = rec.movies as Movie
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null
+  const { enabled: highlightOn, color: highlightColor } = useHoverHighlight()
 
   return (
     <article
@@ -157,7 +159,11 @@ function RecMovieCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onOpen}
-      style={{ cursor: 'pointer' }}
+      style={{
+        cursor: 'pointer',
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        ...hoverGlowStyle(highlightOn, highlightColor, hovered),
+      }}
     >
       <div className="aspect-[2/3] w-full overflow-hidden rounded-lg relative bg-navy-card/60">
         {posterUrl ? (
