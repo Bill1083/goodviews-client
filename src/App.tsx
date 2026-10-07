@@ -19,6 +19,7 @@ import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
 import AboutPage from './pages/AboutPage'
 import OnboardingPage from './pages/OnboardingPage'
+import TutorialManager from './features/tutorials/TutorialManager'
 
 // Loaded on demand: the Wrapped is a once-a-year screen with its own bundle.
 const WrappedPage = lazy(() => import('./features/wrapped/WrappedPage'))
@@ -266,6 +267,7 @@ export default function App() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <AppRoutes />
+        <TutorialManager />
       </div>
     </BrowserRouter>
   )

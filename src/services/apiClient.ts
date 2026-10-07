@@ -319,6 +319,13 @@ export interface ProfileData {
   mute_friend_requests: boolean
   has_onboarded: boolean
   onboarding_genre_ids: number[]
+  /** Keys of feature tutorials this user has already dismissed/completed —
+   * see features/tutorials/registry.ts for the full list. */
+  seen_tutorials: string[]
+  /** Not a profile column — the underlying auth user's own creation date,
+   * used to tell "existed before this feature shipped" apart from "brand
+   * new signup" when deciding which tutorials to show. */
+  created_at: string | null
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -342,6 +349,14 @@ export async function updateProfile(payload: Partial<{
   onboarding_genre_ids: number[]
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
+  return data
+}
+
+/** Marks one tutorial as seen — the backend appends `key` to seen_tutorials
+ * if it isn't there already, so this never needs the current list fetched
+ * first (unlike updateProfile's other fields, which replace wholesale). */
+export async function markTutorialSeen(key: string): Promise<ProfileData> {
+  const { data } = await apiClient.put<ProfileData>('/api/profile/', { seen_tutorial: key })
   return data
 }
 
