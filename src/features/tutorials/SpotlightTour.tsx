@@ -61,6 +61,36 @@ function useAnchorRect(anchor: string, active: boolean) {
   return { rect, gaveUp }
 }
 
+/** Watches `attr` on the anchor element (e.g. aria-checked on a toggle) and
+ *  calls `onTrue` once, a beat after it turns "true" — so a step like "flip
+ *  this on" reacts to the user actually doing it rather than waiting for a
+ *  "Next" click. The short delay lets them see their own click land (and
+ *  the ring react) before the tour visibly moves on. */
+function useAdvanceOnAttr(anchor: string, attr: string | undefined, active: boolean, onTrue: () => void) {
+  useEffect(() => {
+    if (!active || !attr) return
+    const el = document.querySelector<HTMLElement>(`[data-tutorial-anchor="${anchor}"]`)
+    if (!el) return
+
+    let fired = false
+    let timer: number | undefined
+    const check = () => {
+      if (fired || el.getAttribute(attr) !== 'true') return
+      fired = true
+      timer = window.setTimeout(onTrue, 450)
+    }
+    check() // already true by the time we start watching
+    const observer = new MutationObserver(check)
+    observer.observe(el, { attributes: true, attributeFilter: [attr] })
+
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchor, attr, active])
+}
+
 /** Walks the real UI, lighting up one element at a time, instead of
  *  describing it in a dialog — navigates to each step's route, then dims
  *  everything but that element, wiggles a glowing ring around it, and
@@ -89,14 +119,17 @@ export default function SpotlightTour({
 
   const onTargetRoute = location.pathname === step.route
   const { rect, gaveUp } = useAnchorRect(step.anchor, onTargetRoute)
+  const isLast = stepIndex === steps.length - 1
 
   useEffect(() => {
     if (gaveUp) onDone()
   }, [gaveUp, onDone])
 
+  const goNext = () => (isLast ? onDone() : setStepIndex((i) => i + 1))
+  useAdvanceOnAttr(step.anchor, step.advanceOnAttr, onTargetRoute && !!rect, goNext)
+
   if (!onTargetRoute || !rect) return null
 
-  const isLast = stepIndex === steps.length - 1
   const placement = step.placement ?? 'bottom'
   const padded = {
     top: rect.top - PAD,
@@ -114,10 +147,15 @@ export default function SpotlightTour({
     ...s,
   })
 
-  const centerX = Math.min(Math.max(padded.left + padded.width / 2, MARGIN + CALLOUT_WIDTH / 2), vw - MARGIN - CALLOUT_WIDTH / 2)
+  // Shrink the box itself on a narrow viewport rather than only clamping its
+  // position — fixing the position alone still let a too-wide box spill off
+  // the edge (a flex child's text has no excuse to wrap below its own
+  // natural width without this; min-w-0 on the <p> below is the other half).
+  const calloutWidth = Math.min(CALLOUT_WIDTH, vw - MARGIN * 2)
+  const centerX = Math.min(Math.max(padded.left + padded.width / 2, MARGIN + calloutWidth / 2), vw - MARGIN - calloutWidth / 2)
   const centerY = Math.min(Math.max(padded.top + padded.height / 2, MARGIN), vh - MARGIN)
 
-  let calloutStyle: CSSProperties = { position: 'fixed', width: CALLOUT_WIDTH }
+  let calloutStyle: CSSProperties = { position: 'fixed', width: calloutWidth }
   let arrowStyle: CSSProperties = { position: 'absolute', width: 0, height: 0 }
 
   if (placement === 'bottom') {
@@ -164,13 +202,13 @@ export default function SpotlightTour({
       <div
         role="dialog"
         aria-modal="true"
-        className="panel-card dialog-scale-in flex flex-col gap-3 p-4"
+        className="panel-card dialog-scale-in flex flex-col gap-3 overflow-hidden p-4"
         style={{ ...calloutStyle, zIndex: 72 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={arrowStyle} />
         <div className="flex items-start gap-2">
-          <p className="flex-1 text-sm leading-relaxed text-gray-light">{step.text}</p>
+          <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light">{step.text}</p>
           <button onClick={onDone} aria-label="Close" className="shrink-0 text-gray-muted hover:text-gray-lighter transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -186,7 +224,7 @@ export default function SpotlightTour({
             </div>
           ) : <span />}
           <button
-            onClick={() => (isLast ? onDone() : setStepIndex((i) => i + 1))}
+            onClick={goNext}
             className="rounded-full bg-teal px-4 py-1.5 text-xs font-semibold text-navy hover:bg-teal-light transition-colors"
           >
             {isLast ? 'Got it' : 'Next →'}

@@ -17,11 +17,12 @@ export default function TutorialIntroToast({
       role="status"
       className="fixed inset-x-4 bottom-20 z-[70] animate-[fadeInUp_0.3s_ease-out_both] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-80"
     >
-      <div className="panel-card flex items-start gap-3 p-4" style={{ boxShadow: '0 0 0 1px rgba(20,206,202,0.25), 0 8px 24px rgba(0,0,0,0.5)' }}>
-        <p className="flex-1 text-sm leading-relaxed text-gray-light">{text}</p>
+      <div className="panel-card flex items-start gap-3 overflow-hidden p-4" style={{ boxShadow: '0 0 0 1px rgba(20,206,202,0.25), 0 8px 24px rgba(0,0,0,0.5)' }}>
+        <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-light">{text}</p>
         <button
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label="No thanks"
+          title="No thanks"
           className="shrink-0 text-gray-muted hover:text-gray-lighter transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -29,7 +30,13 @@ export default function TutorialIntroToast({
           </svg>
         </button>
       </div>
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex items-center justify-end gap-3">
+        <button
+          onClick={onDismiss}
+          className="text-xs text-gray-muted hover:text-gray-lighter transition-colors"
+        >
+          No thanks
+        </button>
         <button
           onClick={onShowMe}
           className="rounded-full bg-teal px-4 py-1.5 text-xs font-semibold text-navy hover:bg-teal-light transition-colors"

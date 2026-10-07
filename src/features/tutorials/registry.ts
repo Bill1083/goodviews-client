@@ -7,6 +7,12 @@ export interface SpotlightStep {
   text: string
   /** Which side of the element the callout sits on. Defaults to 'bottom'. */
   placement?: 'top' | 'bottom' | 'left' | 'right'
+  /** If set, watches this attribute on the anchor element (e.g.
+   * 'aria-checked' on a toggle) and auto-advances to the next step — or
+   * finishes the tour, on the last step — the moment it becomes "true",
+   * instead of waiting for an explicit "Next" click. Lets a step like "flip
+   * this on" react to the user actually doing it. */
+  advanceOnAttr?: string
 }
 
 export interface Tutorial {
@@ -41,6 +47,13 @@ export const TUTORIALS: Tutorial[] = [
         anchor: 'hover-highlight-toggle',
         text: 'Flip this on to pick your own neon hover colour.',
         placement: 'bottom',
+        advanceOnAttr: 'aria-checked',
+      },
+      {
+        route: '/settings',
+        anchor: 'hover-highlight-colors',
+        text: 'Pick any of these — it saves automatically.',
+        placement: 'top',
       },
     ],
   },

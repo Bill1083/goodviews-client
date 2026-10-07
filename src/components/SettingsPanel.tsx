@@ -365,7 +365,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
         {hoverHighlightEnabled && (
           <div className="flex flex-wrap items-center gap-3 py-5">
             <span className="text-sm text-gray-muted shrink-0">Highlight colour</span>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2.5" data-tutorial-anchor="hover-highlight-colors">
               {NEON_COLORS.map((c) => {
                 const selected = hoverHighlightColor === c.value
                 return (
