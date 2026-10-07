@@ -2,22 +2,35 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getProfile, markTutorialSeen } from '../../services/apiClient'
 import { useAuthStore } from '../../store/authStore'
+import { useTutorialReplayStore } from '../../store/tutorialReplayStore'
 import { TUTORIALS } from './registry'
-import TutorialModal from './TutorialModal'
+import TutorialIntroToast from './TutorialIntroToast'
+import SpotlightTour from './SpotlightTour'
 
-/** Mounted once near the app root. Shows at most one tutorial at a time,
- *  queued oldest-shipped-first, for accounts that already existed before a
- *  given feature shipped and haven't dismissed it yet — a brand-new signup
- *  is always younger than every tutorial's shippedAt, so this never shows
- *  them anything (see registry.ts). Gated on has_onboarded so it can't pop
- *  up mid-onboarding-wizard or before a session exists. */
+/** Mounted once near the app root — the only place a tutorial is ever
+ *  rendered from, since a spotlight tour can navigate between pages
+ *  mid-tour and needs to survive that, which a component nested inside one
+ *  particular page (e.g. the Help modal that requests a replay) can't.
+ *
+ *  Two ways a tutorial gets here:
+ *  - Automatically: at most one eligible tutorial at a time, oldest-shipped
+ *    first. Eligible = the account existed before that tutorial's
+ *    shippedAt and hasn't dismissed it yet — a brand-new signup is always
+ *    younger than every shippedAt, so this never shows them anything.
+ *  - Voluntarily: TutorialsHelpModal hands off a key via
+ *    tutorialReplayStore, which jumps the queue and skips the intro toast
+ *    (they already asked for it) straight to the spotlight. */
 export default function TutorialManager() {
   const session = useAuthStore((s) => s.session)
   const hasOnboarded = useAuthStore((s) => s.hasOnboarded)
   const qc = useQueryClient()
-  // Hides a tutorial the instant its close button is clicked, rather than
-  // waiting on the markTutorialSeen round-trip + profile refetch.
+  const replayKey = useTutorialReplayStore((s) => s.replayKey)
+  const clearReplay = useTutorialReplayStore((s) => s.clearReplay)
+
+  // Hides a tutorial the instant it's dismissed, rather than waiting on the
+  // markTutorialSeen round-trip + profile refetch.
   const [dismissedThisSession, setDismissedThisSession] = useState<Set<string>>(new Set())
+  const [touring, setTouring] = useState<string | null>(null)
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -30,6 +43,20 @@ export default function TutorialManager() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
   })
 
+  const replayTutorial = TUTORIALS.find((t) => t.key === replayKey)
+  if (replayTutorial) {
+    return (
+      <SpotlightTour
+        key={`replay-${replayTutorial.key}`}
+        steps={replayTutorial.spotlights}
+        onDone={() => {
+          clearReplay()
+          dismissMutation.mutate(replayTutorial.key)
+        }}
+      />
+    )
+  }
+
   if (!profile?.created_at) return null
 
   const createdAt = new Date(profile.created_at).getTime()
@@ -41,14 +68,22 @@ export default function TutorialManager() {
 
   if (!next) return null
 
+  const finish = () => {
+    setDismissedThisSession((prev) => new Set(prev).add(next.key))
+    setTouring(null)
+    dismissMutation.mutate(next.key)
+  }
+
+  if (touring === next.key) {
+    return <SpotlightTour key={next.key} steps={next.spotlights} onDone={finish} />
+  }
+
   return (
-    <TutorialModal
+    <TutorialIntroToast
       key={next.key}
-      tutorial={next}
-      onClose={() => {
-        setDismissedThisSession((prev) => new Set(prev).add(next.key))
-        dismissMutation.mutate(next.key)
-      }}
+      text={next.intro}
+      onShowMe={() => setTouring(next.key)}
+      onDismiss={finish}
     />
   )
 }

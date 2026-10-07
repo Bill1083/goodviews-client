@@ -352,6 +352,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
           </div>
           <button
             onClick={() => setHoverHighlightEnabled(!hoverHighlightEnabled)}
+            data-tutorial-anchor="hover-highlight-toggle"
             className={['relative w-12 h-6 rounded-full transition-colors shrink-0', hoverHighlightEnabled ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={hoverHighlightEnabled}

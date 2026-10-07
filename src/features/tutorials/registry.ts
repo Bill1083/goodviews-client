@@ -1,6 +1,12 @@
-export interface TutorialStep {
-  title: string
-  body: string
+export interface SpotlightStep {
+  /** Route to navigate to before spotlighting (no-op if already there). */
+  route: string
+  /** Matches a `data-tutorial-anchor="..."` attribute on the target element. */
+  anchor: string
+  /** Short callout text next to the arrow. */
+  text: string
+  /** Which side of the element the callout sits on. Defaults to 'bottom'. */
+  placement?: 'top' | 'bottom' | 'left' | 'right'
 }
 
 export interface Tutorial {
@@ -13,24 +19,28 @@ export interface Tutorial {
   shippedAt: string
   /** Short label used in the "Features & Tutorials" list in Profile. */
   title: string
-  steps: TutorialStep[]
+  /** The small intro toast shown first, before anything moves. */
+  intro: string
+  /** One or more real UI elements to walk through in order, each one lit
+   * up in place rather than described in a dialog. */
+  spotlights: SpotlightStep[]
 }
 
 /** Every feature tutorial, oldest first. Adding a new one is just adding an
- * entry here — no database migration, no new column, no new endpoint. */
+ * entry here — no database migration, no new column, no new endpoint. Give
+ * the element it points at a `data-tutorial-anchor="<anchor>"` attribute. */
 export const TUTORIALS: Tutorial[] = [
   {
     key: 'hover_highlight',
     shippedAt: '2026-10-07',
     title: 'Personal Hover Highlight',
-    steps: [
+    intro: '✨ Films can now light up when you hover over them.',
+    spotlights: [
       {
-        title: '✨ Films can light up when you hover',
-        body: "Hovering over a film in Discover, My Movies, or a friend's profile can now glow in a colour of your choice.",
-      },
-      {
-        title: 'Turn it on in Settings',
-        body: 'Head to Settings → Appearance → "Highlight Films on Hover", flip it on, and pick a neon colour. Leave it off and hover looks exactly as it always has.',
+        route: '/settings',
+        anchor: 'hover-highlight-toggle',
+        text: 'Flip this on to pick your own neon hover colour.',
+        placement: 'bottom',
       },
     ],
   },

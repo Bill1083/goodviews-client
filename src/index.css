@@ -152,6 +152,24 @@ option.custom-option {
   transform-origin: top center;
 }
 
+/* ─── Tutorial spotlight ring: a "little dance" to draw the eye, then a
+     slower breathing glow so the ring doesn't go dead once it's made its
+     point ───────────────────────────────────────────────────────────── */
+@keyframes tutorialRingWiggle {
+  0%, 100% { transform: scale(1)    rotate(0deg); }
+  20%      { transform: scale(1.06) rotate(-5deg); }
+  40%      { transform: scale(1.06) rotate(4deg); }
+  60%      { transform: scale(1.06) rotate(-3deg); }
+  80%      { transform: scale(1.03) rotate(2deg); }
+}
+@keyframes tutorialRingPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--tutorial-ring-color, #14ceca), 0 0 16px 4px var(--tutorial-ring-color, #14ceca); }
+  50%      { box-shadow: 0 0 0 2px var(--tutorial-ring-color, #14ceca), 0 0 26px 8px var(--tutorial-ring-color, #14ceca); }
+}
+.tutorial-ring {
+  animation: tutorialRingWiggle 0.6s ease-in-out 2, tutorialRingPulse 1.8s ease-in-out infinite 1.2s;
+}
+
 /* ─── Discover grid item entrance ────────────────────────────────────────── */
 @keyframes fadeInUp {
   from { transform: translateY(10px); opacity: 0; }
@@ -357,7 +375,7 @@ option.custom-option {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
-  .glow-pulse, .float-y, .auth-poster, .auth-poster-carousel-track, .bell-wiggle {
+  .glow-pulse, .float-y, .auth-poster, .auth-poster-carousel-track, .bell-wiggle, .tutorial-ring {
     animation: none !important;
   }
   .rec-card-new { animation: none !important; box-shadow: 0 0 0 2px #dd3ee3; }
