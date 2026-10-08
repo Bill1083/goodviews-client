@@ -462,11 +462,22 @@ export default function DiscoverPage() {
 
               {selectedStreamingProviders.length > 0 && (
                 <section className="flex w-full flex-col gap-3">
-                  <div>
-                    <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
-                      Streaming Worlds
-                    </h2>
-                    <p className="text-sm text-gray-muted">Jump into one of your services — everything shown is only on that one</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
+                        Streaming Worlds
+                      </h2>
+                      <p className="text-sm text-gray-muted">Jump into one of your services — everything shown is only on that one</p>
+                    </div>
+                    <button
+                      onClick={() => navigate('/settings', { state: { scrollTo: 'streaming-services' } })}
+                      className="mt-1 flex shrink-0 items-center gap-1 text-xs font-medium text-teal opacity-80 transition-opacity hover:opacity-100"
+                    >
+                      Add More
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="flex flex-wrap justify-center gap-4 sm:justify-start sm:gap-5">
                     {selectedStreamingProviders.map((p) => (

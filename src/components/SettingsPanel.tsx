@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
 import { getProfile, getStreamingProviders, updateProfile, deleteAccount } from '../services/apiClient'
@@ -174,7 +174,10 @@ function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSett
  *  and shrinks the header to fit a narrower column. */
 export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClose?: () => void; closeLabel?: string }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const qc = useQueryClient()
+  const streamingSectionRef = useRef<HTMLElement>(null)
+  const [highlightStreaming, setHighlightStreaming] = useState(false)
   const userEmail = useAuthStore((s) => s.user?.email) ?? ''
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -216,6 +219,21 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     panels.forEach((el) => { el.style.overflow = 'hidden' })
     return () => { panels.forEach((el, i) => { el.style.overflow = previous[i] }) }
   }, [confirmOpen])
+
+  // Deep link from Discover's "Add More" — scrolls to and briefly highlights
+  // the Streaming Services section instead of leaving the user to hunt for
+  // it. Consumed once: replacing the history state keeps a later back/
+  // forward through this same entry (or opening Settings again normally)
+  // from re-triggering the scroll+highlight.
+  useEffect(() => {
+    if ((location.state as { scrollTo?: string } | null)?.scrollTo !== 'streaming-services') return
+    streamingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setHighlightStreaming(true)
+    navigate(location.pathname, { replace: true, state: {} })
+    const timer = setTimeout(() => setHighlightStreaming(false), 2600)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -494,7 +512,11 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
         </div>
       </section>
 
-      <section className="panel-card p-5 sm:p-6">
+      <section
+        ref={streamingSectionRef}
+        id="streaming-services-section"
+        className={['panel-card p-5 sm:p-6 transition-shadow', highlightStreaming ? 'glow-pulse' : ''].join(' ')}
+      >
         <SectionHeading icon={<StreamingIcon />}>Streaming Services</SectionHeading>
         <div className="flex flex-col gap-3">
           <p className="text-xs text-gray-muted">
