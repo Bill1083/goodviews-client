@@ -468,7 +468,7 @@ export default function DiscoverPage() {
                     </h2>
                     <p className="text-sm text-gray-muted">Jump into one of your services — everything shown is only on that one</p>
                   </div>
-                  <div className="flex flex-wrap gap-3 sm:gap-4">
+                  <div className="flex flex-wrap justify-center gap-3 sm:justify-start sm:gap-4">
                     {selectedStreamingProviders.map((p) => (
                       <StreamingWorldTile
                         key={p.provider_id}

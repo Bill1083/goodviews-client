@@ -1,23 +1,26 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getStreamingProviders, getStreamingWorld } from '../../services/apiClient'
+import { getStreamingProviders, getStreamingWorld, type StreamingWorld } from '../../services/apiClient'
 import { useWatchlistMutations } from '../../hooks/useWatchlistMutations'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
+import PaginationControls from '../../components/PaginationControls'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
 import ReviewModal from '../reviews/ReviewModal'
-import ServiceEntranceAnimation from './ServiceEntranceAnimation'
 import { themeFor } from './streamingServiceThemes'
 import type { Movie, StreamingProvider } from '../../types'
 
 const TMDB_LOGO = 'https://image.tmdb.org/t/p/w185'
+const PAGE_SIZE = 10
 
-const SECTIONS: Array<{ key: 'popular' | 'for_you' | 'different'; title: string; subtitle: string }> = [
-  { key: 'popular', title: 'Popular', subtitle: 'What everyone is watching on this service right now' },
-  { key: 'for_you', title: 'For You', subtitle: 'Matches your taste, only on this service' },
-  { key: 'different', title: 'Different', subtitle: 'A bit of a stretch from your usual — still worth a look' },
+type Tab = keyof StreamingWorld
+
+const TABS: Array<{ key: Tab; label: string; subtitle: string }> = [
+  { key: 'popular', label: 'Popular', subtitle: 'What everyone is watching on this service right now' },
+  { key: 'for_you', label: 'For You', subtitle: 'Matches your taste, only on this service' },
+  { key: 'different', label: 'Different', subtitle: 'A bit of a stretch from your usual — still worth a look' },
 ]
 
 function MovieGridSkeleton() {
@@ -38,7 +41,8 @@ export default function StreamingWorldPage() {
   const { providerId: providerIdParam } = useParams()
   const providerId = Number(providerIdParam)
 
-  const [showEntrance, setShowEntrance] = useState(true)
+  const [activeTab, setActiveTab] = useState<Tab>('popular')
+  const [page, setPage] = useState(1)
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
   const [personModalId, setPersonModalId] = useState<number | null>(null)
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -67,13 +71,18 @@ export default function StreamingWorldPage() {
 
   const { watchlistIds, addMutation: watchlistAddMutation, removeMutation: watchlistRemoveMutation } = useWatchlistMutations()
 
+  const activeMovies = world?.[activeTab] ?? []
+  const totalPages = Math.max(1, Math.ceil(activeMovies.length / PAGE_SIZE))
+  const pageMovies = activeMovies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const selectTab = (tab: Tab) => {
+    setActiveTab(tab)
+    setPage(1)
+  }
+
   return (
     <>
-      {showEntrance && provider && (
-        <ServiceEntranceAnimation provider={provider} onDone={() => setShowEntrance(false)} />
-      )}
-
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8 sm:px-6 sm:py-12 2xl:max-w-[1600px]">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 2xl:max-w-[1600px]">
         {/* Hero — themed to the service, same shape as the Popular/For You banner */}
         <div
           className="relative h-48 w-full overflow-hidden rounded-card border border-white/10 sm:h-56"
@@ -113,22 +122,30 @@ export default function StreamingWorldPage() {
 
         {isError && <p className="text-sm text-red-400">Something went wrong loading this service's films. Please try again.</p>}
 
-        {SECTIONS.map(({ key, title, subtitle }) => (
-          <section key={key} className="flex w-full flex-col gap-3">
-            <div>
-              <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
-                {title}
-              </h2>
-              <p className="text-sm text-gray-muted">{subtitle}</p>
-            </div>
+        {/* Tab switcher — same segmented-control style as Discover's Movies/People tabs */}
+        <div className="flex rounded-xl border border-white/10 bg-navy-card/30 p-1 gap-1 self-center">
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => selectTab(key)}
+              className={['px-5 py-2 rounded-lg text-sm font-medium transition-all', activeTab === key ? 'bg-navy-card text-gray-lighter shadow' : 'text-gray-muted hover:text-gray-lighter'].join(' ')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-            {isLoading ? (
-              <MovieGridSkeleton />
-            ) : (world?.[key] ?? []).length === 0 ? (
-              <p className="text-sm text-gray-muted">Nothing here yet — check back soon.</p>
-            ) : (
+        <section className="flex w-full flex-col gap-6">
+          <p className="text-center text-sm text-gray-muted">{TABS.find((t) => t.key === activeTab)?.subtitle}</p>
+
+          {isLoading ? (
+            <MovieGridSkeleton />
+          ) : activeMovies.length === 0 ? (
+            <p className="text-center text-sm text-gray-muted">Nothing here yet — check back soon.</p>
+          ) : (
+            <>
               <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
-                {(world?.[key] ?? []).map((movie) => (
+                {pageMovies.map((movie) => (
                   <MovieCard
                     key={movie.id}
                     movie={movie}
@@ -139,9 +156,11 @@ export default function StreamingWorldPage() {
                   />
                 ))}
               </div>
-            )}
-          </section>
-        ))}
+
+              {totalPages > 1 && <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />}
+            </>
+          )}
+        </section>
       </main>
 
       {selectedMovie && (
