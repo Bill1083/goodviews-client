@@ -94,6 +94,19 @@ export async function getStreamingProviders(signal?: AbortSignal): Promise<Strea
   return data
 }
 
+export interface StreamingWorld {
+  popular: Movie[]
+  for_you: Movie[]
+  different: Movie[]
+}
+
+/** One streaming service's own Popular/For You/Different, scoped to just
+ * that provider — see DiscoverPage's "Streaming Worlds" tiles. */
+export async function getStreamingWorld(providerId: number, signal?: AbortSignal): Promise<StreamingWorld> {
+  const { data } = await apiClient.get(`/api/movies/streaming-worlds/${providerId}`, { signal })
+  return data
+}
+
 
 /** Today's three — today in the browser's timezone, so they turn over at the
  *  user's midnight. */

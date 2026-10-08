@@ -11,6 +11,7 @@ import AuthPage from './pages/AuthPage'
 import MyMoviesPage from './pages/MyMoviesPage'
 import DiscoverPage from './features/discover/DiscoverPage'
 import DiscoverListPage from './features/discover/DiscoverListPage'
+import StreamingWorldPage from './features/discover/StreamingWorldPage'
 import ProfilePage from './features/profile/ProfilePage'
 import PublicProfilePage from './features/profile/PublicProfilePage'
 import SettingsPage from './pages/SettingsPage'
@@ -116,6 +117,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <DiscoverListPage kind="for-you" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover/streaming/:providerId"
+          element={
+            <ProtectedRoute>
+              <StreamingWorldPage />
             </ProtectedRoute>
           }
         />

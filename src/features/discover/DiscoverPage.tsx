@@ -6,6 +6,8 @@ import {
   getTrendingMovies,
   getForYouMovies,
   getMoviesOfTheDay,
+  getProfile,
+  getStreamingProviders,
   markNotInterested,
   type NotInterestedScope,
   searchMovies,
@@ -15,6 +17,7 @@ import { useWatchlistMutations } from '../../hooks/useWatchlistMutations'
 import MovieSearchBar from '../movies/MovieSearchBar'
 import MovieCarousel from './MovieCarousel'
 import MoviesOfTheDay from './MoviesOfTheDay'
+import StreamingWorldTile from './StreamingWorldTile'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
@@ -248,6 +251,20 @@ export default function DiscoverPage() {
     return map
   }, [dailyPicks])
 
+  // Streaming World tiles: one per service the user has selected in
+  // Settings — same ['profile'] / ['streaming-providers'] caches those
+  // already warm, so this is usually an instant read rather than a fetch.
+  const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile })
+  const { data: streamingProviders } = useQuery({
+    queryKey: ['streaming-providers'],
+    queryFn: () => getStreamingProviders(),
+    staleTime: 1000 * 60 * 60 * 24,
+  })
+  const selectedStreamingProviders = useMemo(() => {
+    const selectedIds = new Set(profile?.streaming_provider_ids ?? [])
+    return (streamingProviders ?? []).filter((p) => selectedIds.has(p.provider_id))
+  }, [profile, streamingProviders])
+
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
     // Drop the card on tap rather than after the round-trip; the server's
@@ -442,6 +459,26 @@ export default function DiscoverPage() {
                   />
                 )}
               </section>
+
+              {selectedStreamingProviders.length > 0 && (
+                <section className="flex w-full flex-col gap-3">
+                  <div>
+                    <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
+                      Streaming Worlds
+                    </h2>
+                    <p className="text-sm text-gray-muted">Jump into one of your services — everything shown is only on that one</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
+                    {selectedStreamingProviders.map((p) => (
+                      <StreamingWorldTile
+                        key={p.provider_id}
+                        provider={p}
+                        onClick={() => navigate(`/discover/streaming/${p.provider_id}`)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         )}

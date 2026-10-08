@@ -356,6 +356,40 @@ option.custom-option {
 }
 .float-y { animation: floatY 5.5s ease-in-out infinite; }
 
+/* ─── Streaming-world entrance ("portal" transition into a service's page) ──
+   An original, brand-colour-based transition — not a copy of any one
+   service's actual intro — so it reads as "entering Netflix's own corner of
+   Discover" without imitating a trademarked animation. A small coloured disc
+   expands past the edges of the screen while the logo badge pops in with a
+   slight overshoot, then both fade together just before onDone fires. */
+@keyframes servicePortalExpand {
+  0%   { transform: scale(0); opacity: 0.4; }
+  60%  { opacity: 1; }
+  100% { transform: scale(2.4); opacity: 1; }
+}
+.service-portal {
+  width: 60vmax;
+  height: 60vmax;
+  animation: servicePortalExpand 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes servicePortalLogoPop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  55%  { transform: scale(1.08); opacity: 1; }
+  75%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.service-portal-logo {
+  animation: servicePortalLogoPop 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes servicePortalLabelFade {
+  0%, 60% { opacity: 0; }
+  75%     { opacity: 0.8; }
+  100%    { opacity: 0; }
+}
+.service-portal-label {
+  animation: servicePortalLabelFade 1.4s ease-out both;
+}
+
 /* Gradient headline text (persona reveal, hero numbers). */
 .text-gradient-brand {
   background: linear-gradient(95deg, #14ceca 0%, #e9e9e9 45%, #dd3ee3 100%);
@@ -377,6 +411,10 @@ option.custom-option {
   }
   .glow-pulse, .float-y, .auth-poster, .auth-poster-carousel-track, .bell-wiggle, .tutorial-ring {
     animation: none !important;
+  }
+  .service-portal, .service-portal-logo, .service-portal-label {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
   .rec-card-new { animation: none !important; box-shadow: 0 0 0 2px #dd3ee3; }
   .accordion-body { transition: none !important; }
