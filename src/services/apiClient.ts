@@ -94,20 +94,6 @@ export async function getStreamingProviders(signal?: AbortSignal): Promise<Strea
   return data
 }
 
-/** "Your Streaming Services": popular/well-rated/genre-affinity films
- * available on the providers this user picked in Settings. Empty results
- * means either no providers selected or nothing matched — the Discover page
- * tells those apart via the user's own streaming_provider_ids. */
-export async function getStreamingPicks(
-  excludeSeen: boolean,
-  signal?: AbortSignal,
-): Promise<{ results: Movie[] }> {
-  const { data } = await apiClient.get('/api/movies/streaming-picks', {
-    params: { exclude_seen: excludeSeen },
-    signal,
-  })
-  return data
-}
 
 /** Today's three — today in the browser's timezone, so they turn over at the
  *  user's midnight. */
@@ -349,9 +335,11 @@ export interface ProfileData {
    * used to tell "existed before this feature shipped" apart from "brand
    * new signup" when deciding which tutorials to show. */
   created_at: string | null
-  /** TMDB provider ids (watch_region=AU) this user says they subscribe to —
-   * drives the "Your Streaming Services" carousel. */
+  /** TMDB provider ids (watch_region=AU) this user says they subscribe to. */
   streaming_provider_ids: number[]
+  /** When true, For You and Movies of the Day are filtered to only films
+   * available on streaming_provider_ids — Most Popular This Week never is. */
+  streaming_filter_enabled: boolean
 }
 
 export async function getProfile(): Promise<ProfileData> {
@@ -374,6 +362,7 @@ export async function updateProfile(payload: Partial<{
   has_onboarded: boolean
   onboarding_genre_ids: number[]
   streaming_provider_ids: number[]
+  streaming_filter_enabled: boolean
 }>): Promise<ProfileData> {
   const { data } = await apiClient.put<ProfileData>('/api/profile/', payload)
   return data

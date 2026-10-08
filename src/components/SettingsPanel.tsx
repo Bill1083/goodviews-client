@@ -159,6 +159,11 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     streamingProvidersMutation.mutate(next)
   }
 
+  const streamingFilterMutation = useMutation({
+    mutationFn: (val: boolean) => updateProfile({ streaming_filter_enabled: val }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+  })
+
   const { data: mfaFactors } = useQuery({
     queryKey: ['mfa-factors'],
     queryFn: async () => {
@@ -421,7 +426,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
         <SectionHeading icon={<StreamingIcon />}>Streaming Services</SectionHeading>
         <div className="flex flex-col gap-3">
           <p className="text-xs text-gray-muted">
-            Pick what you subscribe to — the "Your Streaming Services" row on Discover only shows films actually available to you.
+            Pick what you subscribe to — used by the filter below to only show you films you can actually watch.
           </p>
           {streamingProvidersLoading ? (
             <div className="flex flex-wrap gap-2.5">
@@ -465,6 +470,25 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
                   </button>
                 )
               })}
+            </div>
+          )}
+
+          {streamingProviderIds.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+              <div className="min-w-0 flex-1 pr-2">
+                <span className="text-base text-gray-light">Only Show What I Can Stream</span>
+                <p className="mt-0.5 text-xs text-gray-muted">
+                  Filters For You and Movies of the Day down to films available on the services above. Most Popular This Week is never filtered — those are current/cinema titles, not all streaming yet.
+                </p>
+              </div>
+              <button
+                onClick={() => streamingFilterMutation.mutate(!(profile?.streaming_filter_enabled ?? false))}
+                className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.streaming_filter_enabled ? 'bg-teal' : 'bg-white/20'].join(' ')}
+                role="switch"
+                aria-checked={profile?.streaming_filter_enabled ?? false}
+              >
+                <span className={['absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', profile?.streaming_filter_enabled ? 'translate-x-6' : ''].join(' ')} />
+              </button>
             </div>
           )}
         </div>
