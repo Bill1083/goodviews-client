@@ -3,9 +3,10 @@ import type { StreamingProvider } from '../../types'
 
 const TMDB_LOGO = 'https://image.tmdb.org/t/p/w185'
 
-/** One square entry tile into a streaming service's own "world" — sized to
- * sit comfortably beside the movie-poster carousels above it (see
- * DiscoverPage's "Streaming Worlds" section) without towering over them. */
+/** One square entry tile into a streaming service's own "world" — sized
+ * closer to a movie poster card's footprint (not stretched to fill the row,
+ * which distorts the square into something odd-looking — just bigger, so a
+ * short row still reads as filling the screen on its own). */
 export default function StreamingWorldTile({
   provider,
   onClick,
@@ -19,11 +20,11 @@ export default function StreamingWorldTile({
       type="button"
       onClick={onClick}
       aria-label={`Browse ${provider.provider_name}`}
-      className="group relative aspect-square w-28 shrink-0 overflow-hidden rounded-card border border-white/10 shadow-lg transition-transform hover:scale-[1.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 sm:w-32"
+      className="group relative aspect-square w-36 shrink-0 overflow-hidden rounded-card border border-white/10 shadow-lg transition-transform hover:scale-[1.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 sm:w-40 md:w-44 lg:w-48"
       style={{ background: `radial-gradient(circle at 30% 25%, ${theme.color} 0%, ${theme.shade} 78%)` }}
     >
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3">
-        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow sm:h-12 sm:w-12">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4">
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white/95 shadow sm:h-16 sm:w-16">
           {provider.logo_path ? (
             <img
               src={`${TMDB_LOGO}${provider.logo_path}`}
@@ -32,10 +33,10 @@ export default function StreamingWorldTile({
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           ) : (
-            <span className="text-lg font-bold text-navy">{provider.provider_name[0]}</span>
+            <span className="text-xl font-bold text-navy">{provider.provider_name[0]}</span>
           )}
         </div>
-        <span className="line-clamp-2 text-center text-[11px] font-semibold leading-tight text-white drop-shadow sm:text-xs">
+        <span className="line-clamp-2 text-center text-sm font-semibold leading-tight text-white drop-shadow">
           {provider.provider_name}
         </span>
       </div>
