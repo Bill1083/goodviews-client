@@ -147,9 +147,21 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
   const streamingProviderIds = profile?.streaming_provider_ids ?? []
 
+  // Both of these change what For You / Movies of the Day show server-side
+  // (see movies.py's streaming filter), not just the profile row — without
+  // also invalidating those feeds here, the Discover page keeps serving
+  // its last cached fetch (staleTime: 30min) until something else happens
+  // to refetch it, which read as "the toggle needs a couple of refreshes
+  // to take effect".
+  const invalidateStreamingDependentFeeds = () => {
+    qc.invalidateQueries({ queryKey: ['profile'] })
+    qc.invalidateQueries({ queryKey: ['movies', 'for-you'] })
+    qc.invalidateQueries({ queryKey: ['movies', 'movies-of-the-day'] })
+  }
+
   const streamingProvidersMutation = useMutation({
     mutationFn: (ids: number[]) => updateProfile({ streaming_provider_ids: ids }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onSuccess: invalidateStreamingDependentFeeds,
   })
 
   const toggleStreamingProvider = (providerId: number) => {
@@ -161,7 +173,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
   const streamingFilterMutation = useMutation({
     mutationFn: (val: boolean) => updateProfile({ streaming_filter_enabled: val }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onSuccess: invalidateStreamingDependentFeeds,
   })
 
   const { data: mfaFactors } = useQuery({
