@@ -82,47 +82,71 @@ const StreamingIcon = () => (
 )
 
 /** Every Settings toggle/select writes one profile field via updateProfile
- *  and reads it back off the shared ['profile'] query. Three things used
- *  to make that feel laggy or outright lose taps:
+ *  and reads it back off the shared ['profile'] query. Three layered bugs
+ *  made rapid tapping lose or revert changes:
  *
  *  1. Nothing showed on screen until the round trip finished — fixed by
  *     applying the change to the cached profile the instant it's tapped.
  *  2. Tapping the same field again before the first request finished fired
  *     a second, overlapping request — cancelQueries only stops a *query*
- *     refetch, not the mutation's own in-flight call. Those two requests
- *     could then land out of order, and whichever happened to *finish*
- *     last won regardless of which was tapped last. useSerialQueue fixes
- *     this: at most one request per field in flight at a time, and a burst
- *     of taps collapses to just the latest value, sent the instant the
- *     current request clears.
- *  3. The actual data-loss bug: every call site computed its *next* value
- *     by reading straight off `profile` (e.g. "is this id already in
- *     streaming_provider_ids?"), but `profile` only updates once React
- *     re-renders — and two taps close together (different logos, or the
- *     same one twice) both fire *before* that re-render lands, so both
- *     read the same pre-tap snapshot. For a scalar toggle that just means
- *     a second rapid tap can fail to flip it back (looks "stuck"); for the
- *     provider array, the second tap's add/remove is computed without the
- *     first tap's change and then *overwrites the whole array*, silently
- *     dropping it — not a display glitch, an actual lost selection.
- *     currentValue() fixes this by tracking "what did we last decide this
- *     should be" in a plain ref, which — unlike anything derived from a
- *     render — updates synchronously on every call, so even several taps
- *     within the same tick each build on the previous tap's result rather
- *     than on stale, pre-tap data. */
+ *     refetch, not the mutation's own in-flight call, so two in-flight PUTs
+ *     could land out of order. useSerialQueue fixes this: at most one
+ *     request per field in flight at a time, a burst of taps collapses to
+ *     just the latest value.
+ *  3. Every call site computed its *next* value by reading straight off
+ *     `profile`, which only updates once React re-renders — two taps close
+ *     together (different logos, or the same one twice) both fire *before*
+ *     that render lands, so both read the same pre-tap snapshot and the
+ *     second one's change (for an array field, the *entire array*) could
+ *     overwrite the first's. currentValue() fixes this by tracking "what
+ *     did we last decide" in a plain ref — unlike anything derived from a
+ *     render, a ref updates synchronously on every call, so even several
+ *     taps in one tick each build on the previous tap's real result.
+ *  4. The one that survived the first two rounds: resyncing via
+ *     invalidateQueries fires a separate, independent GET — which has no
+ *     ordering guarantee relative to a newer optimistic tap, and a refetch
+ *     *replaces* the cache wholesale. So that GET landing after a newer tap
+ *     would stomp the newer value with the older one it was actually
+ *     fetched for — "settles, then randomly bounces back" with exactly the
+ *     "random" timing of a race, because it was one. Fixed by dropping the
+ *     separate GET and resyncing off each PUT's own response instead,
+ *     always pinning *our* field to the live ref rather than to that
+ *     response's version of it (see the comment inline below). */
 function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSettledExtra?: () => void) {
   const qc = useQueryClient()
   const desiredRef = useRef<ProfileData[K] | undefined>(undefined)
 
   const enqueue = useSerialQueue<K, ProfileData[K]>(
-    (f, val) => updateProfile({ [f]: val } as Partial<Parameters<typeof updateProfile>[0]>),
-    () => {
-      // Once this field's whole burst has drained (not after every
-      // individual send in it) — a final resync with the server's actual
-      // answer, same as onSettled before.
-      qc.invalidateQueries({ queryKey: ['profile'] })
-      onSettledExtra?.()
+    async (f, val) => {
+      // Resync off THIS request's own response, not a separate
+      // invalidate-triggered GET — that GET is an independent request with
+      // no ordering guarantee relative to a newer optimistic tap, so it
+      // could land *after* one and stomp it with the older value it was
+      // actually fetched for. A PUT's response can't suffer that specific
+      // race (it's this exact request's own answer), but it can still be
+      // stale by the time it arrives if a newer tap updated desiredRef in
+      // the meantime — which is why `field` is pinned to the *live* ref
+      // read here, not to `val` or anything captured earlier, and not to
+      // whatever the response itself says that field is now.
+      try {
+        const fresh = await updateProfile({ [f]: val } as Partial<Parameters<typeof updateProfile>[0]>)
+        qc.setQueryData<ProfileData>(['profile'], (old) => ({
+          ...(old ?? fresh),
+          ...fresh,
+          [field]: desiredRef.current !== undefined ? desiredRef.current : fresh[field],
+        }))
+      } catch (err) {
+        // A genuine server-side rejection (not just a slow response) has
+        // no "own response" to resync from — fall back to an actual
+        // refetch so the field doesn't stay stuck on an optimistic value
+        // the server never actually accepted. This path is rare (invalid
+        // writes, not normal taps), so it doesn't reintroduce the
+        // overlapping-GET race the common success path above avoids.
+        qc.invalidateQueries({ queryKey: ['profile'] })
+        throw err
+      }
     },
+    () => onSettledExtra?.(),
   )
 
   const mutate = (val: ProfileData[K]) => {
