@@ -7,6 +7,7 @@ import { supabase } from '../services/supabaseClient'
 import { getProfile, getStreamingProviders, updateProfile, deleteAccount } from '../services/apiClient'
 import type { ProfileData } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useSerialQueue } from '../hooks/useSerialQueue'
 import { useAuthStore } from '../store/authStore'
 import { NEON_COLORS, usePreferencesStore } from '../store/preferencesStore'
 import { verifyReauth } from '../utils/mfa'
@@ -81,31 +82,41 @@ const StreamingIcon = () => (
 )
 
 /** Every Settings toggle/select writes one profile field via updateProfile
- *  and reads it back off the shared ['profile'] query — without this, a tap
- *  only showed its effect once the round trip finished, which read as
- *  laggy. This applies the change to the cached profile the instant it's
- *  tapped, resyncs with the server's actual answer once it lands, and
- *  snaps back if that answer is an error — the standard React Query
- *  optimistic-update shape (onMutate / onError / onSettled). */
+ *  and reads it back off the shared ['profile'] query. Two things used to
+ *  make that feel laggy:
+ *
+ *  1. Nothing showed on screen until the round trip finished — fixed by
+ *     applying the change to the cached profile the instant it's tapped.
+ *  2. Tapping the same field again before the first request finished fired
+ *     a second, overlapping request — cancelQueries only stops a *query*
+ *     refetch, not the mutation's own in-flight call. Those two requests
+ *     could then land out of order, and whichever happened to *finish*
+ *     last won regardless of which was tapped last — seen as the UI
+ *     settling, then visibly bouncing back to a stale value a moment
+ *     later. useSerialQueue fixes this the way the user asked: at most one
+ *     request per field in flight at a time, and a burst of taps collapses
+ *     to just the latest value, sent the instant the current request
+ *     clears — "whatever the user lands on" is what actually goes out. */
 function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSettledExtra?: () => void) {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (val: ProfileData[K]) =>
-      updateProfile({ [field]: val } as Partial<Parameters<typeof updateProfile>[0]>),
-    onMutate: async (val: ProfileData[K]) => {
-      await qc.cancelQueries({ queryKey: ['profile'] })
-      const previous = qc.getQueryData<ProfileData>(['profile'])
-      qc.setQueryData<ProfileData>(['profile'], (old) => (old ? { ...old, [field]: val } : old))
-      return { previous }
-    },
-    onError: (_err, _val, context) => {
-      if (context?.previous) qc.setQueryData<ProfileData>(['profile'], context.previous)
-    },
-    onSettled: () => {
+
+  const enqueue = useSerialQueue<K, ProfileData[K]>(
+    (f, val) => updateProfile({ [f]: val } as Partial<Parameters<typeof updateProfile>[0]>),
+    () => {
+      // Once this field's whole burst has drained (not after every
+      // individual send in it) — a final resync with the server's actual
+      // answer, same as onSettled before.
       qc.invalidateQueries({ queryKey: ['profile'] })
       onSettledExtra?.()
     },
-  })
+  )
+
+  const mutate = (val: ProfileData[K]) => {
+    qc.setQueryData<ProfileData>(['profile'], (old) => (old ? { ...old, [field]: val } : old))
+    enqueue(field, val)
+  }
+
+  return { mutate }
 }
 
 /** The full settings UI — shared between the full-page /settings route (for
