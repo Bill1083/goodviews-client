@@ -227,6 +227,16 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   // from re-triggering the scroll+highlight.
   useEffect(() => {
     if ((location.state as { scrollTo?: string } | null)?.scrollTo !== 'streaming-services') return
+    // scrollIntoView's "start" aligns the section's top with the viewport's
+    // own top edge, which sits right under the app's sticky header — without
+    // this, the section lands there and its heading ends up hidden behind
+    // it. scroll-margin-top (which scrollIntoView respects natively) pushes
+    // the stopping point down by the header's actual rendered height, so
+    // this stays correct if the header's height ever changes rather than
+    // relying on a guessed pixel value.
+    const header = document.querySelector('header')
+    const offset = (header?.getBoundingClientRect().height ?? 0) + 16
+    if (streamingSectionRef.current) streamingSectionRef.current.style.scrollMarginTop = `${offset}px`
     streamingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     setHighlightStreaming(true)
     navigate(location.pathname, { replace: true, state: {} })
