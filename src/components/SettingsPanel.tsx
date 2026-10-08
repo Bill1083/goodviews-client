@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
@@ -82,8 +82,8 @@ const StreamingIcon = () => (
 )
 
 /** Every Settings toggle/select writes one profile field via updateProfile
- *  and reads it back off the shared ['profile'] query. Two things used to
- *  make that feel laggy:
+ *  and reads it back off the shared ['profile'] query. Three things used
+ *  to make that feel laggy or outright lose taps:
  *
  *  1. Nothing showed on screen until the round trip finished — fixed by
  *     applying the change to the cached profile the instant it's tapped.
@@ -91,14 +91,28 @@ const StreamingIcon = () => (
  *     a second, overlapping request — cancelQueries only stops a *query*
  *     refetch, not the mutation's own in-flight call. Those two requests
  *     could then land out of order, and whichever happened to *finish*
- *     last won regardless of which was tapped last — seen as the UI
- *     settling, then visibly bouncing back to a stale value a moment
- *     later. useSerialQueue fixes this the way the user asked: at most one
- *     request per field in flight at a time, and a burst of taps collapses
- *     to just the latest value, sent the instant the current request
- *     clears — "whatever the user lands on" is what actually goes out. */
+ *     last won regardless of which was tapped last. useSerialQueue fixes
+ *     this: at most one request per field in flight at a time, and a burst
+ *     of taps collapses to just the latest value, sent the instant the
+ *     current request clears.
+ *  3. The actual data-loss bug: every call site computed its *next* value
+ *     by reading straight off `profile` (e.g. "is this id already in
+ *     streaming_provider_ids?"), but `profile` only updates once React
+ *     re-renders — and two taps close together (different logos, or the
+ *     same one twice) both fire *before* that re-render lands, so both
+ *     read the same pre-tap snapshot. For a scalar toggle that just means
+ *     a second rapid tap can fail to flip it back (looks "stuck"); for the
+ *     provider array, the second tap's add/remove is computed without the
+ *     first tap's change and then *overwrites the whole array*, silently
+ *     dropping it — not a display glitch, an actual lost selection.
+ *     currentValue() fixes this by tracking "what did we last decide this
+ *     should be" in a plain ref, which — unlike anything derived from a
+ *     render — updates synchronously on every call, so even several taps
+ *     within the same tick each build on the previous tap's result rather
+ *     than on stale, pre-tap data. */
 function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSettledExtra?: () => void) {
   const qc = useQueryClient()
+  const desiredRef = useRef<ProfileData[K] | undefined>(undefined)
 
   const enqueue = useSerialQueue<K, ProfileData[K]>(
     (f, val) => updateProfile({ [f]: val } as Partial<Parameters<typeof updateProfile>[0]>),
@@ -112,11 +126,19 @@ function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSett
   )
 
   const mutate = (val: ProfileData[K]) => {
+    desiredRef.current = val
     qc.setQueryData<ProfileData>(['profile'], (old) => (old ? { ...old, [field]: val } : old))
     enqueue(field, val)
   }
 
-  return { mutate }
+  /** The base to compute a *next* value from — this session's own last
+   *  decision for this field if it's made one yet, otherwise the server's
+   *  own value. Always use this instead of reading `profile` directly when
+   *  figuring out what a tap should change the value *to*. */
+  const currentValue = (serverValue: ProfileData[K]): ProfileData[K] =>
+    desiredRef.current !== undefined ? desiredRef.current : serverValue
+
+  return { mutate, currentValue }
 }
 
 /** The full settings UI — shared between the full-page /settings route (for
@@ -201,9 +223,10 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   const streamingProvidersMutation = useOptimisticProfileField('streaming_provider_ids', invalidateStreamingDependentFeeds)
 
   const toggleStreamingProvider = (providerId: number) => {
-    const next = streamingProviderIds.includes(providerId)
-      ? streamingProviderIds.filter((id) => id !== providerId)
-      : [...streamingProviderIds, providerId]
+    const current = streamingProvidersMutation.currentValue(streamingProviderIds)
+    const next = current.includes(providerId)
+      ? current.filter((id) => id !== providerId)
+      : [...current, providerId]
     streamingProvidersMutation.mutate(next)
   }
 
@@ -507,7 +530,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
                 </p>
               </div>
               <button
-                onClick={() => streamingFilterMutation.mutate(!(profile?.streaming_filter_enabled ?? false))}
+                onClick={() => streamingFilterMutation.mutate(!streamingFilterMutation.currentValue(profile?.streaming_filter_enabled ?? false))}
                 className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.streaming_filter_enabled ? 'bg-teal' : 'bg-white/20'].join(' ')}
                 role="switch"
                 aria-checked={profile?.streaming_filter_enabled ?? false}
@@ -554,7 +577,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             <p className="text-xs text-gray-muted mt-0.5">Prevents your recently watched movies from appearing in friends' activity feeds</p>
           </div>
           <button
-            onClick={() => hideRecentMutation.mutate(!(profile?.hide_recent_movies ?? false))}
+            onClick={() => hideRecentMutation.mutate(!hideRecentMutation.currentValue(profile?.hide_recent_movies ?? false))}
             className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.hide_recent_movies ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={profile?.hide_recent_movies ?? false}
@@ -570,7 +593,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             <p className="text-xs text-gray-muted mt-0.5">Keeps who you're friends with off your profile for anyone who visits it</p>
           </div>
           <button
-            onClick={() => hideFriendsMutation.mutate(!(profile?.hide_friends_list ?? false))}
+            onClick={() => hideFriendsMutation.mutate(!hideFriendsMutation.currentValue(profile?.hide_friends_list ?? false))}
             className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.hide_friends_list ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={profile?.hide_friends_list ?? false}
@@ -592,7 +615,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             <p className="text-xs text-gray-muted mt-0.5">Stop notifying you when friends recommend a movie to you</p>
           </div>
           <button
-            onClick={() => muteRecommendationsMutation.mutate(!(profile?.mute_recommendations ?? false))}
+            onClick={() => muteRecommendationsMutation.mutate(!muteRecommendationsMutation.currentValue(profile?.mute_recommendations ?? false))}
             className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.mute_recommendations ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={profile?.mute_recommendations ?? false}
@@ -608,7 +631,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
             <p className="text-xs text-gray-muted mt-0.5">Stop notifying you when someone sends you a friend request</p>
           </div>
           <button
-            onClick={() => muteFriendRequestsMutation.mutate(!(profile?.mute_friend_requests ?? false))}
+            onClick={() => muteFriendRequestsMutation.mutate(!muteFriendRequestsMutation.currentValue(profile?.mute_friend_requests ?? false))}
             className={['relative w-12 h-6 rounded-full transition-colors shrink-0', profile?.mute_friend_requests ? 'bg-teal' : 'bg-white/20'].join(' ')}
             role="switch"
             aria-checked={profile?.mute_friend_requests ?? false}
