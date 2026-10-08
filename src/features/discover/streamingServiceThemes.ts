@@ -1,9 +1,8 @@
-/** Brand-colour theming for each curated streaming service's tile and entrance
- * animation (see StreamingWorldTile / ServiceEntranceAnimation). Colours are
- * each service's well-known public brand colour, not any trademarked
- * artwork — paired with TMDB's own hosted logo image (already used elsewhere
- * in this app for provider attribution), never a reproduction of a real
- * logo or intro sequence, to stay clear of imitating anything trademarked.
+/** Brand-colour theming for each curated streaming service's tile and its
+ * world page's hero banner (see StreamingWorldTile / StreamingWorldPage).
+ * Colours are each service's well-known public brand colour, not any
+ * trademarked artwork — paired with TMDB's own hosted logo image (already
+ * used elsewhere in this app for provider attribution).
  *
  * Keyed by provider_name (same curated names as the backend's
  * CURATED_PROVIDER_NAMES — see server/app/services/streaming_picks.py),
@@ -26,6 +25,7 @@ const THEMES_BY_NAME: Record<string, ServiceTheme> = {
   'stan': { color: '#1FD4E8', shade: '#07262b' },
   'binge': { color: '#FF2D78', shade: '#330a1a' },
   'paramount plus': { color: '#1F5BFF', shade: '#0a1740' },
+  'hbo max': { color: '#9A5AE5', shade: '#1c0b33' },
   'apple tv': { color: '#9B9B9B', shade: '#0a0a0a' },
   'foxtel now': { color: '#D2042D', shade: '#2b0309' },
   'britbox': { color: '#2338C2', shade: '#070b2e' },
