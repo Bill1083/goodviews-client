@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import ReviewModal from '../reviews/ReviewModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -7,10 +6,8 @@ import {
   markRecommendationRead,
   dismissRecommendation,
   getMovieReviews,
-  addToWatchlist,
-  removeFromWatchlist,
-  getWatchlist,
 } from '../../services/apiClient'
+import { useWatchlistMutations } from '../../hooks/useWatchlistMutations'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import PersonModal from '../../components/PersonModal'
 import RetryImage from '../../components/RetryImage'
@@ -274,12 +271,7 @@ export default function RecommendationsSection() {
     refetchInterval: 30_000, // poll every 30s for new recs
   })
 
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-  })
-
-  const watchlistIds = new Set(watchlist.map((w) => w.movie_id))
+  const { watchlistIds, addMutation: watchlistAddMutation, removeMutation: watchlistRemoveMutation } = useWatchlistMutations()
   const unreadCount = recommendations.filter((r) => !r.is_read).length
   const hasUnread = unreadCount > 0
 
@@ -317,31 +309,13 @@ export default function RecommendationsSection() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['recommendations'] }),
   })
 
-  const watchlistAddMutation = useMutation({
-    mutationFn: (rec: Recommendation) =>
-      addToWatchlist({
-        movie_id: rec.movies.id,
-        title: rec.movies.title,
-        poster_path: rec.movies.poster_path,
-        release_date: rec.movies.release_date,
-        genre_ids: rec.movies.genre_ids,
-        vote_average: rec.movies.vote_average,
-      }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
-
-  const watchlistRemoveMutation = useMutation({
-    mutationFn: (movieId: number) => removeFromWatchlist(movieId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
-
   const handleOpen = (rec: Recommendation) => {
     setOpenRec(rec)
     if (!rec.is_read) markReadMutation.mutate(rec.id)
   }
 
   const handleAddWatchlist = (rec: Recommendation) => {
-    watchlistAddMutation.mutate(rec)
+    watchlistAddMutation.mutate(rec.movies)
     if (!rec.is_read) markReadMutation.mutate(rec.id)
   }
 
@@ -428,13 +402,8 @@ export default function RecommendationsSection() {
           recommendation={openRec}
           onClose={() => setOpenRec(null)}
           watchlistIds={watchlistIds}
-          onAddWatchlist={(movie) => {
-            watchlistAddMutation.mutate({
-              ...openRec,
-              movies: movie,
-            })
-          }}
-          onRemoveWatchlist={(movie) => watchlistRemoveMutation.mutate(movie.id)}
+          onAddWatchlist={(movie) => watchlistAddMutation.mutate(movie)}
+          onRemoveWatchlist={(movie) => watchlistRemoveMutation.mutate(movie)}
         />
       )}
     </>

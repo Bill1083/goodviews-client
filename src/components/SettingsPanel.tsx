@@ -80,6 +80,34 @@ const StreamingIcon = () => (
   <svg {...iconProps}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM8 20h8M12 16v4" /></svg>
 )
 
+/** Every Settings toggle/select writes one profile field via updateProfile
+ *  and reads it back off the shared ['profile'] query — without this, a tap
+ *  only showed its effect once the round trip finished, which read as
+ *  laggy. This applies the change to the cached profile the instant it's
+ *  tapped, resyncs with the server's actual answer once it lands, and
+ *  snaps back if that answer is an error — the standard React Query
+ *  optimistic-update shape (onMutate / onError / onSettled). */
+function useOptimisticProfileField<K extends keyof ProfileData>(field: K, onSettledExtra?: () => void) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (val: ProfileData[K]) =>
+      updateProfile({ [field]: val } as Partial<Parameters<typeof updateProfile>[0]>),
+    onMutate: async (val: ProfileData[K]) => {
+      await qc.cancelQueries({ queryKey: ['profile'] })
+      const previous = qc.getQueryData<ProfileData>(['profile'])
+      qc.setQueryData<ProfileData>(['profile'], (old) => (old ? { ...old, [field]: val } : old))
+      return { previous }
+    },
+    onError: (_err, _val, context) => {
+      if (context?.previous) qc.setQueryData<ProfileData>(['profile'], context.previous)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] })
+      onSettledExtra?.()
+    },
+  })
+}
+
 /** The full settings UI — shared between the full-page /settings route (for
  *  direct links/bookmarks), the SettingsDrawer opened from the navbar on
  *  every other page, and an always-visible inline column on Profile at wide
@@ -152,17 +180,14 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   // also invalidating those feeds here, the Discover page keeps serving
   // its last cached fetch (staleTime: 30min) until something else happens
   // to refetch it, which read as "the toggle needs a couple of refreshes
-  // to take effect".
+  // to take effect". (['profile'] itself is already invalidated generically
+  // by useOptimisticProfileField's onSettled below.)
   const invalidateStreamingDependentFeeds = () => {
-    qc.invalidateQueries({ queryKey: ['profile'] })
     qc.invalidateQueries({ queryKey: ['movies', 'for-you'] })
     qc.invalidateQueries({ queryKey: ['movies', 'movies-of-the-day'] })
   }
 
-  const streamingProvidersMutation = useMutation({
-    mutationFn: (ids: number[]) => updateProfile({ streaming_provider_ids: ids }),
-    onSuccess: invalidateStreamingDependentFeeds,
-  })
+  const streamingProvidersMutation = useOptimisticProfileField('streaming_provider_ids', invalidateStreamingDependentFeeds)
 
   const toggleStreamingProvider = (providerId: number) => {
     const next = streamingProviderIds.includes(providerId)
@@ -171,10 +196,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     streamingProvidersMutation.mutate(next)
   }
 
-  const streamingFilterMutation = useMutation({
-    mutationFn: (val: boolean) => updateProfile({ streaming_filter_enabled: val }),
-    onSuccess: invalidateStreamingDependentFeeds,
-  })
+  const streamingFilterMutation = useOptimisticProfileField('streaming_filter_enabled', invalidateStreamingDependentFeeds)
 
   const { data: mfaFactors } = useQuery({
     queryKey: ['mfa-factors'],
@@ -187,31 +209,11 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
   const verifiedTotp = mfaFactors?.totp.find((f) => f.status === 'verified')
   const hasMfa = !!verifiedTotp
 
-  const visibilityMutation = useMutation({
-    mutationFn: (vis: ProfileData['profile_visibility']) =>
-      updateProfile({ profile_visibility: vis }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
-  })
-
-  const hideRecentMutation = useMutation({
-    mutationFn: (val: boolean) => updateProfile({ hide_recent_movies: val }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
-  })
-
-  const hideFriendsMutation = useMutation({
-    mutationFn: (val: boolean) => updateProfile({ hide_friends_list: val }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
-  })
-
-  const muteRecommendationsMutation = useMutation({
-    mutationFn: (val: boolean) => updateProfile({ mute_recommendations: val }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
-  })
-
-  const muteFriendRequestsMutation = useMutation({
-    mutationFn: (val: boolean) => updateProfile({ mute_friend_requests: val }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
-  })
+  const visibilityMutation = useOptimisticProfileField('profile_visibility')
+  const hideRecentMutation = useOptimisticProfileField('hide_recent_movies')
+  const hideFriendsMutation = useOptimisticProfileField('hide_friends_list')
+  const muteRecommendationsMutation = useOptimisticProfileField('mute_recommendations')
+  const muteFriendRequestsMutation = useOptimisticProfileField('mute_friend_requests')
 
   const emailMutation = useMutation({
     mutationFn: async (email: string) => {

@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react'
 import { invalidateTasteStats } from '../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useWatchlistMutations } from '../hooks/useWatchlistMutations'
 import {
   getMyReviews,
-  getWatchlist,
-  addToWatchlist,
-  removeFromWatchlist,
   getRecommendations,
   getMyCategories,
   incrementRewatch,
@@ -945,21 +943,8 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
   })
   const myReview = reviewData?.my_review ?? null
 
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-    staleTime: 1000 * 60 * 2,
-  })
-  const inWatchlist = watchlist.some((w) => w.movie_id === movie.id)
-
-  const addWatchlistMutation = useMutation({
-    mutationFn: () => addToWatchlist({ movie_id: movie.id, title: movie.title, poster_path: movie.poster_path ?? null, release_date: movie.release_date ?? null, genre_ids: movie.genre_ids, vote_average: movie.vote_average }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(queryClient) },
-  })
-  const removeWatchlistMutation = useMutation({
-    mutationFn: () => removeFromWatchlist(movie.id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(queryClient) },
-  })
+  const { watchlistIds, addMutation: addWatchlistMutation, removeMutation: removeWatchlistMutation } = useWatchlistMutations()
+  const inWatchlist = watchlistIds.has(movie.id)
 
   const actions = [
     {
@@ -986,7 +971,7 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 ),
-                onClick: () => removeWatchlistMutation.mutate(),
+                onClick: () => removeWatchlistMutation.mutate(movie),
               }
             : {
                 key: 'watchlist',
@@ -998,7 +983,7 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 ),
-                onClick: () => addWatchlistMutation.mutate(),
+                onClick: () => addWatchlistMutation.mutate(movie),
               },
         ]
       : []),
@@ -1122,11 +1107,13 @@ export default function MyMoviesPage() {
 
   const reviewsData = fullReviewsData ?? initialReviewsData
 
-  const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-    enabled: needsWatchedWatchlistData,
-  })
+  const {
+    watchlist: watchlistData,
+    watchlistIds: watchlistMovieIds,
+    isLoading: watchlistLoading,
+    addMutation: addToWatchlistMutation,
+    removeMutation: removeFromWatchlistMutation,
+  } = useWatchlistMutations({ enabled: needsWatchedWatchlistData })
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ['recommendations'],
@@ -1138,28 +1125,6 @@ export default function MyMoviesPage() {
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: getMyCategories,
-  })
-
-  const removeFromWatchlistMutation = useMutation({
-    mutationFn: (movieId: number) => removeFromWatchlist(movieId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['watchlist'] })
-      invalidateTasteStats(qc)
-      setWatchlistDetail(null)
-    },
-  })
-
-  const addToWatchlistMutation = useMutation({
-    mutationFn: (movie: Movie) =>
-      addToWatchlist({
-        movie_id: movie.id,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        release_date: movie.release_date,
-        genre_ids: movie.genre_ids,
-        vote_average: movie.vote_average,
-      }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   const incrementRewatchMutation = useMutation({
@@ -1356,7 +1321,6 @@ export default function MyMoviesPage() {
   // "Did you mean…" candidate pools — the full-catalog/full-people search
   // results, minus whatever's already in the relevant list, capped at 10.
   const watchedMovieIds = new Set(movieReviewPairs.map(({ movie }) => movie.id))
-  const watchlistMovieIds = new Set(watchlistData.map((w) => w.movies.id))
 
   // Rough client-side stand-in for the For You algorithm, for ranking a
   // favourite actor/director's filmography: genres from movies the user
@@ -1763,10 +1727,10 @@ export default function MyMoviesPage() {
         <WatchlistMovieModal
           movie={watchlistDetail}
           onClose={() => setWatchlistDetail(null)}
-          onRemove={() => removeFromWatchlistMutation.mutate(watchlistDetail.id)}
+          onRemove={() => { removeFromWatchlistMutation.mutate(watchlistDetail); setWatchlistDetail(null) }}
           onWriteReview={() => setReviewModal({
             mode: 'create', movie: watchlistDetail,
-            onSaved: () => { removeFromWatchlistMutation.mutate(watchlistDetail.id); setWatchlistDetail(null) },
+            onSaved: () => { removeFromWatchlistMutation.mutate(watchlistDetail); setWatchlistDetail(null) },
           })}
           onPersonClick={(pid) => setPersonModalId(pid)}
         />
@@ -1778,7 +1742,7 @@ export default function MyMoviesPage() {
           onClose={() => setSuggestedMovieDetail(null)}
           isInWatchlist={watchlistMovieIds.has(suggestedMovieDetail.id)}
           onAddWatchlist={() => addToWatchlistMutation.mutate(suggestedMovieDetail)}
-          onRemoveWatchlist={() => removeFromWatchlistMutation.mutate(suggestedMovieDetail.id)}
+          onRemoveWatchlist={() => removeFromWatchlistMutation.mutate(suggestedMovieDetail)}
           onWriteReview={() => setReviewModal({
             mode: 'create', movie: suggestedMovieDetail,
             onSaved: () => setSuggestedMovieDetail(null),

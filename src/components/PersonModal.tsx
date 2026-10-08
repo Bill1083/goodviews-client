@@ -10,10 +10,8 @@ import {
   removeFavouriteActor,
   addFavouriteDirector,
   removeFavouriteDirector,
-  getWatchlist,
-  addToWatchlist,
-  removeFromWatchlist,
 } from '../services/apiClient'
+import { useWatchlistMutations } from '../hooks/useWatchlistMutations'
 import MovieDescriptionPanel from './MovieDescriptionPanel'
 import ReviewModal from '../features/reviews/ReviewModal'
 import RetryImage from './RetryImage'
@@ -52,31 +50,8 @@ function FilmographyMovieView({
     genre_ids: entry.genre_ids,
   }
 
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-    staleTime: 1000 * 60 * 5,
-  })
-
-  const inWatchlist = watchlist.some((w) => w.movie_id === entry.id)
-
-  const addMutation = useMutation({
-    mutationFn: () =>
-      addToWatchlist({
-        movie_id: entry.id,
-        title: entry.title,
-        poster_path: entry.poster_path ?? null,
-        release_date: entry.release_date ?? null,
-        genre_ids: entry.genre_ids,
-        vote_average: entry.vote_average,
-      }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
-
-  const removeMutation = useMutation({
-    mutationFn: () => removeFromWatchlist(entry.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
+  const { watchlistIds, addMutation, removeMutation } = useWatchlistMutations()
+  const inWatchlist = watchlistIds.has(entry.id)
 
   const posterUrl = entry.poster_path ? `${TMDB_POSTER}${entry.poster_path}` : null
 
@@ -122,7 +97,7 @@ function FilmographyMovieView({
             <div className="flex flex-wrap gap-2 mt-1">
               {inWatchlist ? (
                 <button
-                  onClick={() => removeMutation.mutate()}
+                  onClick={() => removeMutation.mutate(movie)}
                   disabled={removeMutation.isPending}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal/50 bg-teal/10 text-xs font-medium text-teal hover:bg-teal/20 transition-colors disabled:opacity-50"
                 >
@@ -133,7 +108,7 @@ function FilmographyMovieView({
                 </button>
               ) : (
                 <button
-                  onClick={() => addMutation.mutate()}
+                  onClick={() => addMutation.mutate(movie)}
                   disabled={addMutation.isPending}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/15 bg-navy-card/40 text-xs font-medium text-gray-lighter hover:bg-white/10 transition-colors disabled:opacity-50"
                 >

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -11,10 +10,8 @@ import {
   type NotInterestedScope,
   searchMovies,
   searchPeople,
-  getWatchlist,
-  addToWatchlist,
-  removeFromWatchlist,
 } from '../../services/apiClient'
+import { useWatchlistMutations } from '../../hooks/useWatchlistMutations'
 import MovieSearchBar from '../movies/MovieSearchBar'
 import MovieCarousel from './MovieCarousel'
 import MoviesOfTheDay from './MoviesOfTheDay'
@@ -309,30 +306,7 @@ export default function DiscoverPage() {
     placeholderData: keepPreviousData,
   })
 
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-  })
-
-  const watchlistAddMutation = useMutation({
-    mutationFn: (movie: Movie) =>
-      addToWatchlist({
-        movie_id: movie.id,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        release_date: movie.release_date,
-        genre_ids: movie.genre_ids,
-        vote_average: movie.vote_average,
-      }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
-
-  const watchlistRemoveMutation = useMutation({
-    mutationFn: (movie: Movie) => removeFromWatchlist(movie.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
-
-  const watchlistIds = new Set(watchlist.map((w) => w.movie_id))
+  const { watchlistIds, addMutation: watchlistAddMutation, removeMutation: watchlistRemoveMutation } = useWatchlistMutations()
 
   // A new search simply replaces the old one: React Query aborts the
   // superseded request through its AbortSignal. Searches used to be parked

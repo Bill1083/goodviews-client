@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { invalidateTasteStats } from '../../utils/tasteStatsCache'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -7,10 +6,8 @@ import {
   getForYouMovies,
   markNotInterested,
   type NotInterestedScope,
-  getWatchlist,
-  addToWatchlist,
-  removeFromWatchlist,
 } from '../../services/apiClient'
+import { useWatchlistMutations } from '../../hooks/useWatchlistMutations'
 import MovieCard from '../../components/MovieCard'
 import MovieDetailModal from '../../components/MovieDetailModal'
 import SendToFriendsPanel from '../../components/SendToFriendsPanel'
@@ -154,24 +151,7 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
     })
   }, [kind, data, page, qc])
 
-  const { data: watchlist = [] } = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: getWatchlist,
-  })
-  const watchlistIds = new Set(watchlist.map((w) => w.movie_id))
-
-  const watchlistAddMutation = useMutation({
-    mutationFn: (movie: Movie) =>
-      addToWatchlist({
-        movie_id: movie.id,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        release_date: movie.release_date,
-        genre_ids: movie.genre_ids,
-        vote_average: movie.vote_average,
-      }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
-  })
+  const { watchlistIds, addMutation: watchlistAddMutation, removeMutation: watchlistRemoveMutation } = useWatchlistMutations()
 
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
@@ -189,11 +169,6 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
       refreshForYouFeed(qc)
       if (context?.droppedPick) void refreshDailyPicks(qc)
     },
-  })
-
-  const watchlistRemoveMutation = useMutation({
-    mutationFn: (movie: Movie) => removeFromWatchlist(movie.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['watchlist'] }); invalidateTasteStats(qc) },
   })
 
   return (
