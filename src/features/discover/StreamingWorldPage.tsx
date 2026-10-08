@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getStreamingProviders, getStreamingWorld, type StreamingWorld } from '../../services/apiClient'
@@ -70,6 +70,13 @@ export default function StreamingWorldPage() {
   })
 
   const { watchlistIds, addMutation: watchlistAddMutation, removeMutation: watchlistRemoveMutation } = useWatchlistMutations()
+
+  // Same as DiscoverListPage's own pagination — otherwise "Next" leaves the
+  // reader scrolled wherever they were on the previous page, looking at the
+  // middle of a grid that just changed under them.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [page])
 
   const activeMovies = world?.[activeTab] ?? []
   const totalPages = Math.max(1, Math.ceil(activeMovies.length / PAGE_SIZE))
