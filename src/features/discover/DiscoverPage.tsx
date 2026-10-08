@@ -254,8 +254,8 @@ export default function DiscoverPage() {
   // Streaming World tiles: one per service the user has selected in
   // Settings — same ['profile'] / ['streaming-providers'] caches those
   // already warm, so this is usually an instant read rather than a fetch.
-  const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile })
-  const { data: streamingProviders } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile })
+  const { data: streamingProviders, isLoading: streamingProvidersLoading } = useQuery({
     queryKey: ['streaming-providers'],
     queryFn: () => getStreamingProviders(),
     staleTime: 1000 * 60 * 60 * 24,
@@ -264,6 +264,8 @@ export default function DiscoverPage() {
     const selectedIds = new Set(profile?.streaming_provider_ids ?? [])
     return (streamingProviders ?? []).filter((p) => selectedIds.has(p.provider_id))
   }, [profile, streamingProviders])
+  const streamingWorldsLoading = profileLoading || streamingProvidersLoading
+  const goToStreamingSettings = () => navigate('/settings', { state: { scrollTo: 'streaming-services' } })
 
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
@@ -460,34 +462,58 @@ export default function DiscoverPage() {
                 )}
               </section>
 
-              {selectedStreamingProviders.length > 0 && (
+              {!streamingWorldsLoading && (
                 <section className="flex w-full flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h2 style={{ fontFamily: '"Source Sans 3", sans-serif' }} className="text-lg font-bold text-gray-lighter sm:text-xl">
                         Streaming Worlds
                       </h2>
-                      <p className="text-sm text-gray-muted">Jump into one of your services — everything shown is only on that one</p>
+                      <p className="text-sm text-gray-muted">
+                        {selectedStreamingProviders.length > 0
+                          ? 'Jump into one of your services — everything shown is only on that one'
+                          : 'Add your streaming services to jump into one of their own pages'}
+                      </p>
                     </div>
+                    {selectedStreamingProviders.length > 0 && (
+                      <button
+                        onClick={goToStreamingSettings}
+                        className="mt-1 flex shrink-0 items-center gap-1 text-xs font-medium text-teal opacity-80 transition-opacity hover:opacity-100"
+                      >
+                        Add More
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {selectedStreamingProviders.length > 0 ? (
+                    <div className="flex flex-wrap justify-center gap-4 sm:justify-start sm:gap-5">
+                      {selectedStreamingProviders.map((p) => (
+                        <StreamingWorldTile
+                          key={p.provider_id}
+                          provider={p}
+                          onClick={() => navigate(`/discover/streaming/${p.provider_id}`)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => navigate('/settings', { state: { scrollTo: 'streaming-services' } })}
-                      className="mt-1 flex shrink-0 items-center gap-1 text-xs font-medium text-teal opacity-80 transition-opacity hover:opacity-100"
+                      onClick={goToStreamingSettings}
+                      className="flex w-full flex-col items-center gap-2 rounded-card border border-dashed border-white/15 bg-navy-card/30 p-6 text-center transition-colors hover:border-teal/40 hover:bg-navy-card/50"
                     >
-                      Add More
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <span className="text-sm text-gray-light">
+                        Pick Netflix, Disney+ and more in Settings to get a page of picks for each one
+                      </span>
+                      <span className="flex items-center gap-1 text-sm font-medium text-teal">
+                        Add Streaming Services
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
                     </button>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-4 sm:justify-start sm:gap-5">
-                    {selectedStreamingProviders.map((p) => (
-                      <StreamingWorldTile
-                        key={p.provider_id}
-                        provider={p}
-                        onClick={() => navigate(`/discover/streaming/${p.provider_id}`)}
-                      />
-                    ))}
-                  </div>
+                  )}
                 </section>
               )}
             </div>
