@@ -471,7 +471,7 @@ export default function DiscoverPage() {
                       </h2>
                       <p className="text-sm text-gray-muted">
                         {selectedStreamingProviders.length > 0
-                          ? 'Jump into one of your services — everything shown is only on that one'
+                          ? 'Jump into one of your services'
                           : 'Add your streaming services to jump into one of their own pages'}
                       </p>
                     </div>
