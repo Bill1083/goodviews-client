@@ -151,6 +151,8 @@ export default function StreamingWorldPage() {
             <p className="text-center text-sm text-gray-muted">Nothing here yet — check back soon.</p>
           ) : (
             <>
+              {totalPages > 1 && <PaginationControls page={page} totalPages={totalPages} onChange={setPage} />}
+
               <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                 {pageMovies.map((movie) => (
                   <MovieCard
@@ -172,7 +174,6 @@ export default function StreamingWorldPage() {
 
       {selectedMovie && (
         <MovieDetailModal
-          key={selectedMovie.id}
           movie={selectedMovie}
           onClose={() => { setSelectedMovie(null); setShowReviewModal(false); setShowSendPanel(false) }}
           onPersonClick={(pid) => setPersonModalId(pid)}

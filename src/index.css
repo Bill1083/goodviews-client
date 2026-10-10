@@ -16,6 +16,12 @@
     @apply text-gray-light font-sans antialiased;
     background: radial-gradient(ellipse at 50% 50%, #162b6b 0%, #040c24 45%, #150a2a 100%);
     background-attachment: fixed;
+    /* Removes the legacy ~300ms tap delay some mobile browsers still apply
+       while they wait to see if a second tap is a double-tap-to-zoom.
+       Doesn't fix iOS's separate "a tap during scroll momentum just stops
+       the scroll" behavior (there's no CSS fix for that), but it's a real,
+       safe win for every other tap in the app. */
+    touch-action: manipulation;
   }
 
   #root {
@@ -92,10 +98,18 @@
     @apply rounded-card bg-navy-card/60 border border-white/10 backdrop-blur-sm;
   }
 
-  /* Movie poster card */
+  /* Movie poster card. active: (not just hover:) matters on touch devices —
+     a tap that lands while the page is still settling from a scroll gets
+     consumed by iOS just to stop the scroll, not registered as a click, so
+     the *next* tap is the one that actually opens the movie. There's no way
+     to eliminate that extra tap (it's WebKit's own touch-arbitration, not
+     something this app controls), but an immediate pressed-down feel on
+     every tap — including that "wasted" first one — keeps it from feeling
+     broken while the user taps again. */
   .poster-card {
     @apply rounded-card overflow-hidden bg-navy-card/40 cursor-pointer
-           transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-teal/20;
+           transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-teal/20
+           active:scale-95 active:shadow-none;
   }
 
   /* Accordion slide using CSS grid trick */

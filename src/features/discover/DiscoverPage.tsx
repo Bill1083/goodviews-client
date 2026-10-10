@@ -552,6 +552,11 @@ export default function DiscoverPage() {
 
                 {data && data.results.length > 0 && (
                   <>
+                    {data.fuzzy_fallback && (
+                      <p className="text-sm text-gray-muted">
+                        No exact match for &ldquo;{query}&rdquo; — showing close matches instead:
+                      </p>
+                    )}
                     <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                       {data.results.map((movie) => (
                         <MovieCard
@@ -565,7 +570,7 @@ export default function DiscoverPage() {
                       ))}
                     </div>
 
-                    {data.total_pages > 1 && (
+                    {!data.fuzzy_fallback && data.total_pages > 1 && (
                       <div className="flex items-center gap-4">
                         <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="text-sm text-teal disabled:text-gray-muted disabled:cursor-not-allowed hover:text-teal/80">← Prev</button>
                         <span className="text-sm text-gray-muted">Page {page} of {data.total_pages}</span>
@@ -573,6 +578,12 @@ export default function DiscoverPage() {
                       </div>
                     )}
                   </>
+                )}
+
+                {data && data.results.length === 0 && query.length >= 2 && !isFetching && (
+                  <p className="text-sm text-gray-muted">
+                    No movies found for &ldquo;{query}&rdquo;. Try a different spelling or a shorter title.
+                  </p>
                 )}
 
                 {query.length < 2 && !isFetching && (
@@ -619,7 +630,6 @@ export default function DiscoverPage() {
 
       {selectedMovie && (
         <SearchMovieModal
-          key={selectedMovie.id}
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
           onSelectMovie={setSelectedMovie}

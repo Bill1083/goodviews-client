@@ -83,6 +83,9 @@ export interface MovieSearchResult {
   results: Movie[]
   total_pages: number
   total_results: number
+  /** True when the raw query matched nothing and these are "did you mean"
+   *  fuzzy matches against a corpus of well-known titles instead. */
+  fuzzy_fallback?: boolean
 }
 
 export interface MoviePosterImage {
@@ -102,9 +105,10 @@ export interface MovieImages {
 /** A movie's franchise ("<Franchise> Universe" row on the detail modal) —
  * other movies in the same TMDB collection, server-ordered with direct
  * sequels/prequels first. Absent (collection: null) when the movie isn't
- * part of one. */
+ * part of one. `id` is null for the server's own best-effort fallback
+ * grouping (no official TMDB collection exists) rather than a real one. */
 export interface CollectionSummary {
-  id: number
+  id: number | null
   name: string
   poster_path: string | null
   backdrop_path: string | null

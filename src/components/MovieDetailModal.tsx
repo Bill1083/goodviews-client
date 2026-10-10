@@ -280,10 +280,28 @@ export default function MovieDetailModal({
   }, [showNotInterestedMenu])
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const detailsScrollRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
   useBodyScrollLock(true)
   useCloseOnBack(onClose)
+
+  // Switching to a different movie (e.g. tapping a sequel in the Franchise
+  // Universe row) reuses this same modal instance rather than remounting it
+  // — a remount-via-key previously raced with useCloseOnBack's async
+  // history.back(), closing the modal instead of showing the new movie.
+  // Reusing the instance means per-movie UI state would otherwise bleed
+  // across the switch (e.g. a stale optimistic star rating briefly showing
+  // against the new movie before its own data loads) — reset it here.
+  useEffect(() => {
+    setShowAllCast(false)
+    setShowProviders(false)
+    setShowMore(false)
+    setDescExpanded(false)
+    setShowNotInterestedMenu(false)
+    setOptimisticRating(null)
+    detailsScrollRef.current?.scrollTo({ top: 0 })
+  }, [movie.id])
 
   // Anchor the entrance animation's transform-origin to wherever the user actually
   // clicked/tapped, so the dialog visually launches forward from the poster they
@@ -471,7 +489,7 @@ export default function MovieDetailModal({
         )}
 
         {/* Details — scrollable */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
+        <div ref={detailsScrollRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-4 sm:gap-4 sm:p-6 sm:pt-5">
           {(forYouReason || onNotInterested) && (
             <div className="flex items-center gap-2">
               {forYouReason && (
