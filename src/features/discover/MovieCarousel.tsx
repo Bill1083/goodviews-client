@@ -209,7 +209,12 @@ export default function MovieCarousel({ movies, onOpenAll, onSelectMovie }: Prop
       onPointerLeave={endDrag}
       onPointerCancel={endDrag}
       className="relative isolate w-full select-none overflow-hidden cursor-grab active:cursor-grabbing"
-      style={{ height: posterHeight * 1.25, touchAction: 'none' }}
+      // pan-y (not none): lets the browser handle a vertical-intent gesture
+      // as a native page scroll — which also cancels our pointer session
+      // (onPointerCancel below), so it never gets measured as a small
+      // horizontal drag and misread as a tap that opens a movie. Only a
+      // genuinely horizontal gesture stays captured for the carousel itself.
+      style={{ height: posterHeight * 1.25, touchAction: 'pan-y' }}
     >
       {items.map(({ key, movie, position }) => {
         const absPos = Math.abs(position)
