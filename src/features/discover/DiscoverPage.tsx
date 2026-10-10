@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import {
   getMoviesOfTheDay,
   getProfile,
   getStreamingProviders,
+  getStreamingWorld,
   markNotInterested,
   type NotInterestedScope,
   searchMovies,
@@ -269,6 +270,21 @@ export default function DiscoverPage() {
   }, [profile, streamingProviders])
   const streamingWorldsLoading = profileLoading || streamingProvidersLoading
   const goToStreamingSettings = () => navigate('/settings', { state: { scrollTo: 'streaming-services' } })
+
+  // Streaming World's own first computation is the slow part (several TMDB
+  // calls server-side) — firing it now, in the background, while the user
+  // is still browsing Discover overlaps that wait with their own think time
+  // instead of starting it only once they've tapped a tile. Uses the exact
+  // same query key StreamingWorldPage reads, so a cache hit there is silent.
+  useEffect(() => {
+    for (const p of selectedStreamingProviders) {
+      void qc.prefetchQuery({
+        queryKey: ['movies', 'streaming-world', p.provider_id],
+        queryFn: () => getStreamingWorld(p.provider_id),
+        staleTime: 1000 * 60 * 10,
+      })
+    }
+  }, [selectedStreamingProviders, qc])
 
   const notInterestedMutation = useMutation({
     mutationFn: ({ movieId, scope }: { movieId: number; scope: NotInterestedScope }) => markNotInterested(movieId, scope),
