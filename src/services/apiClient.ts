@@ -24,6 +24,7 @@ import type {
   MovieImages,
   PublicProfile,
   StreamingProvider,
+  CollectionSummary,
 } from '../types'
 import type { DashboardStats, WrappedAvailability, WrappedPayload, WrappedResult } from '../types/stats'
 
@@ -137,6 +138,14 @@ export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
 
 export async function getMovieImages(movieId: number): Promise<MovieImages> {
   const { data } = await apiClient.get<MovieImages>(`/api/movies/${movieId}/images`)
+  return data
+}
+
+/** The movie's franchise, if any — other sequels/prequels/spin-offs for the
+ * "<Franchise> Universe" row on the detail modal. `collection` is null for
+ * a standalone film. */
+export async function getMovieCollection(movieId: number): Promise<{ collection: CollectionSummary | null }> {
+  const { data } = await apiClient.get(`/api/movies/${movieId}/collection`)
   return data
 }
 

@@ -172,9 +172,11 @@ export default function StreamingWorldPage() {
 
       {selectedMovie && (
         <MovieDetailModal
+          key={selectedMovie.id}
           movie={selectedMovie}
           onClose={() => { setSelectedMovie(null); setShowReviewModal(false); setShowSendPanel(false) }}
           onPersonClick={(pid) => setPersonModalId(pid)}
+          onSelectMovie={setSelectedMovie}
           extraContent={
             showSendPanel ? (
               <SendToFriendsPanel movie={selectedMovie} onCancel={() => setShowSendPanel(false)} onSent={() => setShowSendPanel(false)} />

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { invalidateTasteStats } from '../utils/tasteStatsCache'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createReview, getMovieDetails, getMovieReviews, updateReview, type NotInterestedScope } from '../services/apiClient'
+import { createReview, getMovieCollection, getMovieDetails, getMovieReviews, updateReview, type NotInterestedScope } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
 import { getLastPointerPosition } from '../utils/pointerTracker'
@@ -9,7 +9,8 @@ import { dropFromDailyPicks, dropFromForYouFeed, refreshDailyPicks, refreshForYo
 import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import RetryImage from './RetryImage'
-import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember } from '../types'
+import FranchiseStrip from './FranchiseStrip'
+import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember, CollectionSummary } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280'
@@ -33,6 +34,10 @@ interface Props {
   movie: Movie
   onClose: () => void
   onPersonClick?: (personId: number, name: string, type: 'actor' | 'director') => void
+  /** Opens a different movie's own detail view — used by the "<Franchise>
+   *  Universe" row. Omit in a context with no "open a different movie"
+   *  flow of its own; the row still shows, just isn't tappable. */
+  onSelectMovie?: (movie: Movie) => void
 
   /** Pass the caller's own review object directly (e.g. from the watched list) so rewatch-count
    *  updates made via local state are reflected immediately without waiting on a refetch. */
@@ -245,6 +250,7 @@ export default function MovieDetailModal({
   movie,
   onClose,
   onPersonClick,
+  onSelectMovie,
   myReviewOverride,
   rewatch,
   recommendationOverride,
@@ -312,6 +318,23 @@ export default function MovieDetailModal({
   const displayOverview = details?.overview ?? movie.overview
   const auProviders = details?.['watch/providers']?.results?.[REGION]
   const flatrateProviders = auProviders?.flatrate ?? []
+
+  // Lazy (the modal itself fetches it, not the parent before opening) and
+  // non-blocking — most movies are standalone, so this shouldn't hold up
+  // the details skeleton above. Silently absent on error/no-collection/
+  // empty-after-filtering, same resilience as the rest of this modal's
+  // optional enrichment.
+  const { data: collectionData } = useQuery<{ collection: CollectionSummary | null }>({
+    queryKey: ['movie-collection', movie.id],
+    queryFn: () => getMovieCollection(movie.id),
+    staleTime: 1000 * 60 * 60 * 24,
+    retry: 1,
+  })
+  const collection = collectionData?.collection ?? null
+  const franchiseParts = (collection?.parts ?? []).filter((p) => p.id !== movie.id)
+  // TMDB collection names are consistently suffixed "... Collection" —
+  // a safe client-side strip, avoids a second naming heuristic server-side.
+  const franchiseTitle = collection ? `${collection.name.replace(/\s*Collection$/i, '')} Universe` : ''
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -626,6 +649,10 @@ export default function MovieDetailModal({
                     ))}
                   </button>
                 </div>
+              )}
+
+              {franchiseParts.length > 0 && (
+                <FranchiseStrip title={franchiseTitle} movies={franchiseParts} onSelectMovie={onSelectMovie} />
               )}
 
               {/* More — collapsed by default; expands to reveal the credits and friends' reviews */}

@@ -99,6 +99,18 @@ export interface MovieImages {
   logos: MoviePosterImage[]
 }
 
+/** A movie's franchise ("<Franchise> Universe" row on the detail modal) —
+ * other movies in the same TMDB collection, server-ordered with direct
+ * sequels/prequels first. Absent (collection: null) when the movie isn't
+ * part of one. */
+export interface CollectionSummary {
+  id: number
+  name: string
+  poster_path: string | null
+  backdrop_path: string | null
+  parts: Movie[]
+}
+
 export interface Review {
   id: string
   user_id: string

@@ -111,6 +111,7 @@ function CarouselSkeleton({ caption }: { caption?: string }) {
 function SearchMovieModal({
   movie,
   onClose,
+  onSelectMovie,
   inWatchlist,
   onAddWatchlist,
   onRemoveWatchlist,
@@ -120,6 +121,7 @@ function SearchMovieModal({
 }: {
   movie: Movie
   onClose: () => void
+  onSelectMovie: (movie: Movie) => void
   inWatchlist: boolean
   onAddWatchlist: () => void
   onRemoveWatchlist: () => void
@@ -136,6 +138,7 @@ function SearchMovieModal({
         movie={movie}
         onClose={onClose}
         onPersonClick={onPersonClick}
+        onSelectMovie={onSelectMovie}
         forYouReason={forYouReason}
         extraContent={
           showSendPanel ? (
@@ -616,8 +619,10 @@ export default function DiscoverPage() {
 
       {selectedMovie && (
         <SearchMovieModal
+          key={selectedMovie.id}
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
+          onSelectMovie={setSelectedMovie}
           inWatchlist={watchlistIds.has(selectedMovie.id)}
           onAddWatchlist={() => watchlistAddMutation.mutate(selectedMovie)}
           onRemoveWatchlist={() => watchlistRemoveMutation.mutate(selectedMovie)}

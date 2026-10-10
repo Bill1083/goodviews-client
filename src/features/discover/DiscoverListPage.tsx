@@ -274,9 +274,11 @@ export default function DiscoverListPage({ kind }: { kind: Kind }) {
 
       {selectedMovie && (
         <MovieDetailModal
+          key={selectedMovie.id}
           movie={selectedMovie}
           onClose={() => { setSelectedMovie(null); setShowReviewModal(false); setShowSendPanel(false) }}
           onPersonClick={(pid) => setPersonModalId(pid)}
+          onSelectMovie={setSelectedMovie}
           forYouReason={reasonById[selectedMovie.id]}
           extraContent={
             showSendPanel ? (
