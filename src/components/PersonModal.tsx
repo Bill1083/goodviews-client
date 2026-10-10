@@ -309,7 +309,8 @@ export default function PersonModal({ personId, onClose, onMovieSelect }: Props)
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0 ml-3"
+            aria-label="Close"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-xl leading-none text-gray-muted hover:text-gray-lighter"
           >
             ×
           </button>

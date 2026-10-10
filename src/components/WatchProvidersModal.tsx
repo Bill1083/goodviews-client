@@ -39,7 +39,7 @@ export default function WatchProvidersModal({ movieTitle, providers, justWatchLi
           <button
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 text-xl leading-none text-gray-muted hover:text-gray-lighter"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-xl leading-none text-gray-muted hover:text-gray-lighter"
           >
             ×
           </button>

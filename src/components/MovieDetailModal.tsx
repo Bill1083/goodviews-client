@@ -427,11 +427,14 @@ export default function MovieDetailModal({
         className="modal-zoom-forward relative mx-auto flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-navy-wine shadow-2xl sm:my-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button — floats over whichever corner is on top */}
+        {/* Close button — floats over whichever corner is on top. 44px
+            minimum touch target (was 32px) — same Apple HIG minimum already
+            applied to pagination buttons elsewhere. Now a secondary exit;
+            the labeled "Back" button at the bottom is the primary one. */}
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-lg leading-none text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70 hover:text-white"
+          className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-xl leading-none text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70 hover:text-white"
         >
           ×
         </button>
@@ -851,13 +854,29 @@ export default function MovieDetailModal({
                 </div>
               </div>
 
-              {rowActions.length > 0 && (
-                <div className="flex flex-wrap justify-end gap-2">
-                  {rowActions.map((action) => (
-                    <ActionButton key={action.key} action={action} />
-                  ))}
-                </div>
-              )}
+              {/* A second, clearly-labeled way out besides the small top-right
+                  X — bottom-left, thumb-reach distance from the primary
+                  action on the right, same spot people already look for a
+                  "done with this" control. */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex min-h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-navy-card/60 px-4 text-sm font-medium text-gray-lighter transition-all hover:border-white/30 hover:bg-white/10"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back
+                </button>
+                {rowActions.length > 0 && (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {rowActions.map((action) => (
+                      <ActionButton key={action.key} action={action} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

@@ -103,7 +103,7 @@ export default function AvatarPicker({ onSelect, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-gray-muted hover:text-gray-lighter text-xl leading-none shrink-0 ml-3"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-xl leading-none text-gray-muted hover:text-gray-lighter"
           >
             ×
           </button>
