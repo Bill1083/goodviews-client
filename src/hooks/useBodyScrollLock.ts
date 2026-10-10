@@ -4,6 +4,14 @@ let lockCount = 0
 let savedScrollY = 0
 let lockedPanels: { el: HTMLElement; prevOverflow: string }[] = []
 
+/** True while any modal/overlay using this hook is open — used elsewhere
+ *  (the global swipe-between-tabs gesture in App.tsx) as a generic "is a
+ *  modal open right now" check, so a swipe inside any current or future
+ *  modal never falls through to page-level navigation underneath it. */
+export function isScrollLocked(): boolean {
+  return lockCount > 0
+}
+
 /** Prevents the page behind a modal/overlay from scrolling while `active` is true.
  *  Uses position:fixed + restoring scrollY (not just overflow:hidden) because iOS Safari
  *  still allows rubber-band scrolling behind a plain `overflow: hidden` body. Reference-counted

@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from './services/supabaseClient'
 import { verifyTrustedDevice, getProfile } from './services/apiClient'
 import { getStoredTrustedDeviceToken, clearTrustedDeviceToken } from './utils/mfa'
+import { isScrollLocked } from './hooks/useBodyScrollLock'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -47,6 +48,12 @@ function AppRoutes() {
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    // A modal/overlay (review form, movie details, Settings, Wrapped, …) is
+    // open — a swipe inside it is its own business, never page navigation
+    // for whatever's still sitting underneath. Covers every current and
+    // future modal that uses useBodyScrollLock, not just the ones that
+    // happen to also set data-no-swipe.
+    if (isScrollLocked()) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
     // Don't intercept swipes on elements that opt out (e.g. horizontal scroll containers)
