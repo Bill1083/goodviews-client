@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { describeFetchError } from '../../utils/describeFetchError'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getTrendingMovies,
@@ -196,20 +196,10 @@ function SearchMovieModal({
   )
 }
 
-/** What the search failure actually was, in words a person can act on. */
-function searchErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    if (!error.response) return "Search couldn't reach GoodViews. Check your connection and try again."
-    if (error.response.status === 429) return "You're searching a little fast. Give it a few seconds and try again."
-    if (error.response.status >= 500) return "The film database isn't responding right now. Try again in a moment."
-  }
-  return 'Something went wrong. Please try again.'
-}
-
 function SearchError({ error, onRetry, retrying }: { error: unknown; onRetry: () => void; retrying: boolean }) {
   return (
     <div className="flex flex-col items-start gap-2">
-      <p className="text-sm text-red-400">{searchErrorMessage(error)}</p>
+      <p className="text-sm text-red-400">{describeFetchError(error)}</p>
       <button
         type="button"
         onClick={onRetry}

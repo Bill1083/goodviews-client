@@ -10,6 +10,7 @@ import StarRating from './StarRating'
 import WatchProvidersModal from './WatchProvidersModal'
 import RetryImage from './RetryImage'
 import FranchiseStrip from './FranchiseStrip'
+import { describeFetchError } from '../utils/describeFetchError'
 import type { Movie, MovieDetails, MovieReviewsData, Review, MovieRecommendationInfo, CastMember, CollectionSummary } from '../types'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w342'
@@ -314,14 +315,14 @@ export default function MovieDetailModal({
     el.style.transformOrigin = `${origin.x - rect.left}px ${origin.y - rect.top}px`
   }, [])
 
-  const { data, isLoading } = useQuery<MovieReviewsData>({
+  const { data, isLoading, isError: reviewsError, refetch: refetchReviews } = useQuery<MovieReviewsData>({
     queryKey: ['movie-reviews', movie.id],
     queryFn: () => getMovieReviews(movie.id),
     staleTime: 1000 * 60 * 2,
   })
 
   // Shares its cache with MovieDescriptionPanel's identical query, so this rarely costs an extra request.
-  const { data: details, isLoading: detailsLoading } = useQuery<MovieDetails>({
+  const { data: details, isLoading: detailsLoading, isError: detailsError, error: detailsErrorObj, refetch: refetchDetails } = useQuery<MovieDetails>({
     queryKey: ['movie-details', movie.id],
     queryFn: () => getMovieDetails(movie.id),
     staleTime: 1000 * 60 * 60,
@@ -542,6 +543,24 @@ export default function MovieDetailModal({
             <DetailSkeleton />
           ) : (
             <>
+              {/* Previously, a failed details/reviews fetch just left this
+                  section quietly half-empty (no synopsis, no cast, no
+                  providers) with nothing on screen explaining why — looked
+                  like the app had silently broken. A visible reason + a
+                  retry that doesn't require closing and reopening the modal. */}
+              {(detailsError || reviewsError) && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2">
+                  <p className="text-sm text-red-400">{describeFetchError(detailsErrorObj)}</p>
+                  <button
+                    type="button"
+                    onClick={() => { if (detailsError) void refetchDetails(); if (reviewsError) void refetchReviews() }}
+                    className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-gray-lighter transition-colors hover:border-teal hover:text-teal"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+
               {/* Quick rate — the first thing available on open, no need to tap into the
                   full review form just to leave a star rating. */}
               <div className="flex flex-col gap-2">
