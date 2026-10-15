@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { supabase } from './supabaseClient'
 import { getStoredTrustedDeviceToken } from '../utils/mfa'
+import { useModerationStore } from '../store/moderationStore'
 import type {
   CommunityStats,
   CreateReviewPayload,
@@ -26,6 +27,9 @@ import type {
   PublicProfile,
   StreamingProvider,
   CollectionSummary,
+  ModerationOutcome,
+  ModerationState,
+  AdminOverview,
 } from '../types'
 import type { DashboardStats, WrappedAvailability, WrappedPayload, WrappedResult } from '../types/stats'
 
@@ -51,6 +55,22 @@ apiClient.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+// A blocked or suspended account is told so by the server (403 + a `code`);
+// surface it straight away instead of waiting for the next status check.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 403) {
+      const data = error.response.data as { code?: string; suspended_until?: string } | undefined
+      if (data?.code === 'account_blocked') useModerationStore.getState().setStatusOverride('blocked')
+      else if (data?.code === 'account_suspended') {
+        useModerationStore.getState().setStatusOverride('suspended', data.suspended_until ?? null)
+      }
+    }
+    return Promise.reject(error)
+  },
+)
 
 // ─── Movies (proxied via Flask → TMDB) ───────────────────────────────────────
 
@@ -174,8 +194,16 @@ export async function recommendMovie(payload: {
 
 // ─── Reviews ─────────────────────────────────────────────────────────────────
 
+/** If the server removed the comment (hate / strong profanity), show why. Done
+ *  here so every place that saves a review - the review form, quick-rate,
+ *  onboarding - tells the user the same way. */
+function surfaceModeration(data: { moderation?: ModerationOutcome } | undefined): void {
+  if (data?.moderation) useModerationStore.getState().showNotice(data.moderation)
+}
+
 export async function createReview(payload: CreateReviewPayload): Promise<void> {
-  await apiClient.post('/api/reviews/', payload)
+  const { data } = await apiClient.post<{ moderation?: ModerationOutcome }>('/api/reviews/', payload)
+  surfaceModeration(data)
 }
 
 export async function getMyReviews(page = 1, perPage = 20): Promise<PaginatedReviews> {
@@ -195,7 +223,8 @@ export async function updateReview(
     friend_ids?: string[]
   },
 ): Promise<void> {
-  await apiClient.put(`/api/reviews/${reviewId}`, payload)
+  const { data } = await apiClient.put<{ moderation?: ModerationOutcome }>(`/api/reviews/${reviewId}`, payload)
+  surfaceModeration(data)
 }
 
 export async function incrementRewatch(reviewId: string): Promise<{ rewatch_count: number }> {
@@ -589,4 +618,34 @@ export async function getWrapped(year: number): Promise<WrappedResult> {
     }
     throw err
   }
+}
+
+
+// ─── Moderation ──────────────────────────────────────────────────────────────
+
+export async function getModerationState(): Promise<ModerationState> {
+  const { data } = await apiClient.get<ModerationState>('/api/moderation/me')
+  return data
+}
+
+export async function getAdminOverview(): Promise<AdminOverview> {
+  const { data } = await apiClient.get<AdminOverview>('/api/admin/overview')
+  return data
+}
+
+/** Ends a suspension early. `warnings` (0-2) also resets the warning count; omit to keep it. */
+export async function liftSuspension(userId: string, warnings?: 0 | 1 | 2): Promise<void> {
+  await apiClient.post(`/api/admin/users/${userId}/lift-suspension`, warnings === undefined ? {} : { warnings })
+}
+
+export async function setUserWarnings(userId: string, warnings: 0 | 1 | 2): Promise<void> {
+  await apiClient.post(`/api/admin/users/${userId}/warnings`, { warnings })
+}
+
+export async function approveDeletion(requestId: string): Promise<void> {
+  await apiClient.post(`/api/admin/deletion-requests/${requestId}/approve`, {})
+}
+
+export async function rejectDeletion(requestId: string, warnings: 0 | 1 | 2): Promise<void> {
+  await apiClient.post(`/api/admin/deletion-requests/${requestId}/reject`, { warnings })
 }

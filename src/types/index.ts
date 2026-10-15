@@ -348,3 +348,55 @@ export interface FavouriteDirector {
   profile_path: string | null
 }
 
+
+// ─── Moderation ─────────────────────────────────────────────────────────────
+export type ModerationStatus = 'active' | 'suspended' | 'blocked'
+
+export interface ModerationState {
+  status: ModerationStatus
+  warning_count: number
+  suspended_until: string | null
+  is_admin: boolean
+}
+
+/** Returned alongside a review when its comment was removed for hate / strong profanity. */
+export interface ModerationOutcome {
+  action: 'warning' | 'suspension' | 'block'
+  warning_count: number
+  suspended_until: string | null
+  message: string
+}
+
+export interface ModerationEvent {
+  id: string
+  user_id: string
+  username: string | null
+  action: 'warning' | 'suspension' | 'block' | 'suspension_lifted' | 'warnings_set' | 'restored' | 'deleted'
+  category: 'profanity' | 'hate' | null
+  flagged_text: string | null
+  note: string | null
+  created_at: string
+}
+
+export interface AdminUser {
+  id: string
+  username: string | null
+  warning_count: number
+  moderation_status: ModerationStatus
+  suspended_until: string | null
+}
+
+export interface DeletionRequest {
+  id: string
+  user_id: string
+  username: string | null
+  created_at: string
+  profile: AdminUser | null
+  events: ModerationEvent[]
+}
+
+export interface AdminOverview {
+  pending_deletions: DeletionRequest[]
+  suspended: AdminUser[]
+  recent_events: ModerationEvent[]
+}

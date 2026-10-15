@@ -17,6 +17,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
+import ModerationGate from './features/moderation/ModerationGate'
 import AboutPage from './pages/AboutPage'
 // Tutorials: shelved for now (not deleted — see features/tutorials/).
 // import TutorialManager from './features/tutorials/TutorialManager'
@@ -31,6 +32,8 @@ const ProfilePage = lazy(() => import('./features/profile/ProfilePage'))
 const PublicProfilePage = lazy(() => import('./features/profile/PublicProfilePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
+// Only the admin ever loads this.
+const AdminPage = lazy(() => import('./features/moderation/AdminPage'))
 // The Wrapped is a once-a-year screen with its own bundle.
 const WrappedPage = lazy(() => import('./features/wrapped/WrappedPage'))
 
@@ -216,6 +219,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/register" element={<Navigate to="/signup" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
@@ -321,6 +332,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
         <Navbar />
+        <ModerationGate />
         <AppRoutes />
         {/* <TutorialManager /> — shelved for now, see the import above */}
       </div>

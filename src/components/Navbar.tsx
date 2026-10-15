@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
-import { getFriendRequests, getProfile, getWrappedAvailability } from '../services/apiClient'
+import { getAdminOverview, getFriendRequests, getProfile, getWrappedAvailability } from '../services/apiClient'
+import { useModerationState } from '../features/moderation/useModerationState'
 import SettingsDrawer from './SettingsDrawer'
 import { isWrappedSeen } from '../utils/wrappedSeen'
 import { NavLogo } from './brand/BrandLogo'
@@ -66,6 +67,17 @@ export default function Navbar() {
     queryFn: getProfile,
     enabled: !!user,
   })
+
+  // Only the admin sees the link, with the number of blocked accounts waiting
+  // on a decision.
+  const { isAdmin } = useModerationState()
+  const { data: adminOverview } = useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: getAdminOverview,
+    enabled: !!user && isAdmin,
+    refetchInterval: 60_000,
+  })
+  const pendingDeletions = adminOverview?.pending_deletions.length ?? 0
 
   if (!user) return null
 
@@ -132,6 +144,21 @@ export default function Navbar() {
             <span className="hidden truncate text-sm font-medium text-gray-muted md:inline" title={profile.username}>
               {profile.username}
             </span>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="relative text-xs font-semibold uppercase tracking-wide text-gray-medium transition-colors hover:text-gray-lighter"
+              title="Moderation"
+              aria-label={pendingDeletions > 0 ? `Moderation, ${pendingDeletions} waiting` : 'Moderation'}
+            >
+              Admin
+              {pendingDeletions > 0 && (
+                <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-magenta px-1 text-[10px] font-bold text-white">
+                  {pendingDeletions}
+                </span>
+              )}
+            </button>
           )}
           <button
             onClick={() => setSettingsOpen(true)}
