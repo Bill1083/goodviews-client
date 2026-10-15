@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore'
 import { daysUntil, formatDate, plural } from '../../utils/formatStats'
 import { markWrappedSeen } from '../../utils/wrappedSeen'
 import WrappedStory from './WrappedStory'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 function Screen({ children }: { children: React.ReactNode }) {
   useBodyScrollLock(true)
@@ -29,6 +30,7 @@ function BackButton({ onClick, label = 'Back to profile' }: { onClick: () => voi
  * decides what's viewable: 423 until the unlock date, 404 for unknown years,
  * `not_enough` under the film threshold. */
 export default function WrappedPage() {
+  usePageMeta({ title: 'Your Wrapped', noindex: true })
   const { year: yearParam } = useParams()
   const year = Number(yearParam)
   const navigate = useNavigate()

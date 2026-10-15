@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createReview, getMovieCollection, getMovieDetails, getMovieReviews, updateReview, type NotInterestedScope } from '../services/apiClient'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useCloseOnBack } from '../hooks/useCloseOnBack'
+import ShareFilmButton from './ShareFilmButton'
 import { getLastPointerPosition } from '../utils/pointerTracker'
 import { dropFromDailyPicks, dropFromForYouFeed, refreshDailyPicks, refreshForYouFeed } from '../utils/forYouCache'
 import StarRating from './StarRating'
@@ -439,6 +440,7 @@ export default function MovieDetailModal({
         >
           ×
         </button>
+        <ShareFilmButton movie={movie} variant="icon" className="absolute right-12 top-3 z-10" />
 
         {/* Hero banner — a wide scene still from the film (TMDB backdrop), just tall enough to
             frame the poster + title floating in front of it. Kept short so the year/director/

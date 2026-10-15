@@ -13,6 +13,7 @@ import { NEON_COLORS, usePreferencesStore } from '../store/preferencesStore'
 import { verifyReauth } from '../utils/mfa'
 import { PASSWORD_HINT, PASSWORD_MAX_LENGTH, validatePassword } from '../utils/passwordPolicy'
 import ReauthField from './ReauthField'
+import { BRAND } from '../config/brand'
 
 /** Confirmations are portalled to <body> on purpose.
  *  SettingsDrawer slides in with a CSS transform, and a transformed ancestor
@@ -406,7 +407,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    navigate('/auth')
+    navigate('/login')
   }
 
   const deleteAccountMutation = useMutation({
@@ -417,7 +418,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     },
     onSuccess: async () => {
       await supabase.auth.signOut()
-      navigate('/auth')
+      navigate('/')
     },
   })
 
@@ -881,9 +882,15 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
         </div>
       </section>
 
-      <div className="flex justify-center">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
         <Link to="/about" onClick={onClose} className="text-sm text-gray-muted hover:text-gray-lighter transition-colors">
-          About GoodViews &amp; TMDB attribution
+          About {BRAND.name} &amp; TMDB attribution
+        </Link>
+        <Link to="/privacy" onClick={onClose} className="text-sm text-gray-muted hover:text-gray-lighter transition-colors">
+          Privacy Policy
+        </Link>
+        <Link to="/terms" onClick={onClose} className="text-sm text-gray-muted hover:text-gray-lighter transition-colors">
+          Terms of Use
         </Link>
       </div>
 
@@ -904,7 +911,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
       {/* Sign-out confirmation dialog */}
       {showSignOutConfirm && (
         <ConfirmOverlay onDismiss={() => setShowSignOutConfirm(false)}>
-            <p className="text-base font-semibold text-gray-lighter">Sign out of GoodViews?</p>
+            <p className="text-base font-semibold text-gray-lighter">Sign out of {BRAND.name}?</p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowSignOutConfirm(false)}

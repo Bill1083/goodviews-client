@@ -1,17 +1,52 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- %BRAND_*% tokens are filled from src/config/brand.ts by the brand plugin in vite.config.ts. -->
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GoodViews — Track, review, and share movies with your friends." />
-    <title>GoodViews</title>
+    <title>%BRAND_TITLE%</title>
+    <meta name="description" content="%BRAND_DESCRIPTION%" />
+    <link rel="canonical" href="%BRAND_CANONICAL%" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="%BRAND_THEME_COLOR%" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:site_name" content="%BRAND_NAME%" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="%BRAND_TITLE%" />
+    <meta property="og:description" content="%BRAND_DESCRIPTION%" />
+    <meta property="og:url" content="%BRAND_CANONICAL%" />
+    <meta property="og:locale" content="%BRAND_LOCALE%" />
+    <meta name="twitter:title" content="%BRAND_TITLE%" />
+    <meta name="twitter:description" content="%BRAND_DESCRIPTION%" />
+    %BRAND_OG_IMAGE_TAGS%
+    <script type="application/ld+json">%BRAND_JSON_LD%</script>
+
+    <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
+    <link rel="preconnect" href="https://image.tmdb.org" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- What visitors without JavaScript (and link scanners) see. React
+           replaces it on mount, so for everyone else it's a brief splash. -->
+      <main class="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 class="text-4xl font-bold text-gray-lighter">%BRAND_NAME%</h1>
+        <p class="max-w-md text-lg text-gray-light">%BRAND_TAGLINE%</p>
+        <p class="max-w-md text-sm text-gray-medium">%BRAND_DESCRIPTION%</p>
+        <nav class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-gray-medium">
+          <a href="/login">Log in</a>
+          <a href="/signup">Sign up</a>
+          <a href="/about">About</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Use</a>
+        </nav>
+        <noscript><p class="text-sm text-gray-medium">%BRAND_NAME% needs JavaScript turned on.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

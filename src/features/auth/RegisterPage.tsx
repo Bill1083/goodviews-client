@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
 import PrimaryButton from '../../components/PrimaryButton'
+import { BRAND } from '../../config/brand'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -77,7 +78,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-2xl font-bold text-gray-light">Create your account</h1>
         <p className="mb-6 text-sm text-gray-muted">
-          Start tracking movies with GoodViews
+          Start tracking movies with {BRAND.name}
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

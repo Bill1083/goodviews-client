@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children }: Props) {
     )
   }
 
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user) return <Navigate to="/login" replace />
 
   // An enrolled MFA factor hasn't been challenged yet this session — finish
   // that first, unless this browser was already remembered as trusted.

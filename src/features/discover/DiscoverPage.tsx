@@ -20,11 +20,9 @@ import MovieCarousel from './MovieCarousel'
 import MoviesOfTheDay from './MoviesOfTheDay'
 import StreamingWorldTile from './StreamingWorldTile'
 import MovieCard from '../../components/MovieCard'
-import MovieDetailModal from '../../components/MovieDetailModal'
-import SendToFriendsPanel from '../../components/SendToFriendsPanel'
 import PersonModal from '../../components/PersonModal'
+import MovieActionsModal from '../../components/MovieActionsModal'
 import PersonCard from '../../components/PersonCard'
-import ReviewModal from '../reviews/ReviewModal'
 import {
   dailyPicksKey,
   dropFromDailyPicks,
@@ -35,6 +33,7 @@ import {
 } from '../../utils/forYouCache'
 import type { ForYouFeed } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 type SearchTab = 'movies' | 'people'
 
@@ -214,6 +213,7 @@ function SearchError({ error, onRetry, retrying }: { error: unknown; onRetry: ()
 
 // ─── Main component ─────────────────────────────────────────────────────────
 export default function DiscoverPage() {
+  usePageMeta({ title: 'Discover', path: '/' })
   const qc = useQueryClient()
   const navigate = useNavigate()
 
@@ -635,7 +635,7 @@ export default function DiscoverPage() {
       </main>
 
       {selectedMovie && (
-        <SearchMovieModal
+        <MovieActionsModal
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
           onSelectMovie={setSelectedMovie}

@@ -5,6 +5,7 @@ import { supabase } from '../services/supabaseClient'
 import { getStoredTrustedDeviceToken, getVerifiedTotpFactorId, storeTrustedDeviceToken } from '../utils/mfa'
 import { createTrustedDevice, verifyTrustedDevice } from '../services/apiClient'
 import PrimaryButton from '../components/PrimaryButton'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 /** Temporary, opt-in via ?mfadebug=1 — reports why this device wasn't recognised,
  *  so a re-challenge can be traced to a missing token vs a rejected one. */
@@ -60,6 +61,7 @@ function TrustedDeviceDebug({ userId }: { userId: string }) {
  * onAuthStateChange -> refreshAal).
  */
 export default function MfaChallengePage() {
+  usePageMeta({ title: 'Two-factor sign-in', noindex: true })
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const setTrustedDevice = useAuthStore((s) => s.setTrustedDevice)
@@ -69,7 +71,7 @@ export default function MfaChallengePage() {
   const [loading, setLoading] = useState(false)
 
   // Someone with no session at all shouldn't land here — send them to log in properly.
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user) return <Navigate to="/login" replace />
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

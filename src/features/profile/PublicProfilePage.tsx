@@ -9,6 +9,7 @@ import type { FriendProfile } from '../../types'
 import { plural } from '../../utils/formatStats'
 import GenreDnaSection from './dashboard/GenreDnaSection'
 import HeadlineStrip from './dashboard/HeadlineStrip'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 const PAGE = 'mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10 xl:max-w-[1400px] 2xl:max-w-[1600px]'
 
@@ -79,6 +80,7 @@ function FriendsPanel({ friends, username, myId }: { friends: FriendProfile[]; u
  * who they're friends with. Entirely read-only — the editor, the settings and
  * the Wrapped all belong to whoever owns the profile. */
 export default function PublicProfilePage() {
+  usePageMeta({ title: 'Profile', noindex: true })
   const { userId = '' } = useParams()
   const navigate = useNavigate()
   const myId = useAuthStore((s) => s.user?.id)

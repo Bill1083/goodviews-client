@@ -5,36 +5,13 @@ import { useAuthStore } from '../store/authStore'
 import { getFriendRequests, getProfile, getWrappedAvailability } from '../services/apiClient'
 import SettingsDrawer from './SettingsDrawer'
 import { isWrappedSeen } from '../utils/wrappedSeen'
+import { NavLogo } from './brand/BrandLogo'
 
 const NAV_TABS = [
   { label: 'Discover', path: '/' },
   { label: 'My Movies', path: '/my-movies' },
   { label: 'Profile', path: '/profile' },
 ]
-
-function NavLogo() {
-  return (
-    <div className="flex items-center" style={{ gap: 4 }}>
-      <span
-        className="font-normal text-gray-lighter leading-none select-none text-[28px] md:text-[42px]"
-        style={{ fontFamily: '"Source Sans 3", sans-serif' }}
-      >G</span>
-      <svg className="w-[34px] h-[26px] md:w-[51px] md:h-[39px]" viewBox="1049 894 51 39" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g style={{ opacity: 0.6 }}>
-          <path d="M1055.375,900.5L1093.625,900.5C1094.798583984375,900.5,1095.75,901.2275390625,1095.75,902.125L1095.75,903.75L1053.2501220703125,903.75L1053.2501220703125,902.125C1053.2501220703125,901.2275390625,1054.2015380859375,900.5,1055.375,900.5Z" fillRule="evenodd" clipRule="evenodd" fill="white" />
-        </g>
-        <g style={{ opacity: 0.3 }}>
-          <path d="M1059.625,897.25L1089.375,897.25C1090.548583984375,897.25,1091.5,897.9775390625,1091.5,898.875L1091.5,900.5L1057.5,900.5L1057.5,898.875C1057.5,897.9775390625,1058.451416015625,897.25,1059.625,897.25Z" fillRule="evenodd" clipRule="evenodd" fill="white" />
-        </g>
-        <path d="M1051.1251220703125,903.75L1097.875,903.75C1099.0484619140625,903.75,1100,904.4775390625,1100,905.375L1100,929.75C1100,930.6474609375,1099.0484619140625,931.375,1097.875,931.375L1051.1251220703125,931.375C1049.9515380859375,931.375,1049,930.6474609375,1049,929.75L1049,905.375C1049,904.4775390625,1049.9515380859375,903.75,1051.1251220703125,903.75ZM1051.1251220703125,907L1051.1251220703125,911.875L1057.5,911.875L1057.5,907L1051.1251220703125,907ZM1051.1251220703125,915.125L1051.1251220703125,920L1057.5,920L1057.5,915.125L1051.1251220703125,915.125ZM1051.1251220703125,923.25L1051.1251220703125,928.125L1057.5,928.125L1057.5,923.25L1051.1251220703125,923.25ZM1091.5,907L1091.5,911.875L1097.875,911.875L1097.875,907L1091.5,907ZM1091.5,915.125L1091.5,920L1097.875,920L1097.875,915.125L1091.5,915.125ZM1091.5,923.25L1091.5,928.125L1097.875,928.125L1097.875,923.25L1091.5,923.25Z" fillRule="evenodd" clipRule="evenodd" fill="white" />
-      </svg>
-      <span
-        className="font-normal text-gray-lighter leading-none select-none text-[28px] md:text-[42px]"
-        style={{ fontFamily: '"Source Sans 3", sans-serif' }}
-      >V</span>
-    </div>
-  )
-}
 
 function SettingsGearIcon({ className }: { className?: string }) {
   return (
