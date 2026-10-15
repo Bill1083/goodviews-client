@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
 import PrimaryButton from '../../components/PrimaryButton'
+import { BRAND } from '../../config/brand'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -57,7 +58,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-2xl font-bold text-gray-light">Welcome back</h1>
         <p className="mb-6 text-sm text-gray-muted">
-          Sign in to your GoodViews account
+          Sign in to your {BRAND.name} account
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

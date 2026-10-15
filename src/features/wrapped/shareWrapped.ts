@@ -2,6 +2,7 @@ import type { WrappedSlide } from '../../types/stats'
 import { plural } from '../../utils/formatStats'
 import { genreLabel } from '../../utils/genres'
 import { tmdbImage } from '../../utils/tmdbImage'
+import { BRAND, BRAND_HOST, BRAND_SLUG } from '../../config/brand'
 
 type Summary = Extract<WrappedSlide, { kind: 'summary' }>
 
@@ -66,7 +67,7 @@ export async function renderShareCard(slide: Summary, year: number): Promise<Blo
   ctx.fillStyle = 'rgba(255,255,255,0.7)'
   ctx.font = font('600', 34)
   ctx.textBaseline = 'top'
-  ctx.fillText('GOODVIEWS WRAPPED', 90, 120)
+  ctx.fillText(`${BRAND.name.toUpperCase()} WRAPPED`, 90, 120)
   ctx.fillStyle = '#ffffff'
   ctx.font = font('bold', 150)
   ctx.fillText(String(year), 84, 160)
@@ -123,7 +124,7 @@ export async function renderShareCard(slide: Summary, year: number): Promise<Blo
 
   ctx.fillStyle = 'rgba(255,255,255,0.5)'
   ctx.font = font('600', 30)
-  ctx.fillText('goodviews.online', 90, 1780)
+  ctx.fillText(BRAND_HOST, 90, 1780)
 
   return new Promise((resolve) => {
     try {
@@ -137,11 +138,11 @@ export async function renderShareCard(slide: Summary, year: number): Promise<Blo
 /** Share as an image where the platform allows it, else download the PNG,
  * else share/copy a text summary. Returns what happened. */
 export async function shareWrapped(slide: Summary, year: number): Promise<'shared' | 'downloaded' | 'copied' | 'cancelled'> {
-  const text = `My ${year} GoodViews Wrapped: ${slide.films} films, ${Math.round(slide.minutes / 60)} hours, top genre ${slide.top_genre ? genreLabel(slide.top_genre.id, slide.top_genre.name) : '—'}. I'm ${slide.persona.title} ${slide.persona.emoji}`
+  const text = `My ${year} ${BRAND.name} Wrapped: ${slide.films} films, ${Math.round(slide.minutes / 60)} hours, top genre ${slide.top_genre ? genreLabel(slide.top_genre.id, slide.top_genre.name) : '—'}. I'm ${slide.persona.title} ${slide.persona.emoji}`
   const blob = await renderShareCard(slide, year)
 
   if (blob) {
-    const file = new File([blob], `goodviews-wrapped-${year}.png`, { type: 'image/png' })
+    const file = new File([blob], `${BRAND_SLUG}-wrapped-${year}.png`, { type: 'image/png' })
     const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
     if (nav.share && nav.canShare?.({ files: [file] })) {
       try {
@@ -154,7 +155,7 @@ export async function shareWrapped(slide: Summary, year: number): Promise<'share
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `goodviews-wrapped-${year}.png`
+    a.download = `${BRAND_SLUG}-wrapped-${year}.png`
     document.body.appendChild(a)
     a.click()
     a.remove()

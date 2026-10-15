@@ -1,4 +1,4 @@
-// Strict TypeScript interfaces for GoodViews domain entities.
+// Strict TypeScript interfaces for the app's domain entities.
 
 export interface User {
   id: string
@@ -75,6 +75,15 @@ export interface MovieDetails extends Movie {
   backdrop_path?: string | null
   /** Keyed by ISO country code (e.g. "AU"). TMDB names this key literally with a slash. */
   'watch/providers'?: { results: Record<string, WatchProviderRegion> }
+}
+
+/** How members as a whole rated a film (public; totals only). The average
+ *  and distribution are null until enough members have rated it. */
+export interface CommunityStats {
+  movie_id: number
+  rating_count: number
+  average_rating: number | null
+  distribution: Record<'1' | '2' | '3' | '4' | '5', number> | null
 }
 
 /** TMDB search results page */

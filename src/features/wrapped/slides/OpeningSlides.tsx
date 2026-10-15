@@ -5,6 +5,7 @@ import { formatDate, formatMinutesLong, monthName, plural } from '../../../utils
 import { tmdbImage } from '../../../utils/tmdbImage'
 import type { CSSProperties } from 'react'
 import SlideShell, { Body, Eyebrow, Headline, WrappedMotionContext, useStagger } from '../SlideShell'
+import { BRAND } from '../../../config/brand'
 
 type Intro = Extract<WrappedSlide, { kind: 'intro' }>
 type Volume = Extract<WrappedSlide, { kind: 'volume' }>
@@ -41,7 +42,7 @@ export function IntroSlide({ slide, year }: { slide: Intro; year: number }) {
     <>
       <PosterWall posters={slide.poster_wall} />
       <SlideShell align="center">
-        <Eyebrow index={0}>GoodViews Wrapped</Eyebrow>
+        <Eyebrow index={0}>{BRAND.name} Wrapped</Eyebrow>
         <Headline index={1} size="xl">
           Your {year} in film
         </Headline>

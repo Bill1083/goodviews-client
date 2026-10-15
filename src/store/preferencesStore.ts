@@ -35,6 +35,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       setHoverHighlightEnabled: (hoverHighlightEnabled) => set({ hoverHighlightEnabled }),
       setHoverHighlightColor: (hoverHighlightColor) => set({ hoverHighlightColor }),
     }),
+    // Storage key keeps the original name on purpose: renaming it would
+    // silently reset every user's saved preferences.
     { name: 'goodviews-preferences', version: 1 },
   ),
 )

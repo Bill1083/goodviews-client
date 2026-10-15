@@ -6,6 +6,7 @@ import { genreLabel } from '../../../utils/genres'
 import { tmdbImage } from '../../../utils/tmdbImage'
 import { useStagger } from '../SlideShell'
 import { shareWrapped } from '../shareWrapped'
+import { BRAND } from '../../../config/brand'
 
 type Summary = Extract<WrappedSlide, { kind: 'summary' }>
 
@@ -41,7 +42,7 @@ export default function SummarySlide({ slide, year, onReplay, onExit }: Props) {
           className={`w-full overflow-hidden rounded-3xl border border-white/15 bg-black/35 p-5 shadow-2xl backdrop-blur-md ${stagger(0).className}`}
           id="wrapped-summary-card"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">GoodViews Wrapped</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">{BRAND.name} Wrapped</p>
           <h2 className="text-gradient-brand mt-1 text-3xl font-bold" style={{ fontFamily: '"Source Sans 3", sans-serif' }}>
             {year}
           </h2>
