@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
 import { getTrendingMovies, getTopRatedMovies } from '../services/apiClient'
@@ -179,8 +179,13 @@ const authInputStyle = { background: 'rgba(177, 178, 181, 0.30)', height: 29 }
 
 const labelClass = 'text-[15px] text-white leading-none'
 
-export default function AuthPage() {
+export type AuthMode = 'login' | 'signup'
+
+/** The log-in screen (/login) and the sign-up screen (/signup). One component
+ *  for both, so switching between them keeps the poster background in place. */
+export default function AuthPage({ mode }: { mode: AuthMode }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 640px)')
   const { user } = useAuthStore()
 
@@ -234,17 +239,17 @@ export default function AuthPage() {
   const [regLoading, setRegLoading] = useState(false)
   const [regConfirmationSent, setRegConfirmationSent] = useState(false)
 
-  usePageMeta(PUBLIC_PAGES['/auth'])
+  usePageMeta(PUBLIC_PAGES[mode === 'signup' ? '/signup' : '/login'])
 
-  // Arriving from a "Create account" link: bring the sign-up form into view.
-  const [searchParams] = useSearchParams()
-  const registerUsernameRef = useRef<HTMLInputElement>(null)
+  // /auth is the old combined page. Links to it still work (including
+  // confirmation emails sent before the split), but move the address to the
+  // screen's own URL — unless Supabase is still reading a sign-in from the
+  // URL's hash, which a redirect would throw away.
   useEffect(() => {
-    if (searchParams.get('mode') !== 'register') return
-    const input = registerUsernameRef.current
-    input?.scrollIntoView({ block: 'center' })
-    input?.focus({ preventScroll: true })
-  }, [searchParams])
+    if (location.pathname !== '/auth') return
+    if (/access_token|refresh_token|error_description/.test(location.hash)) return
+    navigate(mode === 'signup' ? '/signup' : '/login', { replace: true })
+  }, [location.pathname, location.hash, mode, navigate])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -312,7 +317,7 @@ export default function AuthPage() {
       password: regPassword,
       options: {
         data: { username: trimmed },
-        emailRedirectTo: `${window.location.origin}/auth`,
+        emailRedirectTo: `${window.location.origin}/login`,
       },
     })
     setRegLoading(false)
@@ -358,61 +363,67 @@ export default function AuthPage() {
       >
 
         {/* Brand heading */}
-        <BrandWordmark className="mb-[18px]" />
+        <BrandWordmark className="mb-[10px]" />
+        <h1 className="mb-[18px] text-center text-[15px] text-white/70">
+          {mode === 'login' ? 'Welcome back' : `Create your ${BRAND.name} account`}
+        </h1>
 
-        {/* ── Login form ── */}
-        <form onSubmit={handleLogin} className="w-full flex flex-col gap-[8px]">
-          <div className="flex flex-col gap-[5px]">
-            <label className={labelClass}>Username or Email Address</label>
-            <input
-              type="text"
-              autoComplete="email"
-              required
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              className={authInputClass}
-              style={authInputStyle}
-            />
-          </div>
-          <div className="flex flex-col gap-[5px]">
-            <div className="flex items-center justify-between">
-              <label className={labelClass}>Password</label>
-              <Link to="/forgot-password" className="text-[13px] text-white/50 hover:text-white/80 transition-colors">
-                Forgot password?
+        {mode === 'login' ? (
+          <>
+            {/* ── Login form ── */}
+            <form onSubmit={handleLogin} className="w-full flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[5px]">
+                <label className={labelClass}>Username or Email Address</label>
+                <input
+                  type="text"
+                  autoComplete="email"
+                  autoFocus={isDesktop}
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className={authInputClass}
+                  style={authInputStyle}
+                />
+              </div>
+              <div className="flex flex-col gap-[5px]">
+                <div className="flex items-center justify-between">
+                  <label className={labelClass}>Password</label>
+                  <Link to="/forgot-password" className="text-[13px] text-white/50 hover:text-white/80 transition-colors">
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className={authInputClass}
+                  style={authInputStyle}
+                />
+              </div>
+              {loginError && (
+                <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
+                  {loginError}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-blue-brand hover:brightness-110"
+                style={{ height: 32 }}
+              >
+                {loginLoading ? 'Signing in…' : 'Log In'}
+              </button>
+            </form>
+            <p className="mt-[16px] text-center text-[13px] text-white/60">
+              New to {BRAND.name}?{' '}
+              <Link to="/signup" className="font-semibold text-white transition-colors hover:text-magenta">
+                Create an account
               </Link>
-            </div>
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              className={authInputClass}
-              style={authInputStyle}
-            />
-          </div>
-          {loginError && (
-            <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
-              {loginError}
             </p>
-          )}
-          <button
-            type="submit"
-            disabled={loginLoading}
-            className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-blue-brand hover:brightness-110"
-            style={{ height: 32 }}
-          >
-            {loginLoading ? 'Signing in…' : 'Log In'}
-          </button>
-        </form>
-
-        {/* ── OR divider ── */}
-        <div className="my-[14px] flex items-center justify-center">
-          <span className="text-[15px] text-white" style={{ fontFamily: '"Source Sans 3", sans-serif' }}>OR</span>
-        </div>
-
-        {/* ── Sign Up form ── */}
-        {regConfirmationSent ? (
+          </>
+        ) : regConfirmationSent ? (
           <div className="flex w-full flex-col items-center gap-2 text-center">
             <p className="text-[15px] font-medium text-white">Check your email</p>
             <p className="text-[13px] text-white/60 leading-relaxed">
@@ -428,68 +439,76 @@ export default function AuthPage() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleRegister} className="w-full flex flex-col gap-[8px]">
-            <div className="flex flex-col gap-[5px]">
-              <label className={labelClass}>Username</label>
-              <input
-                ref={registerUsernameRef}
-                type="text"
-                autoComplete="username"
-                required
-                value={regUsername}
-                onChange={(e) => setRegUsername(e.target.value)}
-                className={authInputClass}
-                style={authInputStyle}
-                placeholder="filmbuff42"
-                maxLength={50}
-              />
-            </div>
-            <div className="flex flex-col gap-[5px]">
-              <label className={labelClass}>Email Address</label>
-              <input
-                type="email"
-                autoComplete="email"
-                required
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-                className={authInputClass}
-                style={authInputStyle}
-              />
-            </div>
-            <div className="flex flex-col gap-[5px]">
-              <label className={labelClass}>Password</label>
-              <input
-                type="password"
-                autoComplete="new-password"
-                required
-                maxLength={PASSWORD_MAX_LENGTH}
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                className={authInputClass}
-                style={authInputStyle}
-                placeholder="Min. 10 chars, 1 number, 1 symbol"
-              />
-            </div>
-            {regError && (
-              <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
-                {regError}
+          <>
+            <form onSubmit={handleRegister} className="w-full flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[5px]">
+                <label className={labelClass}>Username</label>
+                <input
+                  type="text"
+                  autoComplete="username"
+                  autoFocus={isDesktop}
+                  required
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  className={authInputClass}
+                  style={authInputStyle}
+                  placeholder="filmbuff42"
+                  maxLength={50}
+                />
+              </div>
+              <div className="flex flex-col gap-[5px]">
+                <label className={labelClass}>Email Address</label>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  className={authInputClass}
+                  style={authInputStyle}
+                />
+              </div>
+              <div className="flex flex-col gap-[5px]">
+                <label className={labelClass}>Password</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  maxLength={PASSWORD_MAX_LENGTH}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  className={authInputClass}
+                  style={authInputStyle}
+                  placeholder="Min. 10 chars, 1 number, 1 symbol"
+                />
+              </div>
+              {regError && (
+                <p className="rounded-md bg-pink-brand/10 border border-pink-brand/30 px-2 py-1 text-sm text-pink-brand">
+                  {regError}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={regLoading}
+                className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-magenta-dark hover:brightness-110"
+                style={{ height: 32 }}
+              >
+                {regLoading ? 'Creating account…' : 'Sign Up'}
+              </button>
+              <p className="text-center text-[12px] leading-snug text-white/50">
+                By signing up you agree to the{' '}
+                <Link to="/terms" className="underline decoration-white/30 underline-offset-2 hover:text-white/80">Terms of Use</Link>{' '}
+                and{' '}
+                <Link to="/privacy" className="underline decoration-white/30 underline-offset-2 hover:text-white/80">Privacy Policy</Link>.
               </p>
-            )}
-            <button
-              type="submit"
-              disabled={regLoading}
-              className="w-full rounded-[5px] text-[15px] font-normal text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed bg-magenta-dark hover:brightness-110"
-              style={{ height: 32 }}
-            >
-              {regLoading ? 'Creating account…' : 'Sign Up'}
-            </button>
-            <p className="text-center text-[12px] leading-snug text-white/50">
-              By signing up you agree to the{' '}
-              <Link to="/terms" className="underline decoration-white/30 underline-offset-2 hover:text-white/80">Terms of Use</Link>{' '}
-              and{' '}
-              <Link to="/privacy" className="underline decoration-white/30 underline-offset-2 hover:text-white/80">Privacy Policy</Link>.
+            </form>
+            <p className="mt-[16px] text-center text-[13px] text-white/60">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-white transition-colors hover:text-teal">
+                Log in
+              </Link>
             </p>
-          </form>
+          </>
         )}
 
       </div>

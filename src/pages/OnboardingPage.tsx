@@ -21,7 +21,7 @@ export default function OnboardingPage() {
   const [finishing, setFinishing] = useState(false)
 
   // Someone with no session at all shouldn't land here — send them to log in properly.
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user) return <Navigate to="/login" replace />
 
   const finish = async () => {
     setFinishing(true)

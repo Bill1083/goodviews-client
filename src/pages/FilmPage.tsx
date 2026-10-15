@@ -248,7 +248,7 @@ export default function FilmPage() {
                   </button>
                 ) : (
                   <Link
-                    to="/auth?mode=register"
+                    to="/signup"
                     className="rounded-pill bg-magenta-dark px-5 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110"
                   >
                     Rate it on {BRAND.name}

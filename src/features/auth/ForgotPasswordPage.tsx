@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
             , you'll receive a password reset link shortly.
           </p>
           <Link
-            to="/auth"
+            to="/login"
             className="mt-2 text-sm font-medium text-teal hover:text-teal-light transition-colors"
           >
             ← Back to Login
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-muted">
-          <Link to="/auth" className="text-teal hover:text-teal-light font-medium">
+          <Link to="/login" className="text-teal hover:text-teal-light font-medium">
             ← Back to Login
           </Link>
         </p>

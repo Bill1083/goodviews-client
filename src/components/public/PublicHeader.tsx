@@ -17,13 +17,13 @@ export default function PublicHeader() {
         </Link>
         <nav aria-label="Account" className="flex items-center gap-2">
           <Link
-            to="/auth"
+            to="/login"
             className="rounded-pill px-3 py-2 text-sm font-semibold text-gray-lighter transition-colors hover:bg-white/5 sm:px-4"
           >
-            Sign in
+            Log in
           </Link>
           <Link
-            to="/auth?mode=register"
+            to="/signup"
             className="rounded-pill bg-magenta-dark px-3 py-2 text-sm font-semibold text-white transition-all hover:brightness-110 sm:px-4"
           >
             Create account

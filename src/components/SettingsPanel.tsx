@@ -407,7 +407,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    navigate('/auth')
+    navigate('/login')
   }
 
   const deleteAccountMutation = useMutation({
@@ -418,7 +418,7 @@ export default function SettingsPanel({ onClose, closeLabel = 'Back' }: { onClos
     },
     onSuccess: async () => {
       await supabase.auth.signOut()
-      navigate('/auth')
+      navigate('/')
     },
   })
 

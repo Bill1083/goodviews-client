@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
             You can now sign in with your new password.
           </p>
           <Link
-            to="/auth"
+            to="/login"
             className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-teal/20 border border-teal/40 px-5 py-2 text-sm font-medium text-teal-light hover:bg-teal/30 transition-colors"
           >
             Go to Login

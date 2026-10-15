@@ -135,16 +135,16 @@ export default function LandingPage() {
             </p>
             <div style={{ animationDelay: '240ms' }} className={`flex flex-col items-center gap-3 sm:flex-row ${ENTRANCE}`}>
               <Link
-                to="/auth?mode=register"
+                to="/signup"
                 className="rounded-pill bg-magenta-dark px-7 py-3 text-base font-semibold text-white shadow-lg shadow-magenta/20 transition-all hover:brightness-110"
               >
                 Create a free account
               </Link>
               <Link
-                to="/auth"
+                to="/login"
                 className="rounded-pill border border-white/20 px-7 py-3 text-base font-semibold text-gray-lighter transition-colors hover:bg-white/5"
               >
-                Sign in
+                Log in
               </Link>
             </div>
             <p style={{ animationDelay: '320ms' }} className={`text-sm text-gray-medium ${ENTRANCE}`}>Free to use. No ads.</p>
@@ -191,7 +191,7 @@ export default function LandingPage() {
               Rate a few films you love and {BRAND.name} starts finding the next ones for you.
             </p>
             <Link
-              to="/auth?mode=register"
+              to="/signup"
               className="rounded-pill bg-magenta-dark px-7 py-3 text-base font-semibold text-white transition-all hover:brightness-110"
             >
               Create a free account

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from './services/supabaseClient'
 import { verifyTrustedDevice, getProfile } from './services/apiClient'
@@ -39,6 +39,14 @@ function PageSpinner() {
       <span className="h-8 w-8 animate-spin rounded-full border-2 border-teal border-t-transparent" />
     </div>
   )
+}
+
+/** The old combined sign-in page. Still served (not redirected) so a
+ *  Supabase confirmation link that lands here keeps its URL hash; AuthPage
+ *  then moves the address on to /login or /signup. */
+function LegacyAuthRoute() {
+  const [params] = useSearchParams()
+  return <AuthPage mode={params.get('mode') === 'register' ? 'signup' : 'login'} />
 }
 
 /** "/" is the landing page for signed-out visitors and Discover for everyone
@@ -121,7 +129,9 @@ function AppRoutes() {
     >
       <Suspense fallback={<PageSpinner />}>
       <Routes location={location}>
-        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/auth" element={<LegacyAuthRoute />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
@@ -199,8 +209,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="/login" element={<Navigate to="/auth" replace />} />
-        <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
+        <Route path="/register" element={<Navigate to="/signup" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       </Suspense>

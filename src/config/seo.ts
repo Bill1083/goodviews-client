@@ -29,19 +29,23 @@ export const PUBLIC_PAGES = {
     title: 'Terms of Use',
     description: `The rules for using ${BRAND.name}.`,
   },
-  '/auth': {
-    title: 'Sign in or create an account',
-    description: `Sign in to ${BRAND.name}, or create a free account to start rating the films you watch.`,
+  '/login': {
+    title: 'Log in',
+    description: `Log in to ${BRAND.name} to rate, review and keep track of the films you watch.`,
+  },
+  '/signup': {
+    title: 'Sign up',
+    description: `Create a free ${BRAND.name} account and start rating the films you watch.`,
   },
 } satisfies Record<string, PageMeta>
 
 export type PublicPath = keyof typeof PUBLIC_PAGES
 
 /** Public pages listed in the static sitemap (the film sitemap is served by the API). */
-export const SITEMAP_PATHS: PublicPath[] = ['/', '/about', '/privacy', '/terms']
+export const SITEMAP_PATHS: PublicPath[] = ['/', '/signup', '/about', '/privacy', '/terms']
 
 /** Public pages that get their own pre-built HTML file at build time. */
-export const PREBUILT_PATHS: PublicPath[] = ['/about', '/privacy', '/terms', '/auth']
+export const PREBUILT_PATHS: PublicPath[] = ['/about', '/privacy', '/terms', '/login', '/signup']
 
 /**
  * Signed-in and account-flow pages: kept out of search results (robots.txt
