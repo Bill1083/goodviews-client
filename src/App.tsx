@@ -8,23 +8,51 @@ import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
-import MyMoviesPage from './pages/MyMoviesPage'
-import DiscoverPage from './features/discover/DiscoverPage'
-import DiscoverListPage from './features/discover/DiscoverListPage'
-import StreamingWorldPage from './features/discover/StreamingWorldPage'
-import ProfilePage from './features/profile/ProfilePage'
-import PublicProfilePage from './features/profile/PublicProfilePage'
-import SettingsPage from './pages/SettingsPage'
+import LandingPage from './pages/LandingPage'
+import FilmPage from './pages/FilmPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
+import NotFoundPage from './pages/NotFoundPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import MfaChallengePage from './pages/MfaChallengePage'
 import AboutPage from './pages/AboutPage'
-import OnboardingPage from './pages/OnboardingPage'
 // Tutorials: shelved for now (not deleted — see features/tutorials/).
 // import TutorialManager from './features/tutorials/TutorialManager'
 
-// Loaded on demand: the Wrapped is a once-a-year screen with its own bundle.
+// The signed-in app loads on demand, so the public pages (landing, film
+// pages, sign-in) that visitors and search engines hit first stay small.
+const DiscoverPage = lazy(() => import('./features/discover/DiscoverPage'))
+const DiscoverListPage = lazy(() => import('./features/discover/DiscoverListPage'))
+const StreamingWorldPage = lazy(() => import('./features/discover/StreamingWorldPage'))
+const MyMoviesPage = lazy(() => import('./pages/MyMoviesPage'))
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage'))
+const PublicProfilePage = lazy(() => import('./features/profile/PublicProfilePage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
+// The Wrapped is a once-a-year screen with its own bundle.
 const WrappedPage = lazy(() => import('./features/wrapped/WrappedPage'))
+
+function PageSpinner() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-teal border-t-transparent" />
+    </div>
+  )
+}
+
+/** "/" is the landing page for signed-out visitors and Discover for everyone
+ *  else (ProtectedRoute still handles loading, 2FA and onboarding). */
+function HomeRoute() {
+  const user = useAuthStore((s) => s.user)
+  const isLoading = useAuthStore((s) => s.isLoading)
+  if (!isLoading && !user) return <LandingPage />
+  return (
+    <ProtectedRoute>
+      <DiscoverPage />
+    </ProtectedRoute>
+  )
+}
 
 const ROUTE_ORDER = ['/', '/discover/popular', '/discover/for-you', '/my-movies', '/profile', '/settings']
 const SWIPE_ROUTES = ['/', '/my-movies', '/profile']
@@ -57,6 +85,8 @@ function AppRoutes() {
     }
     // Only fire for clearly horizontal swipes (≥80px horizontal, 1.5× more horizontal than vertical)
     if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      // Signed out, "/" is the landing page and the other tabs need an account.
+      if (!useAuthStore.getState().user) return
       const idx = SWIPE_ROUTES.indexOf(location.pathname)
       if (idx === -1) return
       if (dx < 0 && idx < SWIPE_ROUTES.length - 1) navigate(SWIPE_ROUTES[idx + 1])
@@ -89,21 +119,18 @@ function AppRoutes() {
       onTouchEnd={handleTouchEnd}
       style={{ flex: 1, minHeight: 0 }}
     >
+      <Suspense fallback={<PageSpinner />}>
       <Routes location={location}>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/film/:filmSlug" element={<FilmPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <DiscoverPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/" element={<HomeRoute />} />
         <Route
           path="/discover/popular"
           element={
@@ -173,8 +200,10 @@ function AppRoutes() {
           }
         />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
-        <Route path="/register" element={<Navigate to="/auth" replace />} />
+        <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </div>
   )
 }

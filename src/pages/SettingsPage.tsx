@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import SettingsPanel from '../components/SettingsPanel'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function SettingsPage() {
+  usePageMeta({ title: 'Settings', noindex: true })
   const navigate = useNavigate()
 
   return (

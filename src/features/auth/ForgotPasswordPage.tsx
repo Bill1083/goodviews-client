@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
 import PrimaryButton from '../../components/PrimaryButton'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 export default function ForgotPasswordPage() {
+  usePageMeta({ title: 'Reset your password', noindex: true })
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)

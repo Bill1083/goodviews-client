@@ -35,6 +35,7 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { TMDB_GENRES } from '../utils/genres'
 import type { Movie, Review, FriendReview, FriendActivityItem, PaginatedReviews, PersonSearchResult, FilmographyEntry } from '../types'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 type SidebarSection = 'watched' | 'want-to-watch' | 'favourite-actors' | 'favourite-directors' | 'Recommendations' | 'Friends'
 type SortKey = 'date-desc' | 'date-asc' | 'release-asc' | 'release-desc' | 'rating-high' | 'rating-low' | 'rating-friends-high' | 'rating-friends-low' | 'rating-public-high' | 'rating-public-low' | 'alpha-az' | 'alpha-za'
@@ -1024,6 +1025,7 @@ function FriendReviewModal({ friendName, review, onClose, onPersonClick }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MyMoviesPage() {
+  usePageMeta({ title: 'My Movies', noindex: true })
   const navigate = useNavigate()
   const qc = useQueryClient()
 

@@ -24,6 +24,7 @@ import {
   type ForYouFeed,
 } from '../../utils/forYouCache'
 import type { Movie } from '../../types'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 type Kind = 'popular' | 'for-you'
 
@@ -46,6 +47,7 @@ const KIND_CONFIG: Record<Kind, { title: string; subtitle: string; accent: strin
 }
 
 export default function DiscoverListPage({ kind }: { kind: Kind }) {
+  usePageMeta({ title: kind === 'popular' ? 'Most popular this week' : 'For You', noindex: true })
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [page, setPage] = useState(1)

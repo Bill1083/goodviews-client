@@ -5,10 +5,13 @@ import { updateProfile } from '../services/apiClient'
 import GenreStep from '../features/onboarding/GenreStep'
 import RateMoviesStep from '../features/onboarding/RateMoviesStep'
 import FavouritesStep from '../features/onboarding/FavouritesStep'
+import { BRAND } from '../config/brand'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 const STEP_LABELS = ['Genres', 'Quick Ratings', 'Favourites'] as const
 
 export default function OnboardingPage() {
+  usePageMeta({ title: 'Welcome', noindex: true })
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const setHasOnboarded = useAuthStore((s) => s.setHasOnboarded)
@@ -43,7 +46,7 @@ export default function OnboardingPage() {
           </div>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-gray-lighter">Welcome to GoodViews</h1>
+              <h1 className="text-lg font-semibold text-gray-lighter">Welcome to {BRAND.name}</h1>
               <p className="mt-1 text-sm text-gray-muted">
                 A few quick steps so "For You" can start recommending movies you'll actually like.
               </p>

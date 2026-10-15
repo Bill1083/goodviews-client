@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import SettingsPanel from './SettingsPanel'
+
+// Loaded the first time Settings opens, not with every page.
+const SettingsPanel = lazy(() => import('./SettingsPanel'))
 
 /** Settings, opened from the navbar on top of whatever page you're already on
  *  instead of navigating away. Full-width on phones (reads as its own screen),
@@ -45,7 +47,15 @@ export default function SettingsDrawer({ open, onClose }: { open: boolean; onClo
       >
         {hasOpened && (
           <div className="flex flex-1 flex-col gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-10">
-            <SettingsPanel onClose={onClose} closeLabel="Close" />
+            <Suspense
+              fallback={
+                <div className="flex flex-1 items-center justify-center">
+                  <span className="h-8 w-8 animate-spin rounded-full border-2 border-teal border-t-transparent" />
+                </div>
+              }
+            >
+              <SettingsPanel onClose={onClose} closeLabel="Close" />
+            </Suspense>
           </div>
         )}
       </div>

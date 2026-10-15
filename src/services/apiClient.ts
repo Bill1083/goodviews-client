@@ -2,6 +2,7 @@ import axios from 'axios'
 import { supabase } from './supabaseClient'
 import { getStoredTrustedDeviceToken } from '../utils/mfa'
 import type {
+  CommunityStats,
   CreateReviewPayload,
   MovieSearchResult,
   ForYouMovie,
@@ -132,6 +133,12 @@ export async function markNotInterested(
 
 export async function getMovieDetails(movieId: number): Promise<MovieDetails> {
   const { data } = await apiClient.get<MovieDetails>(`/api/movies/${movieId}`)
+  return data
+}
+
+/** Public: how members rated a film, for its public page. */
+export async function getCommunityStats(movieId: number, signal?: AbortSignal): Promise<CommunityStats> {
+  const { data } = await apiClient.get<CommunityStats>(`/api/movies/${movieId}/community`, { signal })
   return data
 }
 

@@ -11,6 +11,7 @@ import PersonModal from '../../components/PersonModal'
 import ReviewModal from '../reviews/ReviewModal'
 import { themeFor } from './streamingServiceThemes'
 import type { Movie, StreamingProvider } from '../../types'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 const TMDB_LOGO = 'https://image.tmdb.org/t/p/w185'
 const PAGE_SIZE = 10
@@ -37,6 +38,7 @@ function MovieGridSkeleton() {
 }
 
 export default function StreamingWorldPage() {
+  usePageMeta({ title: 'Streaming Worlds', noindex: true })
   const navigate = useNavigate()
   const { providerId: providerIdParam } = useParams()
   const providerId = Number(providerIdParam)

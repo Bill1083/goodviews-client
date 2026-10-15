@@ -35,6 +35,7 @@ import {
   getProfile,
   updateProfile,
 } from '../../services/apiClient'
+import { usePageMeta } from '../../hooks/usePageMeta'
 
 // ─── Pill preview ─────────────────────────────────────────────────────────────
 function Pill({
@@ -165,6 +166,7 @@ function ModalShell({
 
 // ─── Main ProfilePage ─────────────────────────────────────────────────────────
 export default function ProfilePage() {
+  usePageMeta({ title: 'Your profile', noindex: true })
   const { user } = useAuthStore()
   const qc = useQueryClient()
 
