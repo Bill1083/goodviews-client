@@ -10,3 +10,6 @@ dist/
 # IDE
 .vscode/
 .idea/
+
+# TypeScript incremental build cache (changes every build, causes merge conflicts)
+*.tsbuildinfo
