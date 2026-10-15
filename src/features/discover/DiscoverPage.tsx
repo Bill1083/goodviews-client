@@ -21,7 +21,9 @@ import MoviesOfTheDay from './MoviesOfTheDay'
 import StreamingWorldTile from './StreamingWorldTile'
 import MovieCard from '../../components/MovieCard'
 import PersonModal from '../../components/PersonModal'
-import MovieActionsModal from '../../components/MovieActionsModal'
+import MovieDetailModal from '../../components/MovieDetailModal'
+import SendToFriendsPanel from '../../components/SendToFriendsPanel'
+import ReviewModal from '../reviews/ReviewModal'
 import PersonCard from '../../components/PersonCard'
 import {
   dailyPicksKey,
@@ -635,7 +637,7 @@ export default function DiscoverPage() {
       </main>
 
       {selectedMovie && (
-        <MovieActionsModal
+        <SearchMovieModal
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
           onSelectMovie={setSelectedMovie}
